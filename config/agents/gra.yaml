@@ -1,0 +1,44 @@
+# configs/agents/proximity.yaml
+defaults:
+  - /prompt_refiner/disabled
+
+gra:
+  name: gra
+  enabled: true
+
+  score_threshold: 8.0
+  std_threshold: 1.5
+  dedup_similarity: 0.9
+  samples_per_iteration: 100
+  iterations: 5
+
+  save_prompt: true
+  save_context: false
+  skip_if_completed: false
+  model:
+    name: ollama/qwen3
+    api_base: http://localhost:11434
+    api_key: null
+  input_key: hypotheses   # add nodes
+  output_key: judge  # change
+  prompt_mode: file
+  prompt_file: scientific_debate.txt
+  strategy: scientific_debate
+  generator_pool:
+  - name: ollama/llama3.2
+    api_base: http://localhost:11434
+    api_key: null
+  reviewer_pool:
+    - name: ollama/qwen3
+      api_base: http://localhost:11434
+      api_key: null
+    - name: ollama/mistral
+      api_base: http://localhost:11434
+      api_key: null
+    - name: ollama/gemma3
+      api_base: http://localhost:11434
+      api_key: null
+  adjudicator_pool:
+    - name: ollama/mistral
+      api_base: http://localhost:11434
+      api_key: null
