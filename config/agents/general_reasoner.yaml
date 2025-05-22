@@ -9,6 +9,7 @@ general_reasoner:
   save_context: false
   skip_if_completed: false
 
+  thinking_mode: generate_and_judge  # (judge_only (for processing hypotheses from other agents or generate_and_judge )
   judge: llm
   judge_prompt_file: judge_pairwise_comparison.txt
   judge_model:
@@ -17,9 +18,6 @@ general_reasoner:
     api_key: null
 
   generation_strategy_list:  # the list of strategies the agent wil use to generate hypotheses
-    - cot
-
-  generation_strategy_list2:  # the list of strategies the agent wil use to generate hypotheses
     - cot
     - plan_first
     - debate
@@ -30,6 +28,7 @@ general_reasoner:
     name: ollama/qwen3
     api_base: http://localhost:11434
     api_key: null
+
   input_keys: ["goal"]   # add nodes
   output_key: general_reasoner  # change
   prompt_mode: file

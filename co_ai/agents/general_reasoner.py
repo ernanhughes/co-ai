@@ -1,10 +1,13 @@
+from torch.backends.opt_einsum import strategy
+
 from co_ai.agents.base import BaseAgent
 from co_ai.evaluator import LLMJudgeEvaluator
 from co_ai.evaluator import MRQSelfEvaluator
 from co_ai.constants import GOAL, GOAL_TYPE  
 from co_ai.models import Hypothesis
 from co_ai.prompts import PromptLoader
-
+from itertools import combinations
+from co_ai.models import Score
 
 class GeneralReasonerAgent(BaseAgent):
     def __init__(self, cfg, memory, logger):
@@ -19,36 +22,71 @@ class GeneralReasonerAgent(BaseAgent):
         self.logger.log("AgentRunStarted", {"goal": goal})
 
         # Generate multiple reasoning outputs
-        hypotheses = self.generate_hypotheses(goal, context)
+        if self.cfg.get("thinking_mode") == "generate_and_judge":
+            hypotheses = self.generate_hypotheses(goal, context)
+        else:
+            hypotheses = self.get_hypotheses(context)
+
 
         # Evaluate each hypothesis
+        win_counts = {h.id: 0 for h in hypotheses}
         evaluations = []
-        for i, hyp in enumerate(hypotheses):
-            eval_result = self.judge.evaluate(goal, hyp)
-            evaluations.append(eval_result)
 
-            # Log everything for audit and analysis
-            self.logger.log(
+        prompt_loader = PromptLoader(None, self.logger)
+        judging_prompt_template = self.cfg.get(
+            "evaluator_prompt_file", "judge_pairwise_comparison.txt"
+        )
+
+        for hyp_a, hyp_b in combinations(hypotheses, 2):
+            # Render prompt for this pair
+            context = {
+                "goal": goal,
+                "hypothesis_a": hyp_a.text,
+                "hypothesis_b": hyp_b.text,
+            }
+            prompt_text = prompt_loader.from_file(
+                judging_prompt_template, self.cfg, context
+            )
+
+            # Call the judge
+            preferred, score = self.judge.judge(
+                prompt_text, goal, hyp_a.text, hyp_b.text
+            )
+            s = Score.build(goal, hyp_a.text, self.cfg)
+            s.set_score(score["score_a"])
+            self.memory.hypotheses.insert_score(s)
+            s = Score.build(goal, hyp_a.text, self.cfg)
+            s.set_score(score["score_b"])
+            self.memory.hypotheses.insert_score(s)
+
+            evaluations.append(score)
+
+            winner_id = hyp_a.id if score["winner"] == "A" else hyp_b.id
+            win_counts[winner_id] += 1
+
+            self.logger.log("GeneralReasoningJudgement",
                 {
-                    "event": "EvaluationComplete",
-                    "goal_id": goal["id"],
-                    "hypothesis_id": hyp.id,
-                    "hypothesis_text": hyp.text,
-                    "strategy": hyp.features.get("strategy"),
-                    "score": eval_result.get("score"),
-                    "rationale": eval_result.get("reason", ""),
-                    "evaluator": self.cfg.get("judge", "mrq"),
+                    "event": "JudgedPair",
+                    "goal": goal,
+                    "hypothesis_a": hyp_a.text[:100],
+                    "hypothesis_b": hyp_b.text[:100],
+                    "winner": score["winner"],
+                    "score_a": score["score_a"],
+                    "score_b": score["score_b"],
+                    "reason": score["reason"],
+                    "evaluator": self.cfg.get("judge", "llm"),
                 }
             )
 
-        # Return the best hypothesis
-        best_idx = max(
-            range(len(evaluations)), key=lambda j: evaluations[j].get("score", 0)
-        )
-        best_hypothesis = hypotheses[best_idx]
-        best_hypothesis.evaluation = evaluations[best_idx]  # optional for later use
-
-        return best_hypothesis
+        # Select best hypothesis by win count
+        best_id = max(win_counts, key=win_counts.get)
+        best_hypothesis = next(h for h in hypotheses if h.id == best_id)
+        best_hypothesis.evaluation = {
+            "wins": win_counts[best_id],
+            "judged_pairs": len(hypotheses) - 1,
+        }
+        context[self.output_key] = best_hypothesis
+        return context
 
     def generate_hypotheses(self, question, context):
         # Simple loop; replace with model call w/ temperature or variations
