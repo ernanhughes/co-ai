@@ -2,7 +2,7 @@
 
 import re
 from co_ai.evaluator.base import BaseEvaluator
-from co_ai.utils import PromptLoader
+from co_ai.prompts import PromptLoader
 
 
 class LLMJudgeEvaluator(BaseEvaluator):
