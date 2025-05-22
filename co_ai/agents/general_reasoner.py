@@ -18,7 +18,7 @@ class GeneralReasonerAgent(BaseAgent):
         self.prompt_loader = PromptLoader(self.cfg, self.logger)
 
     async def run(self, context: dict):
-        goal = context.get(GOAL)
+        goal = self.extract_goal_text(context.get(GOAL))
         self.logger.log("AgentRunStarted", {"goal": goal})
 
         # Generate multiple reasoning outputs
@@ -96,7 +96,8 @@ class GeneralReasonerAgent(BaseAgent):
         for strategy in strategies:
             prompt = self.prompt_loader.from_file(f"strategy_{strategy}.txt", self.cfg, merged)
             response = self.call_llm(prompt, merged)
-            hypothesis = Hypothesis(text=response, goal=context.get(GOAL), goal_type=context.get(GOAL_TYPE), 
+            hypothesis = Hypothesis(text=response, goal=context.get(GOAL).get("goal_text"),
+                                    goal_type=context.get(GOAL).get(GOAL_TYPE),
                                     strategy_used=strategy, features={"strategy": strategy},
                                     source=self.name)
             self.memory.hypotheses.store(hypothesis)

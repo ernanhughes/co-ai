@@ -17,7 +17,7 @@ class ChainOfThoughtGeneratorAgent(BaseAgent):
         self._cluster_rubrics()
 
     async def run(self, context: dict):
-        goal = context.get(GOAL)
+        goal = self.extract_goal_text(context.get(GOAL))
         self.logger.log("AgentRunStarted", {"goal": goal})
 
         if isinstance(self.evaluator, MRQSelfEvaluator):
