@@ -1,6 +1,7 @@
-from co_ai.agents.base import BaseAgent
-from co_ai.constants import GOAL, REFLECTION, HYPOTHESES
 import re
+
+from co_ai.agents.base import BaseAgent
+from co_ai.constants import GOAL, HYPOTHESES, REFLECTION
 
 
 class JudgeAgent(BaseAgent):

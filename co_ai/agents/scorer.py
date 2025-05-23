@@ -1,6 +1,7 @@
 from co_ai.agents import BaseAgent
 from co_ai.logs.icons_enum import get_event_icon
 
+
 class HypothesisScorerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)

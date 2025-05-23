@@ -1,6 +1,7 @@
 # co_ai/agents/review.py
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import HYPOTHESES, REVIEW, GOAL
+from co_ai.constants import GOAL, HYPOTHESES, REVIEW
+
 
 class ReviewAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

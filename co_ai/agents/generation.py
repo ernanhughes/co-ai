@@ -1,9 +1,10 @@
 # co_ai/agents/generation.py
 
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import GOAL, HYPOTHESES, LITERATURE, FEEDBACK, NAME
-from co_ai.parsers import extract_hypotheses
+from co_ai.constants import FEEDBACK, GOAL, HYPOTHESES, LITERATURE, NAME
 from co_ai.models import Hypothesis
+from co_ai.parsers import extract_hypotheses
+
 
 class GenerationAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

@@ -2,30 +2,15 @@
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
+
 import litellm
 
+from co_ai.constants import (AGENT, API_BASE, API_KEY, BATCH_SIZE, CONTEXT,
+                             GOAL, HYPOTHESES, INPUT_KEY, MODEL, NAME,
+                             OUTPUT_KEY, PROMPT_MATCH_RE, PROMPT_PATH,
+                             SAVE_CONTEXT, SAVE_PROMPT, SOURCE, STRATEGY)
 from co_ai.logs import JSONLogger
 from co_ai.prompts import PromptLoader
-
-from co_ai.constants import (
-    GOAL,
-    API_BASE,
-    MODEL,
-    STRATEGY,
-    INPUT_KEY,
-    API_KEY,
-    PROMPT_PATH,
-    SAVE_PROMPT,
-    SAVE_CONTEXT,
-    OUTPUT_KEY,
-    AGENT,
-    NAME,
-    PROMPT_MATCH_RE,
-    HYPOTHESES,
-    SOURCE,
-    CONTEXT,
-    BATCH_SIZE
-)
 
 
 def remove_think_blocks(text: str) -> str:

@@ -1,6 +1,7 @@
+import json
+
 from co_ai.memory import BaseStore
 from co_ai.models.sharpening_result import SharpeningResult
-import json
 
 
 class MRQStore(BaseStore):

@@ -1,11 +1,13 @@
 # co_ai/agents/sharpening.py
 
+from dataclasses import asdict
+
 from co_ai.agents import BaseAgent
-from co_ai.evaluator import MRQSelfEvaluator
 from co_ai.constants import GOAL
+from co_ai.evaluator import MRQSelfEvaluator
 from co_ai.models import Hypothesis
 from co_ai.models.sharpening_result import SharpeningResult
-from dataclasses import asdict
+
 
 class SharpeningAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

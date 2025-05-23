@@ -2,13 +2,11 @@ from typing import Optional
 
 import psycopg2
 
-from co_ai.memory import (ContextStore, EmbeddingStore, HypothesesStore,
-                          PromptStore, ReportLogger)
+from co_ai.memory import (BaseStore, ContextStore, EmbeddingStore,
+                          HypothesesStore, PromptStore, ReportLogger)
 from co_ai.memory.goal_store import GoalStore
 from co_ai.memory.lookahead_store import LookaheadStore
 from co_ai.memory.mrq_store import MRQStore
-                          
-from co_ai.memory import BaseStore
 
 
 class MemoryTool:

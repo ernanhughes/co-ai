@@ -5,9 +5,9 @@ import re
 import numpy as np
 
 from co_ai.agents.base import BaseAgent
-from co_ai.tools.embedding_tool import get_embedding
-from co_ai.constants import RANKING, HYPOTHESES, EVOLVED, GOAL
+from co_ai.constants import EVOLVED, GOAL, HYPOTHESES, RANKING
 from co_ai.models import Hypothesis
+from co_ai.tools.embedding_tool import get_embedding
 
 
 class EvolutionAgent(BaseAgent):

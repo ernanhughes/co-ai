@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict
 from datetime import datetime
+from typing import Dict, List, Optional
+
 
 @dataclass
 class Lookahead:

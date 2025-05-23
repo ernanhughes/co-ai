@@ -1,8 +1,11 @@
-from co_ai.memory import BaseStore
-from co_ai.models import Hypothesis,Score
-from typing import Optional
-from psycopg2.extras import Json
 from datetime import datetime
+from typing import Optional
+
+from psycopg2.extras import Json
+
+from co_ai.memory import BaseStore
+from co_ai.models import Hypothesis, Score
+
 
 class HypothesesStore(BaseStore):
     def __init__(self, db, embeddings, logger=None):

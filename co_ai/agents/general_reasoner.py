@@ -1,13 +1,14 @@
-from co_ai.agents.base import BaseAgent
-from co_ai.evaluator import LLMJudgeEvaluator
-from co_ai.evaluator import MRQSelfEvaluator
-from co_ai.constants import GOAL
-from co_ai.models import Hypothesis, Score
-from co_ai.prompts import PromptLoader
-from co_ai.analysis.rubric_classifier import RubricClassifierMixin
-from co_ai.models.pattern_stat import generate_pattern_stats
-from itertools import combinations
 from dataclasses import asdict
+from itertools import combinations
+
+from co_ai.agents.base import BaseAgent
+from co_ai.analysis.rubric_classifier import RubricClassifierMixin
+from co_ai.constants import GOAL
+from co_ai.evaluator import LLMJudgeEvaluator, MRQSelfEvaluator
+from co_ai.models import Hypothesis, Score
+from co_ai.models.pattern_stat import generate_pattern_stats
+from co_ai.prompts import PromptLoader
+
 
 class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
     def __init__(self, cfg, memory, logger):

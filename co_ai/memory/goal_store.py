@@ -1,6 +1,7 @@
-from typing import Optional, List
-from co_ai.models.goal import Goal
+from typing import List, Optional
+
 from co_ai.memory.base_store import BaseStore
+from co_ai.models.goal import Goal
 
 
 class GoalStore(BaseStore):

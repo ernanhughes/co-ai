@@ -1,6 +1,8 @@
-from co_ai.models.lookahead import Lookahead
-from co_ai.memory.base_store import BaseStore
 import json
+
+from co_ai.memory.base_store import BaseStore
+from co_ai.models.lookahead import Lookahead
+
 
 class LookaheadStore(BaseStore):
     def __init__(self, db, logger=None):

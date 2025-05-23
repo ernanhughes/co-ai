@@ -1,7 +1,8 @@
 from co_ai.agents.base import BaseAgent
 from co_ai.constants import GOAL, HYPOTHESES
-from co_ai.parsers import extract_hypotheses
 from co_ai.models import Hypothesis
+from co_ai.parsers import extract_hypotheses
+
 
 class RefinerAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
