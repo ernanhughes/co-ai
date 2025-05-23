@@ -78,7 +78,17 @@ class Supervisor:
         # Fallback to single goal execution
         context = input_data.copy()
         context[PROMPT_DIR] = self.cfg.paths.prompts
+        context = await self.maybe_adjust_pipeline(context)
         return await self._run_pipeline_stages(context)
+
+    def _parse_pipeline_stages_from_list(
+        self, stage_names: list[str]
+    ) -> list[PipelineStage]:
+        return [
+            PipelineStage(name, self.cfg.pipeline.stages[name], self.cfg.agents[name])
+            for name in stage_names
+            if name in self.cfg.agents
+        ]
 
     async def _run_pipeline_stages(self, context: dict) -> dict:
         for stage in self.pipeline_stages:
@@ -152,3 +162,33 @@ class Supervisor:
                     return saved_context
         return None
 
+    async def maybe_adjust_pipeline(self, context: dict) -> dict:
+        """
+        Optionally run LookaheadAgent before pipeline stages to revise or select the pipeline.
+        """
+        if not self.cfg.get("dynamic", {}).get("enabled", False):
+            return context  # Skip if not enabled
+
+        lookahead_cfg = OmegaConf.to_container(self.cfg.dynamic, resolve=True)
+        stage_dict =  OmegaConf.to_container(self.cfg.agents.lookahead, resolve=True)
+        agent_cls = hydra.utils.get_class(lookahead_cfg["cls"])
+        lookahead_agent = agent_cls(
+            cfg=stage_dict, memory=self.memory, logger=self.logger
+        )
+
+        self.logger.log("LookaheadStart", {"goal": context.get("goal", {})})
+
+        # Add current pipeline so LookaheadAgent can reflect on it
+        context["pipeline"] = [stage.name for stage in self.pipeline_stages]
+        updated_context = await lookahead_agent.run(context)
+
+        # Optional: if lookahead returned a revised pipeline
+        if "suggested_pipeline" in updated_context:
+            suggested = updated_context["suggested_pipeline"]
+            self.logger.log("PipelineUpdatedByLookahead", {
+                "original": [stage.name for stage in self.pipeline_stages],
+                "suggested": suggested
+            })
+            self.pipeline_stages = self._parse_pipeline_stages_from_list(suggested)
+
+        return updated_context

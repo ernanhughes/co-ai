@@ -5,10 +5,9 @@ import json
 
 class MRQStore(BaseStore):
     def __init__(self, db, cfg, embeddings, logger=None):
-        self.db = db
+        super().__init__(db, logger)
         self.cfg = cfg
         self.embeddings = embeddings
-        self.logger = logger
         self.name = "mrq"
 
     def __repr__(self):

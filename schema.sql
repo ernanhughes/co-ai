@@ -292,3 +292,19 @@ CREATE TABLE IF NOT EXISTS scores (
     metadata JSONB DEFAULT '{}'::JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+CREATE TABLE IF NOT EXISTS lookaheads (
+    id SERIAL PRIMARY KEY,
+    goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
+    agent_name TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    input_pipeline TEXT[],
+    suggested_pipeline TEXT[],
+    rationale TEXT,
+    reflection TEXT,
+    backup_plans TEXT[],
+    metadata JSONB DEFAULT '{}'::JSONB,
+    run_id TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

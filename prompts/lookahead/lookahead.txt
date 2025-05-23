@@ -1,0 +1,25 @@
+You are a reflection agent analyzing a goal and the pipeline designed to address it.
+
+Goal:
+{{ goal }}
+
+Pipeline:
+{% for step in pipeline %}
+- {{ step }}
+{% endfor %}
+
+Instructions:
+1. Identify any potential weaknesses in this pipeline given the goal.
+2. Suggest any agents or stages that are missing or unnecessary.
+3. Recommend a revised pipeline if needed.
+4. Justify your recommendation.
+
+Format:
+# Analysis
+[paragraph of analysis]
+
+# Suggested Pipeline
+[pipeline as a list of agent names]
+
+# Rationale
+[why you suggested the change]

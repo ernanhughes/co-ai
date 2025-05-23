@@ -6,9 +6,8 @@ from datetime import datetime
 
 class HypothesesStore(BaseStore):
     def __init__(self, db, embeddings, logger=None):
-        self.db = db
+        super().__init__(db, logger)
         self.embeddings = embeddings
-        self.logger = logger
         self.name = "hypotheses"
         self._rankings = {}
 

@@ -37,7 +37,7 @@ RANKING = "ranking"
 DETAILS = "details"
 PROMPT_MATCH_RE="prompt_match_re"
 SKIP_IF_COMPLETED="skip_if_completed"
-
+LOOKAHEAD="lookahead"
 SOURCE = "source"
 CONTEXT = "context"
 DATABASE = "database"

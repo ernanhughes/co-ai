@@ -8,8 +8,7 @@ from co_ai.memory import BaseStore
 
 class ContextStore(BaseStore):
     def __init__(self, db, logger=None):
-        self.db = db
-        self.logger = logger
+        super().__init__(db, logger)
         self.name = "context"
         self.dump_dir = os.path.dirname(self.logger.log_path)
 

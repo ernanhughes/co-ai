@@ -4,8 +4,8 @@ from typing import Optional
 
 @dataclass
 class Goal:
-    id: Optional[int]
     goal_text: str
+    id: Optional[int] = None
     goal_type: Optional[str] = None
     focus_area: Optional[str] = None
     strategy: Optional[str] = None

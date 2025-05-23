@@ -2,8 +2,8 @@
 defaults:
   - /prompt_refiner/disabled
 
-dynamic:
-  name: dynamic
+lookahead:
+  name: lookahead
   enabled: true
   source: context  # database or context
   batch_size: 20
