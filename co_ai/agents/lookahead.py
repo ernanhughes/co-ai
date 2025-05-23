@@ -15,12 +15,36 @@ class LookaheadAgent(BaseAgent):
         goal = self.memory.goal.get_or_create(context.get(GOAL))
 
         # Build context for prompt template
+
+        pipeline = context.get("pipeline", [])
+
+        agent_registry = context.get("agent_registry", {})
+        # Current agents and all available agents from the registry
+        pipeline_info = {
+            step: agent_registry.get(step, {"description": "No description."})
+            for step in pipeline
+        }
+        print(f"Pipeline info: {pipeline_info}")
+
+        all_agents_info = {name: data for name, data in agent_registry.items()}
+        print(f"All agents info: {all_agents_info}")
+
         prompt_context = {
             "goal": goal.goal_text,
+            "goal_type": goal.goal_type,
+            "focus_area": goal.focus_area,
+            "strategy": goal.strategy,
+            "llm_suggested_strategy": goal.llm_suggested_strategy,
+            "pipeline": pipeline,
+            "pipeline_info": {
+                step: agent_registry.get(step, {"description": "No description"})
+                for step in pipeline
+            },
+            "all_agents": agent_registry, 
             **context
         }
 
-        prompt_template = self.prompt_loader.load_prompt(self.cfg, context)
+        prompt_template = self.prompt_loader.load_prompt(self.cfg, prompt_context)
 
         # Call LLM to generate anticipated issues and fallbacks
         response = self.call_llm(prompt_template, prompt_context).strip()
@@ -44,10 +68,13 @@ class LookaheadAgent(BaseAgent):
         reflection.store(self.memory, self.logger)
 
         # Log the result
-        self.logger.log("LookaheadGenerated", {
-            "goal": goal.goal_text,
-            "lookahead": response[:250]  # short preview
-        })
+        self.logger.log(
+            "LookaheadGenerated",
+            {
+                "goal": goal.goal_text,
+                "lookahead": response[:250],  # short preview
+            },
+        )
 
         # Store in context
         context[self.output_key] = asdict(reflection)
@@ -67,7 +94,6 @@ class LookaheadAgent(BaseAgent):
             "rationale": rationale.group(1).strip() if rationale else None,
         }
 
-
     def extract_sections(self, text: str) -> dict:
         # Simple section splitting
         risks_match = re.search(r"# Predicted Risks\s*(.*?)(?:#|$)", text, re.DOTALL)
@@ -77,7 +103,9 @@ class LookaheadAgent(BaseAgent):
             "rationale": risks_match.group(1).strip() if risks_match else None,
             "backup_plans": [
                 line.strip("- ").strip()
-                for line in (backups_match.group(1).strip().split("\n") if backups_match else [])
+                for line in (
+                    backups_match.group(1).strip().split("\n") if backups_match else []
+                )
                 if line.strip()
-            ]
+            ],
         }

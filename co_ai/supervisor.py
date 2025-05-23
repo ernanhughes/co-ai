@@ -181,10 +181,11 @@ class Supervisor:
 
         # Add current pipeline so LookaheadAgent can reflect on it
         context["pipeline"] = [stage.name for stage in self.pipeline_stages]
+        context["agent_registry"] = OmegaConf.to_container(OmegaConf.load("config/agent_registry.yaml")["agents"])
         updated_context = await lookahead_agent.run(context)
 
         # Optional: if lookahead returned a revised pipeline
-        if "suggested_pipeline" in updated_context:
+        if "suggested_pipeline___z" in updated_context:
             suggested = updated_context["suggested_pipeline"]
             self.logger.log("PipelineUpdatedByLookahead", {
                 "original": [stage.name for stage in self.pipeline_stages],

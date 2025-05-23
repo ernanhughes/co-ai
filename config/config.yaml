@@ -4,18 +4,20 @@ defaults:
   - db: postgres
   - agents/literature
   - agents/literature_ranking
-  - agents/prompt_tuning
   - agents/generation
   - agents/refiner
+  - agents/ranking
+  - agents/debate
   - agents/review
   - agents/reflection
-  - agents/ranking
   - agents/evolution
   - agents/meta_review
   - agents/proximity
+  - agents/prompt_tuning
   - agents/sharpening
   - agents/judge
   - agents/cot_generator
+  - agents/general_reasoner
   - agents/supervisor
   - logging/json_logger
 

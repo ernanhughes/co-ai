@@ -24,6 +24,7 @@ def run(cfg: DictConfig):
         log_path = get_log_file_path(run_id, cfg)
         logger = JSONLogger(log_path=log_path)
         memory = MemoryTool(cfg=cfg.db, logger=logger)
+
         supervisor = Supervisor(cfg=cfg, memory=memory, logger=logger)
 
         # ✅ Batch Mode: input_file provided
