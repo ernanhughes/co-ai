@@ -2,15 +2,13 @@
 defaults:
   - /prompt_refiner/disabled
 
-reflection:
-  name: reflection
+symbolic_optimizer:
+  name: symbolic_optimizer
   enabled: true
-  source: database  # database or context
-  batch_size: 10
-
+  source: context  # database or context
+  batch_size: 20
   save_context: false
   skip_if_completed: false
-
   model:
     name: ollama_chat/qwen3
     api_base: http://localhost:11434
@@ -24,9 +22,9 @@ reflection:
   output_key: "reflection"
 
   save_prompt: true
-  prompt_mode: strategy
-  strategy: full_reflection  # Options: default, full_reflection, or custom
-  prompt_file:
+  prompt_mode: file
+  strategy: 
+  prompt_file: lookahead
   # A set of keys that will tune the prompts operation
   preferences:
     - goal_consistency

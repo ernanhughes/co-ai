@@ -6,7 +6,7 @@ import os
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from co_ai.constants import (NAME, PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
+from co_ai.constants import (NAME, PROMPT_DIR, PIPELINE, RUN_ID, SAVE_CONTEXT,
                              SKIP_IF_COMPLETED, STAGE)
 from co_ai.logs.json_logger import JSONLogger
 from co_ai.memory import MemoryTool
@@ -65,6 +65,7 @@ class Supervisor:
                         "goal": goal,
                         "run_id": run_id,
                         "prompt_dir": self.cfg.paths.prompts,
+                        PIPELINE: [stage.name for stage in self.pipeline_stages]
                     }
                     try:
                         await self._run_pipeline_stages(context)
@@ -78,6 +79,7 @@ class Supervisor:
 
         # Fallback to single goal execution
         context = input_data.copy()
+        context[PIPELINE] = [stage.name for stage in self.pipeline_stages]
         context[PROMPT_DIR] = self.cfg.paths.prompts
         context = await self.maybe_adjust_pipeline(context)
         return await self._run_pipeline_stages(context)
@@ -180,7 +182,7 @@ class Supervisor:
         self.logger.log("LookaheadStart", {"goal": context.get("goal", {})})
 
         # Add current pipeline so LookaheadAgent can reflect on it
-        context["pipeline"] = [stage.name for stage in self.pipeline_stages]
+        context[PIPELINE] = [stage.name for stage in self.pipeline_stages]
         context["agent_registry"] = OmegaConf.to_container(OmegaConf.load("config/agent_registry.yaml")["agents"])
         updated_context = await lookahead_agent.run(context)
 

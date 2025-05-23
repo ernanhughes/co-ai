@@ -1,5 +1,5 @@
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import GOAL, HYPOTHESES
+from co_ai.constants import GOAL, HYPOTHESES, PIPELINE
 from co_ai.models import Hypothesis
 from co_ai.parsers import extract_hypotheses
 
@@ -61,7 +61,8 @@ class RefinerAgent(BaseAgent):
                 hyp = Hypothesis(
                     goal=goal,
                     text=h,
-                    prompt=refined_prompt
+                    prompt=refined_prompt,
+                    pipeline_signature=context.get(PIPELINE)
                 )
                 self.memory.hypotheses.store(hyp)
 

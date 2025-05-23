@@ -28,7 +28,7 @@ class HypothesisScorerAgent(BaseAgent):
         return round(score, 4)
 
     async def run(self, context: dict):
-        hypotheses = context.get("hypotheses", [])
+        hypotheses = self.get_hypotheses(context)
         scored = []
 
         for hypo in hypotheses:

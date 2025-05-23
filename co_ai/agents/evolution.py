@@ -5,7 +5,7 @@ import re
 import numpy as np
 
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import EVOLVED, GOAL, HYPOTHESES, RANKING
+from co_ai.constants import EVOLVED, GOAL, HYPOTHESES, RANKING, PIPELINE
 from co_ai.models import Hypothesis
 from co_ai.tools.embedding_tool import get_embedding
 
@@ -13,13 +13,13 @@ from co_ai.tools.embedding_tool import get_embedding
 class EvolutionAgent(BaseAgent):
     """
     The Evolution Agent refines hypotheses iteratively using several strategies:
-    
+
     - Grafting similar hypotheses into unified statements
     - Feasibility improvement through LLM reasoning
     - Out-of-the-box hypothesis generation
     - Inspiration from top-ranked ideas
     - Simplification and clarity enhancement
-    
+
     These improvements are based on the paper:
     "The Evolution agent continuously refines and improves existing hypotheses..."
     """
@@ -32,7 +32,7 @@ class EvolutionAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         """
         Evolve top-ranked hypotheses individually.
-       
+
         Args:
             context: Dictionary with keys:
                 - ranked: list of (hypotheses, score) tuples
@@ -63,16 +63,20 @@ class EvolutionAgent(BaseAgent):
                 )
                 raw_output = self.call_llm(prompt, context)
                 refined_list = self.extract_hypothesis(raw_output)
-                self.logger.log("EvolvedParsedHypotheses", {
-                    "raw_response_snippet": raw_output[:300],
-                    "parsed": refined_list
-                })
+                self.logger.log(
+                    "EvolvedParsedHypotheses",
+                    {"raw_response_snippet": raw_output[:300], "parsed": refined_list},
+                )
 
                 if refined_list:
                     for r in refined_list:
                         goal = self.extract_goal_text(context.get(GOAL))
                         evolved_goal = f"Evolved from top-ranked {goal}"
-                        hyp = Hypothesis(goal=evolved_goal, text=h)
+                        hyp = Hypothesis(
+                            goal=evolved_goal,
+                            text=h,
+                            pipeline_signature=context.get(PIPELINE)
+                        )
                         self.memory.hypotheses.store(hyp)
                         evolved.append(r)
                 else:
@@ -99,7 +103,7 @@ class EvolutionAgent(BaseAgent):
         """
         Graft pairs of highly similar hypotheses into unified versions.
         """
-        hypotheses =self.get_hypotheses(context)
+        hypotheses = self.get_hypotheses(context)
         embeddings = [get_embedding(h, self.cfg) for h in hypotheses]
         used = set()
         grafted = []

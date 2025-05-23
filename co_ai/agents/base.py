@@ -137,8 +137,8 @@ class BaseAgent(ABC):
                 return hypotheses
 
             elif self.source == "database":
-                goal = extract_goal_text(context.get(GOAL))
-                hypotheses = self.get_hypotheses_from_db(goal=goal)
+                goal = context.get(GOAL)
+                hypotheses = self.get_hypotheses_from_db(goal.get("goal_text"))
                 if not hypotheses:
                     self.logger.log("NoUnReflectedInDatabase", {"agent": self.name, "goal": goal})
                 return hypotheses or []
@@ -157,8 +157,8 @@ class BaseAgent(ABC):
 
         return []
 
-    def get_hypotheses_from_db(self, goal:str):
-        return self.memory.hypotheses.get_latest(goal=goal, limit=self.batch_size)
+    def get_hypotheses_from_db(self, goal_text:str):
+        return self.memory.hypotheses.get_latest(goal_text, self.batch_size)
     
     @staticmethod
     def extract_goal_text(goal):

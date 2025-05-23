@@ -3,7 +3,7 @@ import re
 from dataclasses import asdict
 
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import GOAL, LOOKAHEAD
+from co_ai.constants import GOAL, PIPELINE
 from co_ai.models import Lookahead
 
 
@@ -16,7 +16,7 @@ class LookaheadAgent(BaseAgent):
 
         # Build context for prompt template
 
-        pipeline = context.get("pipeline", [])
+        pipeline = context.get(PIPELINE, [])
 
         agent_registry = context.get("agent_registry", {})
         # Current agents and all available agents from the registry
@@ -35,7 +35,7 @@ class LookaheadAgent(BaseAgent):
             "focus_area": goal.focus_area,
             "strategy": goal.strategy,
             "llm_suggested_strategy": goal.llm_suggested_strategy,
-            "pipeline": pipeline,
+            PIPELINE: pipeline,
             "pipeline_info": {
                 step: agent_registry.get(step, {"description": "No description"})
                 for step in pipeline
@@ -53,7 +53,7 @@ class LookaheadAgent(BaseAgent):
         model_name = self.cfg.get("model").get("name")
         extracted = self.parse_response(response)
         context.update(extracted)
-        pipeline = context.get("pipeline", [])
+        pipeline = context.get(PIPELINE, [])
         reflection = Lookahead(
             goal=goal.goal_text,
             agent_name=self.name,

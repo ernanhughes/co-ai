@@ -30,7 +30,7 @@ goal:
 
 dynamic:
   name: lookahead
-  enabled: true
+  enabled: false
   cls: co_ai.agents.lookahead.LookaheadAgent
 
 paths:
@@ -58,7 +58,10 @@ pipeline:
        cls: co_ai.agents.generation.GenerationAgent
        enabled: true
        iterations: 1
-     - name: sharpening
-       cls: co_ai.agents.sharpening.SharpeningAgent
+     - name: proximity
+       cls: co_ai.agents.proximity.ProximityAgent
        enabled: true
        iterations: 1
+    #    cls: co_ai.agents.review.ReviewAgent
+    #    enabled: true
+    #    iterations: 1

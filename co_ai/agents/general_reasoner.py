@@ -3,7 +3,7 @@ from itertools import combinations
 
 from co_ai.agents.base import BaseAgent
 from co_ai.analysis.rubric_classifier import RubricClassifierMixin
-from co_ai.constants import GOAL
+from co_ai.constants import GOAL, PIPELINE
 from co_ai.evaluator import LLMJudgeEvaluator, MRQSelfEvaluator
 from co_ai.models import Hypothesis, Score
 from co_ai.models.pattern_stat import generate_pattern_stats
@@ -125,7 +125,8 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
                 goal_type = "",
                 strategy_used=strategy,
                 features={"strategy": strategy},
-                source=self.name
+                source=self.name,
+                pipeline_signature=context.get(PIPELINE)
             )
             self.memory.hypotheses.store(hypothesis)
             hypotheses.append(hypothesis)

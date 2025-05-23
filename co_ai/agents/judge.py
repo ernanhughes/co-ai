@@ -10,7 +10,7 @@ class JudgeAgent(BaseAgent):
 
     async def run(self, context: dict) -> dict:
         goal = self.extract_goal_text(context.get(GOAL))
-        hypotheses = context.get(self.input_key, [])
+        hypotheses = self.get_hypotheses(context)
 
         self.logger.log("JudgeRunStarted", {"goal": goal[:100], "hypothesis_count": len(hypotheses)})
 

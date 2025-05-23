@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS hypotheses (
     goal TEXT NOT NULL,                 -- Research objective
     text TEXT NOT NULL,                 -- Hypothesis statement
     confidence FLOAT DEFAULT 0.0 ,      -- Confidence score (0–1 scale)
+    pipeline_signature TEXT,            -- Unique identifier for the pipeline used
     review TEXT,                        -- Structured review data
     reflection TEXT,                    -- Structured reflection data
     elo_rating FLOAT DEFAULT 750.0,    -- Tournament ranking score

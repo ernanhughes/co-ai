@@ -110,9 +110,10 @@ class HypothesesStore(BaseStore):
                     INSERT INTO hypotheses (
                         goal_id, text, confidence, review, reflection, elo_rating,
                         embedding, features, prompt_id, source_hypothesis,
-                        strategy_used, version, source, enabled, created_at, updated_at
+                        strategy_used, version, source, enabled,  pipeline_signature, 
+                        created_at, updated_at 
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         goal_id,
@@ -129,6 +130,7 @@ class HypothesesStore(BaseStore):
                         hypothesis.version,
                         hypothesis.source,
                         hypothesis.enabled,
+                        hypothesis.pipeline_signature,
                         hypothesis.created_at,
                         hypothesis.updated_at,
                     )
@@ -384,10 +386,7 @@ class HypothesesStore(BaseStore):
                     (goal, limit),
                 )
                 rows = cur.fetchall()
-            result = []
-            for text in rows:
-                result.append(text)
-            return result
+            return [row[0] for row in rows]
         except Exception as e:
             if self.logger:
                 self.logger.log("GetLatestFailed", {

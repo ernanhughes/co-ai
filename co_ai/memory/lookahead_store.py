@@ -2,6 +2,7 @@ import json
 
 from co_ai.memory.base_store import BaseStore
 from co_ai.models.lookahead import Lookahead
+from co_ai.constants import PIPELINE
 
 
 class LookaheadStore(BaseStore):
@@ -54,7 +55,7 @@ class LookaheadStore(BaseStore):
                             "goal_id": goal_id,
                             "agent": result.agent_name,
                             "model": result.model_name,
-                            "pipeline": result.input_pipeline,
+                            PIPELINE: result.input_pipeline,
                             "suggested_pipeline": result.suggested_pipeline,
                             "rationale_snippet": (result.rationale or "")[:100],
                         },
