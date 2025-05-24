@@ -11,6 +11,9 @@ from co_ai.constants import (NAME, PROMPT_DIR, PIPELINE, RUN_ID, SAVE_CONTEXT,
 from co_ai.logs.json_logger import JSONLogger
 from co_ai.memory import MemoryTool
 from co_ai.reports import ReportFormatter
+from uuid import uuid4
+from datetime import datetime
+from co_ai.models import PipelineRun  # if placed in models
 
 
 class PipelineStage:
@@ -79,8 +82,30 @@ class Supervisor:
 
         # Fallback to single goal execution
         context = input_data.copy()
-        context[PIPELINE] = [stage.name for stage in self.pipeline_stages]
-        context[PROMPT_DIR] = self.cfg.paths.prompts
+        run_id = str(uuid4())
+        pipeline_list = [stage.name for stage in self.pipeline_stages]
+
+        context = input_data.copy()
+        context.update({
+            RUN_ID: run_id,
+            PIPELINE: pipeline_list,
+            PROMPT_DIR: self.cfg.paths.prompts,
+        })
+
+        # Create and store PipelineRun
+        pipeline_run = PipelineRun(
+            run_id=run_id,
+            goal_id=self.memory.goal.get_or_create(context["goal"]).id,  # assumes .get_or_create returns goal with id
+            pipeline=str(pipeline_list),
+            strategy=context.get("strategy"),
+            # model_name=self.cfg.model.name,
+            run_config=OmegaConf.to_container(self.cfg),
+            created_at=datetime.utcnow(),
+        )
+
+        self.memory.pipeline_runs.insert(pipeline_run)
+
+        # Now allow lookahead or other steps to adjust context
         context = await self.maybe_adjust_pipeline(context)
         return await self._run_pipeline_stages(context)
 
@@ -187,7 +212,7 @@ class Supervisor:
         updated_context = await lookahead_agent.run(context)
 
         # Optional: if lookahead returned a revised pipeline
-        if "suggested_pipeline___z" in updated_context:
+        if "suggested_pipeline" in updated_context:
             suggested = updated_context["suggested_pipeline"]
             self.logger.log("PipelineUpdatedByLookahead", {
                 "original": [stage.name for stage in self.pipeline_stages],
@@ -196,3 +221,46 @@ class Supervisor:
             self.pipeline_stages = self._parse_pipeline_stages_from_list(suggested)
 
         return updated_context
+
+
+    async def rerun_pipeline(self, run_id: str) -> dict:
+        """
+        Re-run a previously stored pipeline run by its run_id.
+        """
+        self.logger.log("PipelineRerunStart", {"run_id": run_id})
+
+        # Step 1: Load pipeline run
+        pipeline_run = self.memory.pipeline_runs.get_by_run_id(run_id)
+        if not pipeline_run:
+            raise ValueError(f"No pipeline run found with run_id={run_id}")
+
+        # Step 2: Load goal object
+        goal = self.memory.goal.get_by_id(pipeline_run.goal_id)
+        if not goal:
+            raise ValueError(f"No goal found with goal_id={pipeline_run.goal_id}")
+
+        # Step 3: Build context
+        context = {
+            "goal": goal,
+            RUN_ID: run_id,
+            PIPELINE: pipeline_run.pipeline,
+            "strategy": pipeline_run.strategy,
+            "model_config": pipeline_run.run_config,
+            PROMPT_DIR: self.cfg.paths.prompts,
+        }
+
+        # Optional: override pipeline stages to match recorded run
+        self.pipeline_stages = self._parse_pipeline_stages_from_list(pipeline_run.pipeline)
+
+        # Optional: reapply lookahead suggestion or symbolic context (or skip it for pure repeatability)
+        # context["lookahead"] = pipeline_run.lookahead_context
+        # context["symbolic_suggestion"] = pipeline_run.symbolic_suggestion
+
+        # Step 4: Run
+        context = await self._run_pipeline_stages(context)
+
+        # Step 5: Generate report (optional)
+        self.generate_report(context, run_id)
+
+        self.logger.log("PipelineRerunComplete", {"run_id": run_id})
+        return context

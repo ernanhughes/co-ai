@@ -309,3 +309,17 @@ CREATE TABLE IF NOT EXISTS lookaheads (
     run_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE pipeline_runs (
+    id SERIAL PRIMARY KEY,
+    goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
+    run_id TEXT UNIQUE NOT NULL, -- UUID or generated string
+    pipeline TEXT NOT NULL, -- list of agent names
+    strategy TEXT,
+    model_name TEXT,
+    run_config JSONB,
+    lookahead_context JSONB,
+    symbolic_suggestion JSONB,
+    metadata JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

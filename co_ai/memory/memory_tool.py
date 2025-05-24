@@ -8,6 +8,7 @@ from co_ai.memory.goal_store import GoalStore
 from co_ai.memory.prompt_store import PromptStore
 from co_ai.memory.report_logger import ReportLogger
 from co_ai.memory.score_store import ScoreStore
+from co_ai.memory.pipeline_run_store import PipelineRunStore
 
 from co_ai.memory.lookahead_store import LookaheadStore
 from co_ai.memory.mrq_store import MRQStore
@@ -40,6 +41,7 @@ class MemoryTool:
         self.register_store(MRQStore(self.db, cfg.mrq, self.get("embedding"), logger))
         self.register_store(LookaheadStore(self.db, logger))
         self.register_store(ScoreStore(self.db, logger))
+        self.register_store(PipelineRunStore(self.db, logger))
 
         # Register extra pluggable stores
         if cfg.get("extra_stores"):
