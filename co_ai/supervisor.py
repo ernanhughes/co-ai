@@ -277,3 +277,10 @@ class Supervisor:
 
         self.logger.log("PipelineRerunComplete", {"run_id": run_id})
         return context
+
+
+    def analyze_pipeline_deltas(self, goal_id: int):
+        from co_ai.analysis.reflection_delta import compare_pipeline_runs
+        deltas = compare_pipeline_runs(self.memory, goal_id)
+        for delta in deltas:
+            self.logger.log("ReflectionDeltaComputed", delta)

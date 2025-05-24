@@ -115,6 +115,7 @@ EVENT_ICONS = {
     "RawMetaReviewOutput": "📜",
     "RefinedSkipped": "⏭️",
     "RefinedUpdated": "🔄",
+    "ScoreStored": "💾",
     "GeneralReasoningJudgement": "⚖️",
     "BatchProcessingStart": "📥",
     "RefinerEvaluationPromptGenerated": "💬",
