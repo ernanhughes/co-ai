@@ -162,4 +162,7 @@ EVENT_ICONS = {
     # Reporting
     # ────────────────────────────────────────────
     "ReportGenerated": "📊",
+    "GoalFetchedByText": "📄🔍",
+    "GoalExists": "✔️📌",
+    "PipelineRunInserted": "🧱🚀",
 }

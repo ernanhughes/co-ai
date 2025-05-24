@@ -1,3 +1,4 @@
+import json
 from typing import Optional, List, Dict
 from datetime import datetime
 from co_ai.models.score import Score
@@ -7,82 +8,68 @@ from co_ai.memory.base_store import BaseStore
 class ScoreStore(BaseStore):
     def __init__(self, db, logger=None):
         super().__init__(db, logger)
-        self.name = "score"
+        self.name = "scores"
         self.table_name = "scores"
 
     def __repr__(self):
         return f"<{self.name} connected={self.db is not None}>"
 
     def name(self) -> str:
-        return "score"
+        return "scores"
 
-    def insert_score(self, score_data: dict):
+    def insert(self, score: Score):
         """
-        Inserts a new score into the scores table.
-        
-        :param score_data: Dictionary containing keys matching the table fields.
+        Inserts a Score record into the database, resolving goal_id and hypothesis_id.
         """
-        query = """
-            INSERT INTO scores (
-                goal_id,
-                hypothesis_id,
-                agent_name,
-                model_name,
-                evaluator_name,
-                score_type,
-                score,
-                score_text,
-                strategy,
-                reasoning_strategy,
-                rationale,
-                reflection,
-                review,
-                meta_review,
-                run_id,
-                metadata,
-                created_at
-            ) VALUES (
-                %(goal_id)s,
-                %(hypothesis_id)s,
-                %(agent_name)s,
-                %(model_name)s,
-                %(evaluator_name)s,
-                %(score_type)s,
-                %(score)s,
-                %(score_text)s,
-                %(strategy)s,
-                %(reasoning_strategy)s,
-                %(rationale)s,
-                %(reflection)s,
-                %(review)s,
-                %(meta_review)s,
-                %(run_id)s,
-                %(metadata)s,
-                %(created_at)s
-            )
-            RETURNING id;
-        """
-
         try:
             with self.db.cursor() as cur:
-                cur.execute(query, score_data)
-                score_id = cur.fetchone()[0]
-                self.db.commit()
-                if self.logger:
-                    self.logger.log("ScoreInserted", {
-                        "score_id": score_id,
-                        "goal_id": score_data.get("goal_id"),
-                        "hypothesis_id": score_data.get("hypothesis_id"),
-                        "score": score_data.get("score"),
-                        "score_type": score_data.get("score_type"),
-                        "evaluator": score_data.get("evaluator_name")
-                    })
-                return score_id
+                # Look up goal_id
+                cur.execute("SELECT id FROM goals WHERE goal_text = %s LIMIT 1", (score.goal,))
+                goal_row = cur.fetchone()
+                if not goal_row:
+                    raise ValueError(f"Goal not found: {score.goal}")
+                goal_id = goal_row[0]
+
+                # Look up hypothesis_id
+                cur.execute("SELECT id FROM hypotheses WHERE text = %s LIMIT 1", (score.hypothesis,))
+                hyp_row = cur.fetchone()
+                if not hyp_row:
+                    raise ValueError(f"Hypothesis not found: {score.hypothesis}")
+                hypothesis_id = hyp_row[0]
+
+                # Insert score
+                cur.execute("""
+                    INSERT INTO scores (
+                        goal_id, hypothesis_id, agent_name, model_name, evaluator_name,
+                        score_type, score, score_text, strategy, reasoning_strategy,
+                        rationale, reflection, review, meta_review, run_id, metadata
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    goal_id,
+                    hypothesis_id,
+                    score.agent_name,
+                    score.model_name,
+                    score.evaluator_name,
+                    score.score_type,
+                    score.score,
+                    score.score_text,
+                    score.strategy,
+                    score.reasoning_strategy,
+                    score.rationale,
+                    score.reflection,
+                    score.review,
+                    score.meta_review,
+                    score.run_id,
+                    json.dumps(score.metadata) or {}
+                ))
         except Exception as e:
-            self.db.rollback()
+            print(f"❌ Exception: {type(e).__name__}: {e}")
             if self.logger:
-                self.logger.log("ScoreInsertFailed", {"error": str(e)})
-            raise
+                self.logger.log(
+                    "StoreScoreFailed",
+                    {**score, **{"error": str(e)}}
+                )
 
     def get_by_goal_id(self, goal_id: int) -> List[Dict]:
         """

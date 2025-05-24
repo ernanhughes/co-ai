@@ -153,7 +153,20 @@ class Supervisor:
 
             self.save_context(stage_dict, context)
             self.logger.log("PipelineStageEnd", {STAGE: stage.name})
-            self.logger.log("ContextAfterStage", {STAGE: stage.name, "context_keys": list(context.keys())})
+            self.logger.log(
+                "ContextAfterStage",
+                {STAGE: stage.name, "context_keys": list(context.keys())},
+            )
+
+            # After final stage
+            if self.cfg.get("post_judgment", {}).get("enabled", True):
+                judge_cfg = OmegaConf.to_container(
+                    self.cfg.post_judgment, resolve=True
+                )
+                stage_dict =  OmegaConf.to_container(self.cfg.agents.pipeline_judge, resolve=True)
+                judge_cls = hydra.utils.get_class(judge_cfg["cls"])
+                judge_agent = judge_cls(cfg=stage_dict, memory=self.memory, logger=self.logger)
+                context = await judge_agent.run(context)
 
         return context
 

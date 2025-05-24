@@ -19,6 +19,7 @@ defaults:
   - agents/symbolic_optimizer
   - agents/cot_generator
   - agents/cot_dspy_generator
+  - agents/pipeline_judge
   - agents/supervisor
   - logging/json_logger
 
@@ -32,6 +33,12 @@ dynamic:
   name: lookahead
   enabled: false
   cls: co_ai.agents.lookahead.LookaheadAgent
+
+post_judgment:
+  name: pipeline_judge
+  enabled: true
+  cls: co_ai.agents.pipeline_judge.PipelineJudgeAgent
+
 
 paths:
   prompts: ${hydra:runtime.cwd}/prompts
