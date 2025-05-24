@@ -95,7 +95,7 @@ class Supervisor:
         # Create and store PipelineRun
         pipeline_run = PipelineRun(
             run_id=run_id,
-            goal_id=self.memory.goal.get_or_create(context["goal"]).id,  # assumes .get_or_create returns goal with id
+            goal_id=self.memory.goals.get_or_create(context["goal"]).id,  # assumes .get_or_create returns goal with id
             pipeline=str(pipeline_list),
             strategy=context.get("strategy"),
             # model_name=self.cfg.model.name,
@@ -159,7 +159,7 @@ class Supervisor:
             )
 
             # After final stage
-            if self.cfg.get("post_judgment", {}).get("enabled", True):
+            if self.cfg.get("post_judgment", {}).get("enabled", False):
                 judge_cfg = OmegaConf.to_container(
                     self.cfg.post_judgment, resolve=True
                 )
@@ -248,7 +248,7 @@ class Supervisor:
             raise ValueError(f"No pipeline run found with run_id={run_id}")
 
         # Step 2: Load goal object
-        goal = self.memory.goal.get_by_id(pipeline_run.goal_id)
+        goal = self.memory.goals.get_by_id(pipeline_run.goal_id)
         if not goal:
             raise ValueError(f"No goal found with goal_id={pipeline_run.goal_id}")
 

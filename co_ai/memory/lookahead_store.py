@@ -79,15 +79,15 @@ class LookaheadStore(BaseStore):
 
     def _row_to_result(self, row) -> Lookahead:
         return Lookahead(
-            goal=row[0],
-            agent_name=row[1],
-            model_name=row[2],
-            input_pipeline=row[3],
-            suggested_pipeline=row[4],
-            rationale=row[5],
-            reflection=row[6],
-            backup_plans=row[7],
-            metadata=row[8],
-            run_id=row[9],
-            created_at=row[10],
+            goal=row["goal_id"],
+            agent_name=row["agent_name"],
+            model_name=row["model_name"],
+            input_pipeline=row["input_pipeline"],
+            suggested_pipeline=row["suggested_pipeline"],
+            rationale=row["rationale"],
+            reflection=row["reflection"],
+            backup_plans=row["backup_plans"],
+            metadata=row["metadata"],
+            run_id=row["run_id"],
+            created_at=row["created_at"],
         )

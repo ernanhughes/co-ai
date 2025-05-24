@@ -8,13 +8,13 @@ class GoalStore(BaseStore):
     def __init__(self, db, logger=None):
         super().__init__(db, logger)
         self.table_name = "goals"
-        self.name = "goal"
+        self.name = "goals"
 
     def __repr__(self):
         return f"<{self.name} connected={self.db is not None}>"
 
     def name(self) -> str:
-        return "goal"
+        return "goals"
 
 
     def get_by_id(self, goal_id: int) -> Optional[Goal]:
@@ -130,12 +130,12 @@ class GoalStore(BaseStore):
 
     def _row_to_goal(self, row) -> Goal:
         return Goal(
-            id=row[0],
-            goal_text=row[1],
-            goal_type=row[2],
-            focus_area=row[3],
-            strategy=row[4],
-            llm_suggested_strategy=row[5],
-            source=row[6],
-            created_at=row[7],
+            id=row["id"],
+            goal_text=row["goal_text"],
+            goal_type=row["goal_type"],
+            focus_area=row["focus_area"],
+            strategy=row["strategy"],
+            llm_suggested_strategy=row["llm_suggested_strategy"],
+            source=row["source"],
+            created_at=row["created_at"],
         )

@@ -63,7 +63,7 @@ class ChainOfThoughtGeneratorAgent(BaseAgent, RubricClassifierMixin):
             prompt=prompt,
             pipeline_signature=context.get(PIPELINE),
         )
-        self.memory.hypotheses.store(hyp)
+        self.memory.hypotheses.insert(hyp)
         self.logger.log("HypothesisStored", {"text": best[:100], "confidence": score})
 
         self.classify_and_store_patterns(

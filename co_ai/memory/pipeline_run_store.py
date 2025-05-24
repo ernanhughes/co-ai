@@ -55,7 +55,7 @@ class PipelineRunStore(BaseStore):
                 cur.execute(query, {
                     "run_id": run.run_id,
                     "goal_id": run.goal_id,
-                    "pipeline": run.pipeline,
+                    "pipeline": json.dumps(run.pipeline) or {},
                     "strategy": run.strategy,
                     "model_name": run.model_name,
                     "run_config": json.dumps(run.run_config) or {},
@@ -96,7 +96,7 @@ class PipelineRunStore(BaseStore):
 
         return self._fetch_one(query, (run_id,))
 
-    def get_by_goal_id(self, goal_id: int) -> List[PipelineRun]:
+    def get_by_goal_id(self, goal_id: int) -> list[PipelineRun]:
         """
         Fetches all pipeline runs associated with a given goal.
 
@@ -106,7 +106,7 @@ class PipelineRunStore(BaseStore):
         query = "SELECT * FROM pipeline_runs WHERE goal_id = %s ORDER BY created_at DESC"
         return self._fetch_all(query, (goal_id,))
 
-    def get_all(self, limit: int = 100) -> List[PipelineRun]:
+    def get_all(self, limit: int = 100) -> list[PipelineRun]:
         """
         Returns the most recent pipeline runs up to a limit.
 
@@ -116,7 +116,7 @@ class PipelineRunStore(BaseStore):
         query = f"SELECT * FROM pipeline_runs ORDER BY created_at DESC LIMIT {limit}"
         return self._fetch_all(query)
 
-    def find(self, filters: dict) -> List[PipelineRun]:
+    def find(self, filters: dict) -> list[PipelineRun]:
         """
         Generic search method for pipeline runs.
 
@@ -163,7 +163,7 @@ class PipelineRunStore(BaseStore):
                 self.logger.log("PipelineRunFetchFailed", {"error": str(e)})
             return None
 
-    def _fetch_all(self, query: str, params=None) -> List[PipelineRun]:
+    def _fetch_all(self, query: str, params=None) -> list[PipelineRun]:
         """
         Helper to fetch multiple results and convert them to PipelineRun objects.
         """

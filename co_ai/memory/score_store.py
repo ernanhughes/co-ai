@@ -78,35 +78,42 @@ class ScoreStore(BaseStore):
         query = "SELECT * FROM scores WHERE goal_id = %s ORDER BY created_at DESC"
         return self._execute_and_fetch(query, (goal_id,))
 
-    def get_by_hypothesis_id(self, hypothesis_id: int) -> List[Dict]:
+    def get_by_run_id(self, run_id: str) -> list[Dict]:
+        """
+        Returns all scores associated with a specific goal.
+        """
+        query = "SELECT * FROM scores WHERE run_id = %s ORDER BY created_at DESC"
+        return self._execute_and_fetch(query, (run_id,))
+
+    def get_by_hypothesis_id(self, hypothesis_id: int) -> list[Dict]:
         """
         Returns all scores associated with a specific hypothesis.
         """
         query = "SELECT * FROM scores WHERE hypothesis_id = %s ORDER BY created_at DESC"
         return self._execute_and_fetch(query, (hypothesis_id,))
 
-    def get_by_evaluator(self, evaluator_name: str) -> List[Dict]:
+    def get_by_evaluator(self, evaluator_name: str) -> list[Dict]:
         """
         Returns all scores produced by a specific evaluator (e.g., 'llm', 'mrq').
         """
         query = "SELECT * FROM scores WHERE evaluator_name = %s ORDER BY created_at DESC"
         return self._execute_and_fetch(query, (evaluator_name,))
 
-    def get_by_strategy(self, strategy: str) -> List[Dict]:
+    def get_by_strategy(self, strategy: str) -> list[Dict]:
         """
         Returns all scores generated using a specific reasoning strategy.
         """
         query = "SELECT * FROM scores WHERE strategy = %s ORDER BY created_at DESC"
         return self._execute_and_fetch(query, (strategy,))
 
-    def get_all(self, limit: int = 100) -> List[Dict]:
+    def get_all(self, limit: int = 100) -> list[Dict]:
         """
         Returns the most recent scores up to a limit.
         """
         query = f"SELECT * FROM scores ORDER BY created_at DESC LIMIT {limit}"
         return self._execute_and_fetch(query)
 
-    def _execute_and_fetch(self, query: str, params: tuple = None) -> List[Dict]:
+    def _execute_and_fetch(self, query: str, params: tuple = None) -> list[Dict]:
         """
         Helper method to execute a query and fetch results as list of dicts.
         """

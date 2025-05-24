@@ -97,7 +97,7 @@ class HypothesesStore(BaseStore):
 
 
 
-    def store(self, hypothesis: Hypothesis, prompt_text: Optional[str] = None):
+    def insert(self, hypothesis: Hypothesis, prompt_text: Optional[str] = None):
         try:
             # Resolve prompt and goal
             embedding = self.embeddings.get_or_create(hypothesis.text)

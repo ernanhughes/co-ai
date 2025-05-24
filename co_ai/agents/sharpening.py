@@ -150,7 +150,7 @@ class SharpeningAgent(BaseAgent):
                 pipeline_signature=entry.get(PIPELINE)
                 )
             # Save new hypothesis for that prompt
-            self.memory.hypotheses.store(hyp)
+            self.memory.hypotheses.insert(hyp)
 
             self.logger.log(
                 "SharpenedHypothesisSaved",

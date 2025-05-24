@@ -77,7 +77,7 @@ class EvolutionAgent(BaseAgent):
                             text=h,
                             pipeline_signature=context.get(PIPELINE)
                         )
-                        self.memory.hypotheses.store(hyp)
+                        self.memory.hypotheses.insert(hyp)
                         evolved.append(r)
                 else:
                     self.logger.log(

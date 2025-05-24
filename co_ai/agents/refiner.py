@@ -64,7 +64,7 @@ class RefinerAgent(BaseAgent):
                     prompt=refined_prompt,
                     pipeline_signature=context.get(PIPELINE)
                 )
-                self.memory.hypotheses.store(hyp)
+                self.memory.hypotheses.insert(hyp)
 
             info = {
                 "original_response": original_response,

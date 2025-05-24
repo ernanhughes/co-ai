@@ -44,6 +44,8 @@ def compute_pipeline_delta(run_a, run_b, scores_a, scores_b):
         "score_a": score_a,
         "score_b": score_b,
         "score_delta": round(score_b - score_a, 4) if score_a is not None and score_b is not None else None,
+        "pipeline_a": run_a.pipeline,
+        "pipeline_b": run_b.pipeline,
         "pipeline_diff": list_diff(run_a.pipeline, run_b.pipeline),
         "strategy_diff": run_b.strategy != run_a.strategy,
         "model_diff": run_b.model_name != run_a.model_name,

@@ -7,19 +7,23 @@ defaults:
   - agents/prompt_tuning
   - agents/generation
   - agents/refiner
+  - agents/ranking
+  - agents/debate
   - agents/review
   - agents/reflection
-  - agents/ranking
   - agents/evolution
   - agents/meta_review
   - agents/proximity
   - agents/sharpening
   - agents/judge
   - agents/lookahead
+  - agents/reflection_delta
   - agents/symbolic_optimizer
   - agents/cot_generator
+  - agents/general_reasoner
   - agents/cot_dspy_generator
   - agents/pipeline_judge
+  - agents/mrq_strategy
   - agents/supervisor
   - logging/json_logger
 
@@ -69,6 +73,11 @@ pipeline:
        cls: co_ai.agents.proximity.ProximityAgent
        enabled: true
        iterations: 1
-    #    cls: co_ai.agents.review.ReviewAgent
-    #    enabled: true
-    #    iterations: 1
+     - name: reflection_delta
+       cls: co_ai.agents.reflection_delta.ReflectionDeltaAgent
+       enabled: true
+       iterations: 1
+     - name: mrq_strategy
+       cls: co_ai.agents.mrq_strategy.MRQStrategyAgent
+       enabled: true
+       iterations: 1

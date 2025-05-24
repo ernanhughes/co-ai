@@ -79,7 +79,7 @@ class ChainOfThoughtDSPyGeneratorAgent(BaseAgent):
             prompt=goal_text,
             pipeline_signature=context.get(PIPELINE),
         )
-        self.memory.hypotheses.store(hyp)
+        self.memory.hypotheses.insert(hyp)
 
         context[self.output_key] = [cot]
         return context

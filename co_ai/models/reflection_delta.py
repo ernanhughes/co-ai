@@ -11,6 +11,8 @@ class ReflectionDelta:
     score_a: Optional[float] = None
     score_b: Optional[float] = None
     score_delta: Optional[float] = None
+    pipeline_a: Optional[Dict] = None
+    pipeline_b: Optional[Dict] = None
     pipeline_diff: Optional[Dict] = None  # {"only_in_a": [...], "only_in_b": [...]}
     strategy_diff: Optional[bool] = False
     model_diff: Optional[bool] = False

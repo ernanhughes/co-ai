@@ -40,7 +40,7 @@ class GenerationAgent(BaseAgent):
                 prompt=prompt,
                 pipeline_signature=context.get(PIPELINE),
             )
-            self.memory.hypotheses.store(hyp)
+            self.memory.hypotheses.insert(hyp)
 
         # Update context with new hypotheses
         context[self.output_key] = hypotheses

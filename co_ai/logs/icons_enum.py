@@ -165,5 +165,7 @@ EVENT_ICONS = {
     "ReportGenerated": "📊",
     "GoalFetchedByText": "📄🔍",
     "GoalExists": "✔️📌",
+    "ReflectionDeltaInserted": "🧩📈",
+    "ReflectionDeltaLogged": "🔁📝OK ",
     "PipelineRunInserted": "🧱🚀",
 }
