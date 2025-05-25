@@ -48,11 +48,14 @@ class BaseAgent(ABC):
         required_keys = [NAME, API_BASE]
         for key in required_keys:
             if key not in self.model_config:
-                raise ValueError(f"Missing required LLM config key: {key}")
+                self.logger.log(
+                    "MissingLLMConfig",
+                    {"agent": self.name, "missing_key": key}
+                )   
         return {
-            NAME: self.model_config[NAME],
-            API_BASE: self.model_config[API_BASE],
-            API_KEY: self.model_config.get(API_KEY),
+            NAME: self.cfg.get("model_config", {}).get(NAME),
+            API_BASE: self.cfg.get("model_config", {}).get(API_BASE),
+            API_KEY: self.cfg.get("model_config", {}).get(API_KEY),
         }
 
     def call_llm(self, prompt: str, context: dict, llm_cfg: dict = None) -> str:

@@ -5,18 +5,19 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto; -- text hashing
 -- Stores all generated hypotheses and their evaluations
 CREATE TABLE IF NOT EXISTS hypotheses (
     id SERIAL PRIMARY KEY,
+    goal_id INT REFERENCES goals(id), -- Prompt used to generate this hypothesis
+    prompt_id INT REFERENCES prompts(id), -- Prompt used to generate this hypothesis
     goal TEXT NOT NULL,                 -- Research objective
     text TEXT NOT NULL,                 -- Hypothesis statement
+    strategy TEXT,                      -- e.g., goal_aligned, out_of_the_box
     confidence FLOAT DEFAULT 0.0 ,      -- Confidence score (0–1 scale)
-    pipeline_signature TEXT,            -- Unique identifier for the pipeline used
     review TEXT,                        -- Structured review data
     reflection TEXT,                    -- Structured reflection data
     elo_rating FLOAT DEFAULT 750.0,    -- Tournament ranking score
     embedding VECTOR(1024),             -- Vector representation of hypothesis
     features JSONB,                     -- Mechanism, rationale, experiment plan
-    prompt_id INT REFERENCES prompts(id), -- Prompt used to generate this hypothesis
+    pipeline_signature TEXT,            -- Unique identifier for the pipeline used
     source_hypothesis INT REFERENCES hypotheses(id), -- If derived from another
-    strategy_used TEXT,                 -- e.g., goal_aligned, out_of_the_box
     version INT DEFAULT 1,              -- Evolve count
     source TEXT,                        -- e.g., manual, refinement, grafting
     enabled BOOLEAN DEFAULT TRUE,       -- Soft delete flag

@@ -50,12 +50,12 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
 
             s_a = Score.build(goal, hyp_a.text, self.cfg)
             s_a.set_score(score["score_a"])
-            s_a.reasoning_strategy = hyp_a.strategy_used
+            s_a.reasoning_strategy = hyp_a.strategy
             self.memory.scores.insert(s_a)
 
             s_b = Score.build(goal, hyp_b.text, self.cfg)
             s_b.set_score(score["score_b"])
-            s_b.reasoning_strategy = hyp_b.strategy_used
+            s_b.reasoning_strategy = hyp_b.strategy
             self.memory.scores.insert(s_b)
 
             evaluations.append(score)
@@ -123,7 +123,7 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
                 text=response,
                 goal=self.extract_goal_text(context.get(GOAL)),
                 goal_type = "",
-                strategy_used=strategy,
+                strategy=strategy,
                 features={"strategy": strategy},
                 source=self.name,
                 pipeline_signature=context.get(PIPELINE)

@@ -2,32 +2,30 @@
 defaults:
   - _self_
   - db: postgres
-  - agents/cot_dspy_generator
-  - agents/cot_generator
-  - agents/debate
-  - agents/dots_planner
-  - agents/evolution
-  - agents/general_reasoner
-  - agents/generation
-  - agents/generic
-  - agents/judge
   - agents/literature
   - agents/literature_ranking
-  - agents/lookahead
-  - agents/meta_review
-  - agents/mrq_strategy
-  - agents/pipeline_judge
   - agents/prompt_tuning
-  - agents/proximity
-  - agents/ranking
+  - agents/generation
   - agents/refiner
-  - agents/reflection
-  - agents/reflection_delta
+  - agents/ranking
+  - agents/debate
   - agents/review
-  - agents/scorer
+  - agents/reflection
+  - agents/evolution
+  - agents/meta_review
+  - agents/proximity
   - agents/sharpening
-  # - agents/strategy_selector
+  - agents/judge
+  - agents/lookahead
+  - agents/reflection_delta
   - agents/symbolic_optimizer
+  - agents/cot_generator
+  - agents/general_reasoner
+  - agents/cot_dspy_generator
+  - agents/pipeline_judge
+  - agents/mrq_strategy
+  - agents/supervisor
+  - agents/survey
   - logging/json_logger
 
 # The goal of the pipeline, e.g., "Generate a hypothesis about the impact of climate change on biodiversity."
@@ -68,19 +66,7 @@ pipeline:
   name: default_pipeline
   description: "Default hypothesis generation and refinement pipeline"
   stages:
-    #  - name: generation
-    #    cls: co_ai.agents.generation.GenerationAgent
-    #    enabled: true
-    #    iterations: 1
-    #  - name: proximity
-    #    cls: co_ai.agents.proximity.ProximityAgent
-    #    enabled: true
-    #    iterations: 1
-    #  - name: reflection_delta
-    #    cls: co_ai.agents.reflection_delta.ReflectionDeltaAgent
-    #    enabled: true
-    #    iterations: 1
-     - name: scorer
-       cls: co_ai.agents.scorer.ScorerAgent
-       enabled: true
-       iterations: 1
+    - name: survey
+      cls: co_ai.agents.survey.SurveyAgent
+      enabled: true
+      iterations: 1

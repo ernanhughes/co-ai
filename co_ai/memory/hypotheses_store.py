@@ -110,7 +110,7 @@ class HypothesesStore(BaseStore):
                     INSERT INTO hypotheses (
                         goal_id, text, confidence, review, reflection, elo_rating,
                         embedding, features, prompt_id, source_hypothesis,
-                        strategy_used, version, source, enabled,  pipeline_signature, 
+                        strategy, version, source, enabled,  pipeline_signature, 
                         created_at, updated_at 
                     )
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -126,7 +126,7 @@ class HypothesesStore(BaseStore):
                         Json(hypothesis.features),
                         prompt_id,
                         hypothesis.source_hypothesis,
-                        hypothesis.strategy_used,
+                        hypothesis.strategy,
                         hypothesis.version,
                         hypothesis.source,
                         hypothesis.enabled,

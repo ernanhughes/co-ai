@@ -1,14 +1,14 @@
 from co_ai.agents import BaseAgent
-from co_ai.logs.icons_enum import get_event_icon
 
 
-class HypothesisScorerAgent(BaseAgent):
+class ScorerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.weight_proximity = cfg.get("weight_proximity", 0.4)
         self.weight_review = cfg.get("weight_review", 0.3)
         self.weight_llm_judge = cfg.get("weight_llm_judge", 0.2)
         self.weight_elo = cfg.get("weight_elo", 0.1)
+        print(f"ScorerAgent initialized with weights: {self.weight_proximity}, {self.weight_review}, {self.weight_llm_judge}, {self.weight_elo}")
 
     def score(self, hypothesis: dict, context: dict) -> float:
         # Extract features (assumes values already normalized 0–1)

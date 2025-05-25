@@ -18,7 +18,7 @@ class Hypothesis:
     embedding: Optional[list] = field(default_factory=list)  # Expecting a 1024-dim vector
     features: Optional[dict[str, any]] = field(default_factory=dict)
     source_hypothesis: Optional[int] = None
-    strategy_used: Optional[str] = None
+    strategy: Optional[str] = None
     version: int = 1
     source: Optional[str] = None
     enabled: bool = True
