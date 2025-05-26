@@ -3,7 +3,7 @@ from co_ai.analysis.rubric_classifier import RubricClassifierMixin
 from co_ai.constants import GOAL, PIPELINE
 from co_ai.evaluator.llm_judge_evaluator import LLMJudgeEvaluator
 from co_ai.evaluator.mrq_self_evaluator import MRQSelfEvaluator
-from co_ai.models import Hypothesis
+from co_ai.models import HypothesisORM
 
 
 class ChainOfThoughtGeneratorAgent(BaseAgent, RubricClassifierMixin):
@@ -15,12 +15,11 @@ class ChainOfThoughtGeneratorAgent(BaseAgent, RubricClassifierMixin):
 
     async def run(self, context: dict):
         goal = context.get(GOAL)
-        goal_text = goal.get("goal_text", goal)
-        self.logger.log("AgentRunStarted", {"goal": goal_text})
+        self.logger.log("AgentRunStarted", {"goal": goal})
 
         if isinstance(self.evaluator, MRQSelfEvaluator):
             self.logger.log("MRQTraining", {"type": "MRQ"})
-            self.evaluator.train_from_database(goal=goal_text, cfg=self.cfg)
+            self.evaluator.train_from_database(goal=goal.goal_text, cfg=self.cfg)
 
         prompt = self.prompt_loader.load_prompt(self.cfg, context)
         self.logger.log("PromptGenerated", {"prompt": prompt[:200]})
@@ -40,7 +39,7 @@ class ChainOfThoughtGeneratorAgent(BaseAgent, RubricClassifierMixin):
         for candidate in candidates[1:]:
             best, scores = self.evaluator.judge(
                 prompt=prompt,
-                goal=goal_text,
+                goal=goal,
                 output_a=best,
                 output_b=candidate,
             )
@@ -55,12 +54,13 @@ class ChainOfThoughtGeneratorAgent(BaseAgent, RubricClassifierMixin):
             "best_output": best,
             "candidates": candidates,
         }
-        hyp = Hypothesis(
-            goal=goal_text,
+
+        hyp = HypothesisORM(
+            goal_id=self.get_goal_id(goal),
             text=best,
             confidence=score,
             features=features,
-            prompt=prompt,
+            prompt_id=self.get_prompt_id(prompt),
             pipeline_signature=context.get(PIPELINE),
         )
         self.memory.hypotheses.insert(hyp)

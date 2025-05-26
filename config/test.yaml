@@ -44,7 +44,7 @@ goal:
 
 planner:
   name: planner
-  enabled: true
+  enabled: false
   cls: co_ai.agents.planner.PipelinePlannerAgent
   dots_enabled: true
   lookahead_enabled: true
@@ -52,7 +52,7 @@ planner:
 
 post_judgment:
   name: pipeline_judge
-  enabled: true
+  enabled: false
   cls: co_ai.agents.pipeline_judge.PipelineJudgeAgent
 
 
@@ -77,6 +77,10 @@ pipeline:
   name: default_pipeline
   description: "Default hypothesis generation and refinement pipeline"
   stages:
+    - name: cot_generator
+      cls: co_ai.agents.cot_generator.ChainOfThoughtGeneratorAgent
+      enabled: true
+      iterations: 1
     #  - name: generation
     #    cls: co_ai.agents.generation.GenerationAgent
     #    enabled: true
@@ -85,11 +89,15 @@ pipeline:
     #    cls: co_ai.agents.proximity.ProximityAgent
     #    enabled: true
     #    iterations: 1
-     - name: review
-       cls: co_ai.agents.review.ReviewAgent
-       enabled: true
-       iterations: 1
-     - name: scorer
-       cls: co_ai.agents.scorer.ScorerAgent
-       enabled: true
-       iterations: 1
+    #  - name: review
+    #    cls: co_ai.agents.review.ReviewAgent
+    #    enabled: true
+    #    iterations: 1
+    #  - name: review
+    #    cls: co_ai.agents.review.ReviewAgent
+    #    enabled: true
+    #    iterations: 1
+    #  - name: scorer
+    #    cls: co_ai.agents.scorer.ScorerAgent
+    #    enabled: true
+    #    iterations: 1

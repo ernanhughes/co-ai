@@ -1,7 +1,7 @@
 import re
 
 from co_ai.agents.base import BaseAgent
-from co_ai.models import Score
+from co_ai.models import ScoreORM
 from co_ai.constants import PIPELINE, RUN_ID
 from dataclasses import asdict
 
@@ -17,6 +17,9 @@ class PipelineJudgeAgent(BaseAgent):
         if hypotheses:
             # top_hypo = max(hypotheses, key=lambda h: h.get("composite_score", 0))
             top_hypo = hypotheses[0]
+        else:
+            self.logger.log("JudgementSkipped", {"Error": "Non hypotheses found"})
+            return context
 
         reflection = context.get("lookahead", {}).get("reflection", "")
 
@@ -43,7 +46,7 @@ class PipelineJudgeAgent(BaseAgent):
         )
 
         # Store
-        score_obj = Score(
+        score_obj = ScoreORM(
             goal=prompt_context["goal"],
             hypothesis=prompt_context["hypothesis"],
             agent_name="PipelineJudgeAgent",

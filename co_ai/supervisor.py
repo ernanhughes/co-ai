@@ -20,7 +20,7 @@ from co_ai.memory import MemoryTool
 from co_ai.reports import ReportFormatter
 from uuid import uuid4
 from datetime import datetime
-from co_ai.models import PipelineRun  # if placed in models
+from co_ai.models import PipelineRunORM  # if placed in models
 
 
 class PipelineStage:
@@ -63,16 +63,18 @@ class Supervisor:
         Each stage loads its class dynamically via hydra.utils.get_class()
         """
         self.logger.log("PipelineStart", input_data)
+        goal_orm= {}
         input_file = input_data.get("input_file", self.cfg.get("input_file", None))
         # Handle JSONL file for batch input
         if input_file and os.path.exists(input_file):
             self.logger.log("BatchProcessingStart", {"file": input_file})
             with open(input_file, "r", encoding="utf-8") as f:
                 for i, line in enumerate(f):
-                    goal = json.loads(line)
-                    run_id = goal.get("id", f"goal_{i}")
+                    goal_dict = json.loads(line)
+                    goal_orm = self.memory.goals.get_or_create(goal_dict)
+                    run_id = goal_orm.get("id", f"goal_{i}")
                     context = {
-                        "goal": goal,
+                        "goal": goal_dict,
                         "run_id": run_id,
                         "prompt_dir": self.cfg.paths.prompts,
                         PIPELINE: [stage.name for stage in self.pipeline_stages],
@@ -102,20 +104,18 @@ class Supervisor:
         )
 
         # Create and store PipelineRun
-        pipeline_run = PipelineRun(
-            run_id=run_id,
-            goal_id=self.memory.goals.get_or_create(
-                context["goal"]
-            ).id,  # assumes .get_or_create returns goal with id
-            pipeline=str(pipeline_list),
-            strategy=context.get("strategy"),
-            # model_name=self.cfg.model.name,
-            run_config=OmegaConf.to_container(self.cfg),
-            created_at=datetime.utcnow(),
-        )
+        # Create and store PipelineRun
+        pipeline_run_data = {
+            "run_id": run_id,
+            "pipeline": pipeline_list,  # Should be list of strings like ["generation", "judge"]
+            "strategy": context.get("strategy"),
+            "model_name": self.cfg.get("model.name", "unknown"),
+            "run_config": OmegaConf.to_container(self.cfg),
+            "created_at": datetime.utcnow()
+        }
 
-        self.memory.pipeline_runs.insert(pipeline_run)
-
+        # Insert into DB
+        self.memory.pipeline_runs.insert(pipeline_run_data)
         # Now allow lookahead or other steps to adjust context
         context = await self.maybe_adjust_pipeline(context)
         return await self._run_pipeline_stages(context)
@@ -187,9 +187,9 @@ class Supervisor:
         """Generate a report based on the pipeline context."""
         formatter = ReportFormatter(self.cfg.report.path)
         report = formatter.format_report(context)
-        self.memory.report.log(
-            run_id, str(context.get("goal")), report, self.cfg.report.path
-        )
+        # self.memory.report.log(
+        #     run_id, str(context.get("goal")), report, self.cfg.report.path
+        # )
         self.logger.log(
             "ReportGenerated", {RUN_ID: run_id, "report_snippet": report[:100]}
         )
@@ -222,17 +222,14 @@ class Supervisor:
         goal = context.get("goal", {})
 
         # === RUN DOTS PLANNER FIRST (STRATEGY PLANNER) ===
-        if self.cfg.get("dynamic", {}).get("dots_enabled", True):
+        if self.cfg.get("planner", {}).get("enabled", False):
             try:
-                dots_cfg = OmegaConf.to_container(
-                    self.cfg.agents.dots_planner, resolve=True
-                )
-                planner_cls = hydra.utils.get_class(dots_cfg["cls"])
-                planner_agent = planner_cls(
-                    cfg=dots_cfg, memory=self.memory, logger=self.logger
-                )
+                planner_cfg = OmegaConf.to_container(self.cfg.planner, resolve=True)
+                planner_cls = hydra.utils.get_class(planner_cfg["cls"])
+                planner = planner_cls(cfg=planner_cfg, memory=self.memory, logger=self.logger)
 
-                context = await planner_agent.run(context)
+                context = await planner.run(context)
+
                 if "suggested_pipeline" in context:
                     suggested = context["suggested_pipeline"]
                     self.logger.log(

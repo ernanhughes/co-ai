@@ -64,6 +64,7 @@ EVENT_ICONS = {
     "PromptTuningCompleted": "🧪✨",
     "PromptTuningExamples": "📚",
     "PromptTuningSkipped": "⏭️",
+    "PromptStored": "🗃🗃️",
     "TunedPromptGenerationFailed": "❌",
     "TunedPromptStored": "🗃️",
     "MRQTrainingStart": "🚀",

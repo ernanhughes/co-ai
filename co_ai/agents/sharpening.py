@@ -5,7 +5,7 @@ from dataclasses import asdict
 from co_ai.agents import BaseAgent
 from co_ai.constants import GOAL, PIPELINE
 from co_ai.evaluator import MRQSelfEvaluator
-from co_ai.models import Hypothesis
+from co_ai.models import HypothesisORM
 from co_ai.models.sharpening_result import SharpeningResult
 
 
@@ -18,7 +18,7 @@ class SharpeningAgent(BaseAgent):
         self.templates = cfg.get("templates", ["critic"])
 
     async def run(self, context: dict):
-        goal = self.extract_goal_text(context.get(GOAL))
+        goal = self.memory.goals.get_or_create(context.get(GOAL))
 
         self.evaluator.train_from_database(goal=goal, cfg=self.cfg)
 
@@ -143,7 +143,7 @@ class SharpeningAgent(BaseAgent):
                     "prompt_text": prompt[:100],
                 },
             )
-            hyp = Hypothesis(
+            hyp = HypothesisORM(
                 goal=goal, 
                 text=entry["sharpened_hypothesis"], 
                 prompt=prompt,

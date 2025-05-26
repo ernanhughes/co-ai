@@ -10,6 +10,7 @@ from co_ai.constants import (AGENT, API_BASE, API_KEY, BATCH_SIZE, CONTEXT,
                              OUTPUT_KEY, PROMPT_MATCH_RE, PROMPT_PATH,
                              SAVE_CONTEXT, SAVE_PROMPT, SOURCE, STRATEGY)
 from co_ai.logs import JSONLogger
+from co_ai.models import HypothesisORM
 from co_ai.prompts import PromptLoader
 
 
@@ -35,6 +36,9 @@ class BaseAgent(ABC):
         self.preferences = cfg.get("preferences", {})
         self.remove_think = cfg.get("remove_think", True)
         self.output_key = cfg.get(OUTPUT_KEY, self.name)
+        self._goal_id_cache = {}
+        self._prompt_id_cache = {}
+        self._hypothesis_id_cache = {}
         self.logger.log(
             "AgentInitialized",
             {
@@ -53,9 +57,9 @@ class BaseAgent(ABC):
                     {"agent": self.name, "missing_key": key}
                 )   
         return {
-            NAME: self.cfg.get("model_config", {}).get(NAME),
-            API_BASE: self.cfg.get("model_config", {}).get(API_BASE),
-            API_KEY: self.cfg.get("model_config", {}).get(API_KEY),
+            NAME: self.model_config.get(NAME),
+            API_BASE: self.model_config.get(API_BASE),
+            API_KEY: self.model_config.get(API_KEY),
         }
 
     def call_llm(self, prompt: str, context: dict, llm_cfg: dict = None) -> str:
@@ -75,7 +79,7 @@ class BaseAgent(ABC):
             # Save prompt and response if enabled
             if self.cfg.get(SAVE_PROMPT, False) and self.memory:
                 self.memory.prompt.save(
-                    BaseAgent.extract_goal_text(context.get("goal")),
+                    context.get("goal"),
                     agent_name=self.name,
                     prompt_key=self.cfg.get(PROMPT_PATH, ""),
                     prompt_text=prompt,
@@ -134,16 +138,17 @@ class BaseAgent(ABC):
     def get_hypotheses(self, context: dict) -> list[str]:
         try:
             if self.source == "context":
-                hypotheses = context.get(self.input_key, [])
-                if not hypotheses:
+                hypothesis_dicts = context.get(self.input_key, [])
+                if not hypothesis_dicts:
                     self.logger.log("NoHypothesesInContext", {"agent": self.name})
-                return hypotheses
+                return [HypothesisORM.from_dict(h) for h in hypothesis_dicts]
+
 
             elif self.source == "database":
                 goal = context.get(GOAL)
                 hypotheses = self.get_hypotheses_from_db(goal.get("goal_text"))
                 if not hypotheses:
-                    self.logger.log("NoUnReflectedInDatabase", {"agent": self.name, "goal": goal})
+                    self.logger.log("NoHypothesesInDatabase", {"agent": self.name, "goal": goal})
                 return hypotheses or []
 
             else:
@@ -162,7 +167,29 @@ class BaseAgent(ABC):
 
     def get_hypotheses_from_db(self, goal_text:str):
         return self.memory.hypotheses.get_latest(goal_text, self.batch_size)
-    
+
     @staticmethod
     def extract_goal_text(goal):
         return goal.get("goal_text") if isinstance(goal, dict) else goal
+
+    def get_goal_id(self, goal: dict):
+        goal_text = goal.get("goal_text", "")
+        if goal_text in self._goal_id_cache:
+            return self._goal_id_cache[goal_text].first
+        goal = self.memory.goals.get_from_text(goal_text)
+        self._goal_id_cache[goal_text] = (goal.id, goal)
+        return goal.id
+
+    def get_prompt_id(self, prompt_text: str):
+        if prompt_text in self._prompt_id_cache:
+            return self._prompt_id_cache[prompt_text].first
+        prompt = self.memory.prompt.get_from_text(prompt_text)
+        self._prompt_id_cache[prompt_text] = (prompt.id, prompt)
+        return prompt.id
+
+    def get_hypothesis_id(self, hypothesis_text: str):
+        if hypothesis_text in self._hypothesis_id_cache:
+            return self._hypothesis_id_cache[hypothesis_text].first
+        hypothesis = self.memory.hypotheses.get_from_text(hypothesis_text)
+        self._hypothesis_id_cache[hypothesis_text] = (hypothesis.id, hypothesis)
+        return hypothesis.id
