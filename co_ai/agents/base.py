@@ -12,7 +12,7 @@ from co_ai.constants import (AGENT, API_BASE, API_KEY, BATCH_SIZE, CONTEXT,
 from co_ai.logs import JSONLogger
 from co_ai.models import HypothesisORM
 from co_ai.prompts import PromptLoader
-
+import random
 
 def remove_think_blocks(text: str) -> str:
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
@@ -65,7 +65,38 @@ class BaseAgent(ABC):
     def call_llm(self, prompt: str, context: dict, llm_cfg: dict = None) -> str:
         """Call the default or custom LLM, log the prompt, and handle output."""
         props = llm_cfg or self.llm  # Use passed-in config or default
-        
+
+        goal = context.get("goal", {})
+        goal_id = goal.get("id")
+        agent_name = self.name
+        strategy = self.cfg.get(STRATEGY, "")
+        prompt_key = self.cfg.get(PROMPT_PATH, "")
+
+        # 🔁 Check cache
+        if self.memory:
+            previous = self.memory.prompt.find_matching(
+                agent_name=agent_name,
+                prompt_key=prompt_key,
+                prompt_text=prompt,
+                strategy=strategy,
+                goal_id=goal_id,
+            )
+            if previous:
+                chosen = random.choice(previous)
+                cached_response = chosen.get("response_text")
+                self.logger.log(
+                    "LLMCacheHit",
+                    {
+                        "agent": agent_name,
+                        "strategy": strategy,
+                        "prompt_key": prompt_key,
+                        "cached": True,
+                        "count": len(previous),
+                        "emoji": "📦🔁💬",
+                    },
+                )
+                return cached_response
+
         messages = [{"role": "user", "content": prompt}]
         try:
             response = litellm.completion(
@@ -175,21 +206,21 @@ class BaseAgent(ABC):
     def get_goal_id(self, goal: dict):
         goal_text = goal.get("goal_text", "")
         if goal_text in self._goal_id_cache:
-            return self._goal_id_cache[goal_text].first
+            return self._goal_id_cache[goal_text][0]
         goal = self.memory.goals.get_from_text(goal_text)
         self._goal_id_cache[goal_text] = (goal.id, goal)
         return goal.id
 
     def get_prompt_id(self, prompt_text: str):
         if prompt_text in self._prompt_id_cache:
-            return self._prompt_id_cache[prompt_text].first
+            return self._prompt_id_cache[prompt_text][0]
         prompt = self.memory.prompt.get_from_text(prompt_text)
         self._prompt_id_cache[prompt_text] = (prompt.id, prompt)
         return prompt.id
 
     def get_hypothesis_id(self, hypothesis_text: str):
         if hypothesis_text in self._hypothesis_id_cache:
-            return self._hypothesis_id_cache[hypothesis_text].first
+            return self._hypothesis_id_cache[hypothesis_text][0]
         hypothesis = self.memory.hypotheses.get_from_text(hypothesis_text)
         self._hypothesis_id_cache[hypothesis_text] = (hypothesis.id, hypothesis)
         return hypothesis.id

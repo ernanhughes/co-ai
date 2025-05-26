@@ -6,7 +6,6 @@ from co_ai.analysis.rubric_classifier import RubricClassifierMixin
 from co_ai.constants import GOAL, PIPELINE
 from co_ai.evaluator import LLMJudgeEvaluator, MRQSelfEvaluator
 from co_ai.models import HypothesisORM, ScoreORM
-from co_ai.models.pattern_stat import generate_pattern_stats
 from co_ai.prompts import PromptLoader
 
 
@@ -18,9 +17,9 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
         self.prompt_loader = PromptLoader(self.cfg, self.logger)
 
     async def run(self, context: dict):
-        goal = self.memory.goals.get_or_create(context.get(GOAL))
+        goal = context.get(GOAL)
 
-        goal_text = goal.goal_text
+        goal_text = goal.get("goal_text")
         self.logger.log("AgentRunStarted", {"goal": goal_text})
 
         if self.cfg.get("thinking_mode") == "generate_and_judge":
@@ -28,7 +27,7 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
         else:
             hypotheses = self.get_hypotheses(context)
 
-        context["hypotheses"] = [asdict(h) for h in hypotheses]
+        context["hypotheses"] = [h.to_dict() for h in hypotheses]
 
         win_counts = {h.id: 0 for h in hypotheses}
         evaluations = []
@@ -41,7 +40,7 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
         context["scoring"] = []
         for hyp_a, hyp_b in combinations(hypotheses, 2):
             judge_context = {
-                "goal": goal_text,
+                "goal": goal,
                 "hypothesis_a": hyp_a.text,
                 "hypothesis_b": hyp_b.text,
             }
@@ -50,32 +49,51 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
             )
 
             preferred, score = self.judge.judge(
-                prompt_text, goal_text, hyp_a.text, hyp_b.text
+                prompt_text, goal, hyp_a.text, hyp_b.text
             )
 
+            goal_id = self.get_goal_id(goal)
+            judge_name = self.cfg.get("judge")
+            model_name = self.cfg.get("model", {}).get("name", "unknown")
             s_a = ScoreORM(
-                goal_id=goal.id,
+                goal_id=goal_id,
                 hypothesis_id=hyp_a.id,
                 agent_name=self.name,
-                model_name=self.cfg.get("model", {}).get("name", "unknown"),
-                evaluator_name=self.judge.name,
+                model_name=model_name,
+                evaluator_name=judge_name,
                 score_type="pairwise_comparison",
                 run_id=context.get("run_id"),
             )
-            s_a.set_score(score["score_a"])
+            value = score["score_a"]
+            if isinstance(value, (float, int)):
+                s_a.score = float(value)
+                s_a.score_text = None  # optional: clear if previously set
+            elif isinstance(value, str):
+                s_a.score = None
+                s_a.score_text = value
+            else:
+                raise ValueError(f"Unexpected score type: {type(value)} for score_a")
             s_a.reasoning_strategy = hyp_a.strategy
             self.memory.scores.insert(s_a)
 
             s_b = ScoreORM(
-                goal_id=goal.id,
+                goal_id=goal_id,
                 hypothesis_id=hyp_b.id,
                 agent_name=self.name,
-                model_name=self.cfg.get("model", {}).get("name", "unknown"),
-                evaluator_name=self.judge.name,
+                model_name=model_name,
+                evaluator_name=judge_name,
                 score_type="pairwise_comparison",
                 run_id=context.get("run_id"),
             )
-            s_b.set_score(score["score_b"])
+            value = score["score_b"]
+            if isinstance(value, (float, int)):
+                s_b.score = float(value)
+                s_b.score_text = None  # optional: clear if previously set
+            elif isinstance(value, str):
+                s_b.score = None
+                s_b.score_text = value
+            else:
+                raise ValueError(f"Unexpected score type: {type(value)} for score_a")
             s_b.reasoning_strategy = hyp_b.strategy
             self.memory.scores.insert(s_b)
 
@@ -129,8 +147,8 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
         summarized = self._summarize_pattern(pattern)
         context["pattern"] = summarized
 
-        goal_id, hypothesis_id, pattern_stats = generate_pattern_stats(
-            self.extract_goal_text(context.get(GOAL)),
+        goal_id, hypothesis_id, pattern_stats = self.generate_pattern_stats(
+            goal,
             best_hypothesis.text,
             summarized,
             self.memory,
@@ -138,15 +156,13 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
             self.name,
             win_counts[best_id],
         )
-        self.memory.hypotheses.store_pattern_stats(
-            goal_id, hypothesis_id, pattern_stats
-        )
+        self.memory.pattern_stats.insert(pattern_stats)
         context["pattern_stats"] = summarized
 
-        context[self.output_key] = asdict(best_hypothesis)
+        context[self.output_key] = best_hypothesis.to_dict()
         return context
 
-    def generate_hypotheses(self, question, context):
+    def generate_hypotheses(self, question:str, context:dict) -> HypothesisORM:
         goal = self.memory.goals.get_or_create(context.get(GOAL))
         strategies = self.cfg.get("generation_strategy_list", ["cot"])
         merged = {**context, **{"question": question}}

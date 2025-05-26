@@ -25,3 +25,25 @@ class PromptORM(Base):
 
     goal = relationship("GoalORM", back_populates="prompts")
     hypotheses = relationship("HypothesisORM", back_populates="prompt")
+
+    def to_dict(self, include_relationships: bool = False) -> dict:
+        data = {
+            "id": self.id,
+            "agent_name": self.agent_name,
+            "prompt_key": self.prompt_key,
+            "prompt_text": self.prompt_text,
+            "response_text": self.response_text,
+            "goal_id": self.goal_id,
+            "source": self.source,
+            "strategy": self.strategy,
+            "version": self.version,
+            "is_current": self.is_current,
+            "extra_data": self.extra_data,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+        }
+
+        if include_relationships:
+            data["goal"] = self.goal.to_dict() if self.goal else None
+            data["hypotheses"] = [h.to_dict() for h in self.hypotheses] if self.hypotheses else []
+
+        return data

@@ -2,7 +2,6 @@ from datetime import datetime
 
 from co_ai.constants import GOAL
 from co_ai.models import PatternStatORM
-from co_ai.memory.pattern_store import PatternStatStore
 
 class RubricClassifierMixin:
     def _load_enabled_rubrics(self, cfg):
@@ -75,7 +74,6 @@ class RubricClassifierMixin:
         context["pattern_stats"] = summarized
         return summarized
 
-    # analysis/rubric_classifier.py
     def generate_pattern_stats(self, goal,
                                hypothesis_text,
                                pattern_dict,

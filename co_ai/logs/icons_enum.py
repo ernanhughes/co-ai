@@ -117,6 +117,7 @@ EVENT_ICONS = {
     "RefinedSkipped": "⏭️",
     "RefinedUpdated": "🔄",
     "ScoreStored": "💾",
+    "HypothesisInserted": "💡📥",
     "GeneralReasoningJudgement": "⚖️",
     "BatchProcessingStart": "📥",
     "RefinerEvaluationPromptGenerated": "💬",
