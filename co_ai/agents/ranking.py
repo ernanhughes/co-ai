@@ -67,9 +67,7 @@ class RankingAgent(BaseAgent):
                 )
 
         ranked = sorted(self.elo_scores.items(), key=lambda x: x[1], reverse=True)
-        context[self.output_key] = [
-            {"text": text, "score": score} for text, score in ranked
-        ]
+        context[self.output_key] = ranked
 
         self.logger.log(
             "TournamentCompleted",
@@ -236,7 +234,6 @@ class RankingAgent(BaseAgent):
             return "A" if winner_key == "1" else "B"
 
         # Default fallback logic
-        self.logger.log("[⚠️my 0 my god it's lost me ] Could not extract winner from response.")
         self.logger.log("ParseError", {
                     "error": "Could not extract winner from response",
                     "response": response

@@ -118,6 +118,7 @@ EVENT_ICONS = {
     "IdeaSharpenedAndSaved": "💡🪓💾",
     "MetaReviewSummary": "📘",
     "RawMetaReviewOutput": "📜",
+    "HypothesisEloUpdated ": "📈",
     "RefinedSkipped": "⏭️",
     "RefinedUpdated": "🔄",
     "ScoreStored": "💾",

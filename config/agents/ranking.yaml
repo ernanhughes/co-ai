@@ -5,7 +5,7 @@ defaults:
 ranking:
   name: ranking
   enabled: true
-  source: database  # database or context
+  source: context
   batch_size: 10    # limit to process at a time
 
   tournament_type: elo

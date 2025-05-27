@@ -2,15 +2,8 @@
 defaults:
   - _self_
   - db: postgres
-  - agents/debate
   - agents/dots_planner
-  - agents/evolution
-  - agents/generic
-  - agents/judge
-  - agents/meta_review
-  - agents/mrq_strategy
   - agents/pipeline_judge
-  - agents/prompt_tuning
   - agents/proximity
   - agents/ranking
   - agents/refiner
@@ -21,6 +14,7 @@ defaults:
   - agents/method_planner
   - agents/idea_innovation
   - agents/idea_sharpening
+  - agents/idea_evaluator
   - agents/knowledge_loader
   - logging/json_logger
 
@@ -94,6 +88,10 @@ pipeline:
        iterations: 1
      - name: ranking
        cls: co_ai.agents.ranking.RankingAgent
+       enabled: true
+       iterations: 1
+     - name: idea_evaluator
+       cls: co_ai.agents.idea_evaluator.IdeaEvaluatorAgent
        enabled: true
        iterations: 1
      - name: method_planner

@@ -3,6 +3,9 @@
 idea_sharpening:
   name: idea_sharpening
   enabled: true
+
+  save_count: 5
+
   save_prompt: true
   save_context: false
   skip_if_completed: false
