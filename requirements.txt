@@ -11,6 +11,7 @@ ollama
 
 # web search tools
 requests
+wikipedia
 duckduckgo-search
 readability-lxml
 beautifulsoup4

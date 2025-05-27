@@ -1,6 +1,6 @@
 DELETE FROM search_results
 WHERE id IN (
-    SELECT idthis is a bit sloppy dog
+    SELECT id
     FROM (
         SELECT
             id,

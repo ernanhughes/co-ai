@@ -45,7 +45,7 @@ class MethodPlannerAgent(BaseAgent):
 
         # Build prompt context
         prompt_context = {
-            "idea": hypothesis,
+            "idea": hypothesis or goal.get("goal_text"),
             "task_description": self._extract_task_description(goal),
             "baseline_approach": baseline_approach,
             "literature_summary": self._summarize_literature(literature_summary),
@@ -68,7 +68,7 @@ class MethodPlannerAgent(BaseAgent):
             return context
 
         # Save to database
-        method_plan = self._save_to_db(plan_data, goal.get("id"))
+        method_plan = self._save_to_db(plan_data, context)
 
         # Update context with result
         context[self.output_key] = plan_data
@@ -100,11 +100,11 @@ class MethodPlannerAgent(BaseAgent):
         Retrieve baseline implementation from config or file system
         """
         if focus_area == "chemistry":
-            return self.memory.baselines.get("reaction_yield_model", "")
+            return self.cfg.get("baselines").get("reaction_yield_model", "")
         elif focus_area == "nlp":
-            return self.memory.baselines.get("sentiment_transformer", "")
+            return self.cfg.get("baselines").get("sentiment_transformer", "")
         elif focus_area == "cv":
-            return self.memory.baselines.get("pointnet_classifier", "")
+            return self.cfg.get("baselines").get("pointnet_classifier", "")
         else:
             return ""
 
@@ -155,7 +155,6 @@ class MethodPlannerAgent(BaseAgent):
             task_description=plan_data.get("task_description"),
             baseline_method=plan_data.get("baseline_used"),
             literature_summary=plan_data.get("relevant_papers"),
-            plan=plan_data.get("plan_steps"),
             code_plan=plan_data.get("code_plan"),
             score_novelty=plan_data.get("score_novelty"),
             score_feasibility=plan_data.get("score_feasibility"),
@@ -167,7 +166,7 @@ class MethodPlannerAgent(BaseAgent):
             evolution_level=0,  # Initial plan
         )
 
-        self.memory.method_plans.add_method_plan(plan_data)  # Or plan.to_dict() if needed
+        self.memory.method_plans.add_method_plan(plan.to_dict())  # Or plan.to_dict() if needed
         return plan
 
     def _refine_plan(self, plan: dict, feedback: dict) -> dict:

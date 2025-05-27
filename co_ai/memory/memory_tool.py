@@ -18,6 +18,9 @@ from co_ai.memory.prompt_store import PromptStore
 from co_ai.memory.search_result_store import SearchResultStore
 from co_ai.memory.idea_store import IdeaStore
 from co_ai.memory.method_plan_store import MethodPlanStore
+from co_ai.memory.embedding_store import EmbeddingStore
+import psycopg2
+from pgvector.psycopg2 import register_vector
 
 from co_ai.logs import JSONLogger
 
@@ -32,8 +35,19 @@ class MemoryTool:
         self.session_maker = sessionmaker(bind=engine)
         self.session: Session = self.session_maker()
 
+        # Create connection
+        conn = psycopg2.connect(
+            dbname=self.cfg.get("db").get("name"),
+            user=self.cfg.get("db").get("user"),
+            password=self.cfg.get("db").get("password"),
+            host=self.cfg.get("db").get("host"),
+            port=self.cfg.get("db").get("port")
+        )
+        register_vector(conn)  # Register pgvector extension
+
         # Register stores
         self.register_store(GoalStore(self.session, logger))
+        self.register_store(EmbeddingStore(self.cfg, conn, self.session, logger))
         self.register_store(HypothesisStore(self.session, logger))
         self.register_store(PromptStore(self.session, logger))
         self.register_store(ScoreStore(self.session, logger))

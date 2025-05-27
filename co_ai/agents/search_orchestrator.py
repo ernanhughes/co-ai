@@ -2,14 +2,15 @@ from co_ai.agents.base import BaseAgent
 from co_ai.constants import GOAL
 from co_ai.tools.arxiv_tool import search_arxiv
 from co_ai.tools.huggingface_tool import search_huggingface_datasets
-from co_ai.tools import WebSearchTool  # Assume this exists
-from co_ai.memory.search_result_store import SearchResultStore
-
+from co_ai.tools.cos_sim_tool import get_top_k_similar
+from co_ai.tools import WebSearchTool
+from co_ai.tools.wikipedia_tool import WikipediaTool
 
 class SearchOrchestratorAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.web_search_tool = WebSearchTool(cfg.get("web_search", {}), self.logger)
+        self.wikipedia_tool = WikipediaTool(self.memory, self.logger)
         self.max_results = cfg.get("max_results", 5)
 
     async def run(self, context: dict) -> dict:
@@ -20,12 +21,15 @@ class SearchOrchestratorAgent(BaseAgent):
 
         for query in queries:
             search_query = query.get("goal_text")
-            source = self.route_query(search_query)
+            #source = self.route_query(goal, search_query)
+            source ="wikipedia"
             try:
                 if source == "arxiv":
                     hits = await search_arxiv([search_query])
                 elif source == "huggingface":
                     hits = await search_huggingface_datasets([search_query])
+                elif source == "wikipedia":
+                    hits = self.wikipedia_tool.find_similar(search_query)
                 elif source == "web":
                     hits = await self.web_search_tool.search(
                         search_query, max_results=self.max_results
@@ -67,14 +71,51 @@ class SearchOrchestratorAgent(BaseAgent):
         context["search_results"] = [r.to_dict() for r in results]
         return context
 
-    def route_query(self, query: str) -> str:
+    def route_query(self, goal, query: str) -> str:
         """
         Decide which source to use based on query content.
         """
         query_lower = query.lower()
-        if any(kw in query_lower for kw in ["paper", "study", "theory", "method"]):
-            return "arxiv"
-        elif any(kw in query_lower for kw in ["dataset", "model", "huggingface"]):
+
+        # Try fast metadata path first
+        source = self.fast_metadata_routing(goal, query_lower)
+        if source:
+            return source
+
+        # Fallback to semantic similarity
+        return self.semantic_fallback_routing(query)
+
+    def fast_metadata_routing(self, goal, query_lower):
+        focus_area = goal.get("focus_area", "").lower()
+        goal_type = goal.get("goal_type", "").lower()
+
+        if goal_type == "data_search" or "dataset" in query_lower:
             return "huggingface"
-        else:
-            return "web"
+        if goal_type == "model_review" or "model" in query_lower:
+            return "arxiv"
+        if goal_type == "background" or any(k in query_lower for k in ["overview", "definition"]):
+            return "wikipedia"
+        if focus_area in ["nlp", "cv", "graph learning"] and "baseline" in query_lower:
+            return "arxiv"
+
+        return None
+
+    def semantic_fallback_routing(self, query: str) -> str:
+        intent_map = {
+            "arxiv": ["find research paper", "latest ML study", "scientific method"],
+            "huggingface": ["find dataset", "huggingface model", "nlp corpus"],
+            "wikipedia": ["define concept", "what is", "overview of topic"],
+            "web": ["general info", "random search", "link to resource"]
+        }
+
+        candidates = [(intent, phrase) for intent, phrases in intent_map.items() for phrase in phrases]
+        phrases = [p for _, p in candidates]
+
+        top = get_top_k_similar(query, phrases, self.memory, top_k=1)
+        best_phrase = top[0][0]
+
+        for intent, phrase in candidates:
+            if phrase == best_phrase:
+                return intent
+
+        return "web"

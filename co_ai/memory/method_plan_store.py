@@ -22,7 +22,7 @@ class MethodPlanStore(BaseStore):
         Returns:
             MethodPlanORM: The saved ORM object
         """
-        required_fields = ["idea_text", "plan"]
+        required_fields = ["idea_text"]
         missing = [f for f in required_fields if plan_data.get(f) is None]
 
         if missing:
