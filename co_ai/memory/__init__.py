@@ -11,4 +11,6 @@ from .report_logger import ReportLogger
 from .score_store import ScoreStore
 from .pipeline_run_store import PipelineRunStore
 from .pattern_store import PatternStatStore
+from .search_result_store import SearchResultStore
+from .idea_store import IdeaStore
 

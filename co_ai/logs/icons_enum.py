@@ -59,6 +59,7 @@ EVENT_ICONS = {
     "PromptFileNotFound": "🚫",
     "PromptLoadFailed": "❓",
     "PromptLogged": "🧾",
+    "LLMCacheHit": "✅",
     "PromptParseFailed": "⚠️",
     "PromptQualityCompareStart": "⚖️",
     "PromptTuningCompleted": "🧪✨",

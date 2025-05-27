@@ -22,7 +22,7 @@ class RubricClassifierMixin:
         rubrics = self._load_enabled_rubrics(cfg)
 
         for rubric in rubrics:
-            rubric["hypotheses"] = hypothesis.text
+            rubric["hypotheses"] = hypothesis.get("text")
             merged = {**context, **rubric}
             prompt_text = prompt_loader.from_file(pattern_file, cfg, merged)
             custom_llm = cfg.get("analysis_model", None)
@@ -63,7 +63,7 @@ class RubricClassifierMixin:
         summarized = self._summarize_pattern(pattern)
 
         goal_id, hypothesis_id, pattern_stats = self.generate_pattern_stats(
-            goal, hypothesis.text, summarized, memory, cfg, agent_name, score
+            goal, hypothesis, summarized, memory, cfg, agent_name, score
         )
         memory.pattern_stats.insert(pattern_stats)
         logger.log(
@@ -75,7 +75,7 @@ class RubricClassifierMixin:
         return summarized
 
     def generate_pattern_stats(self, goal,
-                               hypothesis_text,
+                               hypothesis,
                                pattern_dict,
                                memory,
                                cfg,
@@ -87,11 +87,10 @@ class RubricClassifierMixin:
         """
         try:
             # Get or create goal
-            goal_orm = memory.goals.get_or_create(goal)
-            goal_id = goal_orm.id
+            goal_id = self.get_goal_id(goal)
 
             # Get hypothesis by text
-            hypothesis_id = self.get_hypothesis_id(hypothesis_text)
+            hypothesis_id = self.get_hypothesis_id(hypothesis)
             model_name = cfg.get("model", {}).get("name", "unknown")
 
             stats = []

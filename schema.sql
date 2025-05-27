@@ -1,4 +1,4 @@
-Yeah he's not a he's not a good guy right I don't be terrible CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto; -- text hashing
 
@@ -341,3 +341,103 @@ CREATE TABLE IF NOT EXISTS reflection_deltas (
     rationale_diff JSONB DEFAULT '["", ""]'::JSONB, -- tuple stored as array
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+CREATE TABLE IF NOT EXISTS ideas (
+    id SERIAL PRIMARY KEY,
+
+    idea_text VARCHAR NOT NULL,
+    parent_goal VARCHAR,
+    focus_area VARCHAR,
+    strategy VARCHAR,
+    source VARCHAR,
+    origin VARCHAR,
+    extra_data JSON,
+    goal_id INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    FOREIGN KEY(goal_id) REFERENCES goals(id)
+);
+
+CREATE TABLE IF NOT EXISTS search_results (
+    id SERIAL PRIMARY KEY,
+
+    query TEXT NOT NULL,
+    source TEXT NOT NULL,
+    result_type TEXT,
+    title TEXT,
+    summary TEXT,
+    url TEXT,
+    author TEXT,
+    published_at DATETIME,
+    tags TEXT[],
+    goal_id INTEGER REFERENCES goals(id),
+    parent_goal TEXT,
+    strategy TEXT,
+    focus_area TEXT,
+    key_concepts TEXT[],
+    technical_insights TEXT[],
+    relevance_score INTEGER,
+    novelty_score INTEGER,
+    related_ideas TEXT[],
+    refined_summary TEXT,
+    extracted_methods TEXT[],
+    domain_knowledge_tags TEXT[],
+    critique_notes TEXT
+    extra_data JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+-- Table: method_plans
+-- Purpose: Store structured research methodologies generated from hypotheses
+
+CREATE TABLE IF NOT EXISTS method_plans (
+    id SERIAL PRIMARY KEY,
+
+    -- Core Research Idea
+    idea_text TEXT NOT NULL,
+    idea_id INTEGER REFERENCES ideas(id) ON DELETE SET NULL,
+
+    -- Goal Context
+    goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
+
+    -- Methodological Components
+    research_objective TEXT NOT NULL,
+    key_components JSONB,         -- List of method components
+    experimental_plan TEXT,
+    hypothesis_mapping TEXT,      -- Mapping between hypotheses and plan parts
+    search_strategy TEXT,        -- Keywords and sources to use in next round
+    knowledge_gaps TEXT,        -- Missing info before testing
+    next_steps TEXT,            -- What should be done after this plan
+
+    -- Supporting Metadata
+    task_description TEXT,
+    baseline_method TEXT,
+    literature_summary TEXT,
+    code_plan TEXT,             -- Optional starter code / pseudocode
+    focus_area TEXT,
+    strategy TEXT,
+
+    -- Evaluation Metrics
+    score_novelty FLOAT,
+    score_feasibility FLOAT,
+    score_impact FLOAT,
+    score_alignment FLOAT,
+
+    -- Evolution Tracking
+    evolution_level INTEGER DEFAULT 0,
+    parent_plan_id INTEGER REFERENCES method_plans(id) ON DELETE SET NULL,
+    is_refinement BOOLEAN DEFAULT FALSE,
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for faster querying
+CREATE INDEX idx_idea_text ON method_plans USING GIN (to_tsvector('english', idea_text));
+CREATE INDEX idx_research_objective ON method_plans USING GIN (to_tsvector('english', research_objective));
+CREATE INDEX idx_focus_area ON method_plans (focus_area);
+CREATE INDEX idx_evolution_level ON method_plans (evolution_level);
+CREATE INDEX idx_goal_id ON method_plans (goal_id);
+CREATE INDEX idx_parent_plan_id ON method_plans (parent_plan_id);

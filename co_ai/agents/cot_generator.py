@@ -55,7 +55,7 @@ class ChainOfThoughtGeneratorAgent(BaseAgent, RubricClassifierMixin):
             "candidates": candidates,
         }
 
-        hyp = HypothesisORM(
+        best_orm = HypothesisORM(
             goal_id=self.get_goal_id(goal),
             text=best,
             confidence=score,
@@ -63,11 +63,11 @@ class ChainOfThoughtGeneratorAgent(BaseAgent, RubricClassifierMixin):
             prompt_id=self.get_prompt_id(prompt),
             pipeline_signature=context.get(PIPELINE),
         )
-        self.memory.hypotheses.insert(hyp)
+        self.memory.hypotheses.insert(best_orm)
         self.logger.log("HypothesisStored", {"text": best[:100], "confidence": score})
 
         self.classify_and_store_patterns(
-            hypothesis=hyp,
+            hypothesis=best_orm.to_dict(),
             context=context,
             prompt_loader=self.prompt_loader,
             cfg=self.cfg,
@@ -77,7 +77,7 @@ class ChainOfThoughtGeneratorAgent(BaseAgent, RubricClassifierMixin):
             score=score,
         )
 
-        context[self.output_key] = [best]
+        context[self.output_key] = [best_orm.to_dict()]
         self.logger.log("AgentRunCompleted", {"output_key": self.output_key})
         return context
 

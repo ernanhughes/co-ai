@@ -138,15 +138,12 @@ class PromptStore:
                 )
             return None
 
-    def find_matching(self, agent_name, prompt_key, prompt_text, strategy=None, goal_id=None):
+    def find_matching(self, agent_name, prompt_text, strategy=None):
         query = self.session.query(PromptORM).filter_by(
             agent_name=agent_name,
-            prompt_key=prompt_key,
             prompt_text=prompt_text
         )
         if strategy:
             query = query.filter_by(strategy=strategy)
-        if goal_id:
-            query = query.filter_by(goal_id=goal_id)
 
         return [p.to_dict() for p in query.limit(10).all()]

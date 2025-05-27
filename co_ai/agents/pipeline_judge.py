@@ -24,7 +24,7 @@ class PipelineJudgeAgent(BaseAgent):
         reflection = context.get("lookahead", {}).get("reflection", "")
 
         prompt_context = {
-            "goal": goal["goal_text"],
+            "goal": goal,
             "pipeline": pipeline,
             "hypothesis": top_hypo,
             "lookahead": reflection
@@ -36,32 +36,40 @@ class PipelineJudgeAgent(BaseAgent):
         # Parse score and rationale
         # Match "**Score: 0.8**", "Score = 0.8", etc.
         score_match = re.search(
-            r"\*\*?score[:=]?\s*([0-9]*\.?[0-9]+)\*\*?", judgement, re.IGNORECASE
+            r"\*\*?score[:=]?\*\*?\s*([0-9]+(?:\.[0-9]+)?)", judgement, re.IGNORECASE
         )
-        score = float(score_match.group(1)) if score_match else None
-        rationale = (
-            judgement
-            if score is None
-            else judgement[judgement.index(str(score)) + len(str(score)) :].strip()
-        )
+        if not score_match:
+            self.logger.log("⚠️ ScoreParseFailed", {
+                "agent": self.name,
+                "judgement": judgement,
+                "goal_id": goal.get("id"),
+                "run_id": context.get(RUN_ID),
+                "emoji": "🚨❓🧠"
+            })
+            score = None
+            rationale = judgement
+        else:
+            score = float(score_match.group(1))
+            rationale_start = score_match.end()
+            rationale = judgement[rationale_start:].strip()
 
         # Store
         score_obj = ScoreORM(
-            goal=prompt_context["goal"],
-            hypothesis=prompt_context["hypothesis"],
-            agent_name="PipelineJudgeAgent",
-            model_name=self.cfg.get("model", {}).get("name"),
+            goal_id=self.get_goal_id(goal),
+            hypothesis_id=self.get_hypothesis_id(top_hypo),
+            agent_name=self.name,
+            model_name=self.model_name,
             evaluator_name="PipelineJudgeAgent",
             score_type="pipeline_judgment",
             score=score,
             rationale=rationale,
             run_id=context.get(RUN_ID),
-            metadata={"raw_response": judgement},
+            metadata={"raw_response": judgement}
         )
-        score_obj.store(self.memory, self.logger)
+        self.memory.scores.insert(score_obj)
 
         context[self.output_key] = {
-            "score" : asdict(score_obj),
+            "score" : score_obj.to_dict(),
             "judgement": judgement
         }
 

@@ -26,4 +26,4 @@ from .refiner import RefinerAgent
 from .reflection import ReflectionAgent
 from .sharpening import SharpeningAgent
 from .dots_planner import DOTSPlannerAgent
-from.lookahead import LookaheadAgent
+from .lookahead import LookaheadAgent

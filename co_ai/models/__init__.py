@@ -10,3 +10,7 @@ from .lookahead import LookaheadORM
 from .pipeline_run import PipelineRunORM
 from .context_state import ContextStateORM
 from .reflection_delta import ReflectionDeltaORM
+from .search_result import SearchResultORM
+from .idea import IdeaORM
+from .method_plan import MethodPlanORM
+

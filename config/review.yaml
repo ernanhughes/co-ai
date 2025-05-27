@@ -81,7 +81,7 @@ pipeline:
        cls: co_ai.agents.generation.GenerationAgent
        enabled: true
        iterations: 1
-     - name: reflection
-       cls: co_ai.agents.reflection.ReflectionAgent
+     - name: review
+       cls: co_ai.agents.review.ReviewAgent
        enabled: true
        iterations: 1

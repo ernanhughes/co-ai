@@ -1,4 +1,4 @@
-# models/search_results.py
+# models/search_result.py
 from sqlalchemy import ARRAY, Column, Integer, String, ForeignKey, JSON, DateTime, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -25,6 +25,21 @@ class SearchResultORM(Base):
     extra_data = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # 🔍 New Fields Below — For Knowledge Refinement & Idea Linking
+    key_concepts = Column(ARRAY(String))
+    technical_insights = Column(ARRAY(String))
+    relevance_score = Column(Integer)  # 1–10 score for how relevant this is to the goal
+    novelty_score = Column(Integer)  # Estimated novelty vs. prior knowledge
+    related_ideas = Column(ARRAY(String))  # List of idea IDs or descriptions
+    refined_summary = Column(Text)  # A concise, processed summary for downstream agents
+    extracted_methods = Column(
+        ARRAY(String)
+    )  # Techniques or methods described in the result
+    domain_knowledge_tags = Column(
+        ARRAY(String)
+    )  # e.g., "self-modifying", "graph transformer"
+    critique_notes = Column(Text)  # Feedback from evaluator agent (Mr Q), if any
+
     def to_dict(self, include_relationships: bool = False) -> dict:
         return {
             "id": self.id,
@@ -43,6 +58,13 @@ class SearchResultORM(Base):
             "parent_goal": self.parent_goal,
             "strategy": self.strategy,
             "focus_area": self.focus_area,
+            "key_concepts": self.key_concepts,
+            "technical_insights": self.technical_insights,
+            "relevance_score": self.relevance_score,
+            "novelty_score": self.novelty_score,
+            "related_ideas": self.related_ideas,
+            "extracted_methods": self.extracted_methods,
+            "critique_notes": self.critique_notes,
             "extra_data": self.extra_data,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

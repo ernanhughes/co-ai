@@ -1,8 +1,10 @@
 from typing import Optional, Any
+
+from sklearn.metrics import fowlkes_mallows_score
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from co_ai.models.base import Base, engine  # From your SQLAlchemy setup
+from co_ai.models.base import engine  # From your SQLAlchemy setup
 from co_ai.memory.goal_store import GoalStore
 from co_ai.memory.hypothesis_store import HypothesisStore
 from co_ai.memory.context_store import ContextStore
@@ -13,6 +15,10 @@ from co_ai.memory.reflection_delta_store import ReflectionDeltaStore
 from co_ai.memory.mrq_store import MRQStore
 from co_ai.memory.pattern_store import PatternStatStore
 from co_ai.memory.prompt_store import PromptStore
+from co_ai.memory.search_result_store import SearchResultStore
+from co_ai.memory.idea_store import IdeaStore
+from co_ai.memory.method_plan_store import MethodPlanStore
+
 from co_ai.logs import JSONLogger
 
 
@@ -36,7 +42,10 @@ class MemoryTool:
         self.register_store(ContextStore(self.session, logger))
         self.register_store(ReflectionDeltaStore(self.session, logger))
         self.register_store(PatternStatStore(self.session, logger))
-        # self.register_store(MRQStore(self.session, logger))
+        self.register_store(SearchResultStore(self.session, logger))
+        self.register_store(IdeaStore(self.session, logger))
+        self.register_store(MethodPlanStore(self.session, logger))
+        self.register_store(MRQStore(self.session, logger))
 
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):
