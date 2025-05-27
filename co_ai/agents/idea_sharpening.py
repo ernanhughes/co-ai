@@ -1,11 +1,9 @@
 # co_ai/agents/idea_sharpening.py
-from dataclasses import asdict
 
 from co_ai.agents.base import BaseAgent
 from co_ai.constants import GOAL, PIPELINE
 from co_ai.evaluator import MRQSelfEvaluator
 from co_ai.models import HypothesisORM
-from co_ai.models.sharpening_result import SharpeningResult
 
 
 class IdeaSharpeningAgent(BaseAgent):
@@ -34,7 +32,8 @@ class IdeaSharpeningAgent(BaseAgent):
 
         sharpened_results = []
         for idea in ideas:
-            result = await self._sharpen_and_evaluate(idea, goal, context)
+            idea_text = idea.get("idea_text")
+            result = await self._sharpen_and_evaluate(idea_text, goal, context)
             sharpened_results.append(result)
 
         # Sort by score
@@ -49,12 +48,15 @@ class IdeaSharpeningAgent(BaseAgent):
 
     async def _sharpen_and_evaluate(self, idea: str, goal: dict, context: dict) -> dict:
         # Build prompt for refinement
+        focus_area = goal.get("focus_area", "")
+        baselines = self.cfg.get("baselines")
+        baseline = baselines.get(focus_area, baselines.get("default"))
         merged = {
             "goal": goal,
             "idea": idea,
-            "baseline": self.memory.baseline.get(goal.get("focus_area")),
+            "baseline": baseline,
             "literature_summary": context.get("knowledge_base_summaries", []),
-            "examples": self.memory.hypotheses.get_hypotheses_for_prompt(idea, limit=3),
+            "examples": self.memory.hypotheses.get_similar_hypotheses(idea, limit=3),
             "strategy": goal.get("strategy", "default"),
         }
 
@@ -68,7 +70,7 @@ class IdeaSharpeningAgent(BaseAgent):
 
             try:
                 preferred_output, scores = self.evaluator.judge(
-                    goal=goal.get("goal_text"),
+                    goal=goal,
                     prompt=idea,
                     output_a=idea,
                     output_b=sharpened,
@@ -99,28 +101,16 @@ class IdeaSharpeningAgent(BaseAgent):
     def save_improved(self, goal: dict, original_idea: str, result: dict, context: dict):
         if not result["improved"]:
             return
-
-        # Save to Prompt ORM (optional)
-        new_prompt_id = self.memory.prompt.save(
-            goal=goal.get("goal_text"),
-            agent_name=f"{self.name}_{result['template_used']}",
-            prompt_key="idea_sharpening",
-            prompt_text=original_idea,
-            response=result["sharpened_hypothesis"],
-            strategy=goal.get("strategy", "default"),
-            meta_data={
-                "score_diff": result["score_diff"],
-                "prompt_template": result["prompt_template"],
-            },
-        )
+        sharpened = result["sharpened_hypothesis"]
+        prompt_id = self.memory.prompt.get_id_from_response(sharpened)
 
         # Save to HypothesisORM
         hyp = HypothesisORM(
-            goal=goal.get("goal_text"),
+            goal_id=goal.get("id"),
             text=result["sharpened_hypothesis"],
-            prompt=original_idea,
+            prompt_id=prompt_id,
             pipeline_signature=context.get(PIPELINE),
-            origin="idea_sharpening_agent",
+            source="idea_sharpening_agent",
         )
         self.memory.hypotheses.insert(hyp)
 

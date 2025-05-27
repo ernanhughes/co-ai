@@ -4,12 +4,14 @@ from sqlalchemy.orm import Session
 from co_ai.models.hypothesis import HypothesisORM
 from difflib import SequenceMatcher
 from co_ai.models.goal import GoalORM
-
+from sqlalchemy import text
+import numpy as np
 
 class HypothesisStore:
-    def __init__(self, session: Session, logger=None):
+    def __init__(self, session: Session, logger=None, embedding_store=None):
         self.session = session
         self.logger = logger
+        self.embedding_store = embedding_store  # Optional embedding model
         self.name = "hypotheses"
     
     def name(self) -> str:
@@ -157,3 +159,38 @@ class HypothesisStore:
 
     def get_all(self, limit: int = 100) -> list[HypothesisORM]:
         return self.session.query(HypothesisORM).order_by(HypothesisORM.created_at.desc()).limit(limit).all()
+    
+    def get_similar_hypotheses(self, query: str, limit: int = 3) -> list[str]:
+        """
+        Get top N hypotheses similar to the given prompt using semantic similarity.
+
+        Args:
+            query (str): New hypothesis or idea
+            limit (int): Number of similar items to return
+
+        Returns:
+            list: Top N similar hypotheses
+        """
+        try:
+            query_embedding = self.embedding_store.get_or_create(query)
+
+            results = []
+            with self.embedding_store.conn.cursor() as cur:
+                cur.execute(
+                    "SELECT text FROM hypotheses ORDER BY embedding <-> %s LIMIT %s",
+                    (np.array(query_embedding), limit),
+                )
+                results = [row[0] for row in cur.fetchall()]
+
+            if self.logger:
+                self.logger.log("SimilarHypothesesFound", {
+                    "query": query[:100],
+                    "matches": [r[:100] for r in results]
+                })
+
+            return results
+
+        except Exception as e:
+            if self.logger:
+                self.logger.log("SimilarHypothesesSearchFailed", {"error": str(e)})
+            return []

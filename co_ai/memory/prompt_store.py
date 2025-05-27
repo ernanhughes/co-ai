@@ -1,6 +1,6 @@
 # stores/prompt_store.py
 import json
-from typing import Optional, Dict, Any
+from typing import Optional
 from sqlalchemy.orm import Session
 from co_ai.models.prompt import PromptORM
 from co_ai.models.goal import GoalORM
@@ -128,6 +128,41 @@ class PromptStore:
                 )
 
             return prompt
+
+        except Exception as e:
+            self.session.rollback()
+            if self.logger:
+                self.logger.log(
+                    "PromptLookupFailed",
+                    {"error": str(e), "text_snippet": prompt_text[:100]},
+                )
+            return None
+
+    def get_id_from_response(
+        self,
+        response_text: str
+    ) -> Optional[PromptORM]:
+        """
+        Retrieve a prompt from the DB based on its exact prompt_text.
+        Optionally filter by agent_name and/or strategy.
+        """
+        try:
+            query = self.session.query(PromptORM).filter(
+                PromptORM.response_text == response_text
+            )
+
+            prompt = query.order_by(PromptORM.timestamp.desc()).first()
+
+            if self.logger:
+                self.logger.log(
+                    "PromptLookup",
+                    {
+                        "matched": bool(prompt),
+                        "text_snippet": response_text[:100],
+                    },
+                )
+
+            return prompt.id
 
         except Exception as e:
             self.session.rollback()

@@ -20,6 +20,7 @@ defaults:
   - agents/search_orchestrator
   - agents/method_planner
   - agents/idea_innovation
+  - agents/idea_sharpening
   - agents/knowledge_loader
   - logging/json_logger
 
@@ -85,6 +86,10 @@ pipeline:
        iterations: 1
      - name: idea_innovation
        cls: co_ai.agents.idea_innovation.IdeaInnovationAgent
+       enabled: true
+       iterations: 1
+     - name: idea_sharpening
+       cls: co_ai.agents.idea_sharpening.IdeaSharpeningAgent
        enabled: true
        iterations: 1
      - name: method_planner

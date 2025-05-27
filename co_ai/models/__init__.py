@@ -3,7 +3,7 @@ from .prompt import PromptORM
 from .hypothesis import HypothesisORM
 from .pattern_stat import PatternStatORM
 from .score import ScoreORM
-from .sharpening_prediction import SharpeningPrediction
+from .sharpening_prediction import SharpeningPredictionORM
 from .sharpening_result import SharpeningResult
 from .mrq_memory_entry import MRQMemoryEntryORM
 from .lookahead import LookaheadORM

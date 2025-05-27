@@ -1,7 +1,5 @@
 import hashlib
 
-import pgvector.psycopg2
-
 from co_ai.memory import BaseStore
 from co_ai.tools import get_embedding
 

@@ -13,4 +13,5 @@ from .pipeline_run_store import PipelineRunStore
 from .pattern_store import PatternStatStore
 from .search_result_store import SearchResultStore
 from .idea_store import IdeaStore
+from .sharpening_store import SharpeningStore
 

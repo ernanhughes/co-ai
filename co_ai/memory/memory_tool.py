@@ -1,6 +1,5 @@
 from typing import Optional, Any
 
-from sklearn.metrics import fowlkes_mallows_score
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -19,6 +18,8 @@ from co_ai.memory.search_result_store import SearchResultStore
 from co_ai.memory.idea_store import IdeaStore
 from co_ai.memory.method_plan_store import MethodPlanStore
 from co_ai.memory.embedding_store import EmbeddingStore
+from co_ai.memory.sharpening_store import SharpeningStore
+
 import psycopg2
 from pgvector.psycopg2 import register_vector
 
@@ -47,8 +48,9 @@ class MemoryTool:
 
         # Register stores
         self.register_store(GoalStore(self.session, logger))
-        self.register_store(EmbeddingStore(self.cfg, conn, self.session, logger))
-        self.register_store(HypothesisStore(self.session, logger))
+        embedding_store = EmbeddingStore(self.cfg, conn, self.session, logger)
+        self.register_store(embedding_store)
+        self.register_store(HypothesisStore(self.session, logger, embedding_store))
         self.register_store(PromptStore(self.session, logger))
         self.register_store(ScoreStore(self.session, logger))
         self.register_store(PipelineRunStore(self.session, logger))
@@ -59,7 +61,8 @@ class MemoryTool:
         self.register_store(SearchResultStore(self.session, logger))
         self.register_store(IdeaStore(self.session, logger))
         self.register_store(MethodPlanStore(self.session, logger))
-        self.register_store(MRQStore(self.session, logger))
+        self.register_store(MRQStore(cfg, self.session, logger))
+        self.register_store(SharpeningStore(self.session, logger))
 
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):

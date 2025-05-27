@@ -24,4 +24,4 @@ class GoalORM(Base):
     reflection_deltas = relationship("ReflectionDeltaORM", back_populates="goal")
     ideas = relationship("IdeaORM", back_populates="goal")
     method_plans = relationship("MethodPlanORM", back_populates="goal")
-    
+    sharpening_predictions = relationship("SharpeningPredictionORM", back_populates="goal")

@@ -41,7 +41,7 @@ class SharpeningAgent(BaseAgent):
         goal = self.extract_goal_text(context.get(GOAL))
         results = []
         prompt = data.get("prompt")
-        examples = self.memory.hypotheses.get_hypotheses_for_prompt(prompt, 3)
+        examples = self.memory.hypotheses.get_similar_hypotheses(prompt, 3)
         merged = {**context, **{"prompt": prompt, "examples": examples}}
 
         if prompt:
@@ -114,7 +114,7 @@ class SharpeningAgent(BaseAgent):
 
     async def run_judge_only(self, data:dict, context: dict):
         prompt = data.get("prompt")
-        examples = self.memory.hypotheses.get_hypotheses_for_prompt(prompt, 3)
+        examples = self.memory.hypotheses.get_similar_hypotheses(prompt, 3)
         merged = {**context, **{"prompt": prompt, "examples": examples}}
         prompt_template = self.prompt_loader.from_file("self_reward.txt", self.cfg, merged)
         response = self.call_llm(prompt_template, context)

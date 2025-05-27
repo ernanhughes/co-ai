@@ -8,11 +8,14 @@ from datetime import datetime
 
 
 class MRQStore:
-    def __init__(self, session: Session, logger=None):
+    def __init__(self, cfg:dict, session: Session, logger=None):
         self.session = session
         self.logger = logger
         self.name = "mrq"
-        self.cfg = None  # Will be set externally
+        self.cfg = cfg
+
+    def log_evaluations(self):
+        return self.cfg.get("log_evaluations", True)
 
     def add(self, goal: str, strategy: str, prompt: str,
             response: str, reward: float, metadata: dict = None):
