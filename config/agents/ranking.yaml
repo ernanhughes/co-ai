@@ -9,7 +9,9 @@ ranking:
   batch_size: 10    # limit to process at a time
 
   tournament_type: elo
+  initial_elo_score: 750
   max_comparisons: 6  # if using database will change
+
 
   save_context: false
   skip_if_completed: false

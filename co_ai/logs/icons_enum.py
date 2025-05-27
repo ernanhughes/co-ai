@@ -113,6 +113,9 @@ EVENT_ICONS = {
     # ────────────────────────────────────────────
     "MetaReviewAgent": "🧠",
     "MetaReviewInput": "📉",
+    "SimilarHypothesesFound": "💡🔁",
+    "PromptLookup": "🔍📜",
+    "IdeaSharpenedAndSaved": "💡🪓💾",
     "MetaReviewSummary": "📘",
     "RawMetaReviewOutput": "📜",
     "RefinedSkipped": "⏭️",

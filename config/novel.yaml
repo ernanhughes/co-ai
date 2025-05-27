@@ -92,6 +92,10 @@ pipeline:
        cls: co_ai.agents.idea_sharpening.IdeaSharpeningAgent
        enabled: true
        iterations: 1
+     - name: ranking
+       cls: co_ai.agents.ranking.RankingAgent
+       enabled: true
+       iterations: 1
      - name: method_planner
        cls: co_ai.agents.method_planner.MethodPlannerAgent
        enabled: false
