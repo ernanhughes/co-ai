@@ -1,5 +1,6 @@
 # co_ai/logs/icons.py
 
+
 def get_event_icon(event_type: str) -> str:
     """
     Get the icon associated with a specific event type.
@@ -53,7 +54,7 @@ EVENT_ICONS = {
     "PromptAResponseGenerated": "🅰️",
     "PromptABResponseGenerated": "🅰️",
     "PromptBResponseGenerated": "🅱️",
-    "PromptComparisonNoMatch": "❓",
+    "PromptComparisonNoMatch": "🧪📄❌",
     "PromptComparisonResult": "🏁",
     "PromptEvaluationFailed": "❌",
     "PromptFileNotFound": "🚫",
@@ -66,6 +67,9 @@ EVENT_ICONS = {
     "PromptTuningExamples": "📚",
     "PromptTuningSkipped": "⏭️",
     "PromptStored": "🗃🗃️",
+    "ScoreComputed": "🧮📊✅",
+    "ReviewScoreComputed": "🧑‍⚖️📊✅",
+    "ReflectionScoreComputed": "🪞📊✅",
     "TunedPromptGenerationFailed": "❌",
     "TunedPromptStored": "🗃️",
     "MRQTrainingStart": "🚀",
@@ -162,6 +166,8 @@ EVENT_ICONS = {
     "NoResultsFromWebSearch": "🌐🚫",
     "ProximityGraphComputed": "🗺️",
     "FetchHTMLFailed": "🌐❌",
+    "RubricPatternsStored": "📚🧩💾",
+    "PatternStatsStored": "📊🧩💾",
     "SearchResult": "🔎📄",
     "LLMPromptGenerated_SearchQuery": "🧠🔍",
     "LLMResponseReceived_SearchQuery": "📥🔍",

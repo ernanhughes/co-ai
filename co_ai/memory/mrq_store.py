@@ -1,7 +1,7 @@
 # stores/mrq_store.py
 import json
 from datetime import datetime
-from typing import Any, Dict, Optional
+from sqlalchemy import text
 
 from sqlalchemy.orm import Session
 
@@ -133,3 +133,73 @@ class MRQStore:
             return base_score
 
         return score_pipeline
+    
+    def get_training_pairs(self, goal: str, limit: int = 100, agent_name="generation") -> list[dict]:
+        try:
+            sql = text("""
+                WITH top_h AS (
+                    SELECT DISTINCT ON (p.id)
+                        p.id AS prompt_id,
+                        g.goal_text AS goal,
+                        p.prompt_text,
+                        h.text AS output_a,
+                        h.elo_rating AS rating_a
+                    FROM prompts p
+                    JOIN goals g ON p.goal_id = g.id
+                    JOIN hypotheses h ON h.prompt_id = p.id
+                    WHERE h.enabled = TRUE
+                    AND h.goal_id = g.id
+                    AND p.agent_name = :agent_name
+                    ORDER BY p.id, h.elo_rating DESC
+                ),
+                bottom_h AS (
+                    SELECT DISTINCT ON (p.id)
+                        p.id AS prompt_id,
+                        h.text AS output_b,
+                        h.elo_rating AS rating_b
+                    FROM prompts p
+                    JOIN hypotheses h ON h.prompt_id = p.id
+                    JOIN goals g ON p.goal_id = g.id
+                    WHERE h.enabled = TRUE
+                    AND h.goal_id = g.id
+                    AND p.agent_name = :agent_name
+                    ORDER BY p.id, h.elo_rating ASC
+                )
+                SELECT 
+                    top_h.prompt_id,
+                    top_h.goal,
+                    top_h.prompt_text,
+                    top_h.output_a,
+                    top_h.rating_a,
+                    bottom_h.output_b,
+                    bottom_h.rating_b
+                FROM top_h
+                JOIN bottom_h ON top_h.prompt_id = bottom_h.prompt_id
+                WHERE top_h.rating_a != bottom_h.rating_b
+                LIMIT :limit;
+            """)
+
+            result = self.session.execute(sql, {
+                'goal': goal,
+                'agent_name': agent_name,
+                'limit': limit
+            })
+            rows = result.fetchall()
+
+            return [
+                {
+                    "prompt": row[2],
+                    "output_a": row[3],
+                    "output_b": row[5],
+                    "preferred": "a" if row[4] > row[6] else "b",
+                    "rating_a": row[4],
+                    "rating_b": row[6],
+                }
+                for row in rows
+            ]
+
+        except Exception as e:
+            self.session.rollback()
+            if self.logger:
+                self.logger.log("GetMRQTrainingPairsFailed", {"error": str(e), "goal": goal})
+            return []

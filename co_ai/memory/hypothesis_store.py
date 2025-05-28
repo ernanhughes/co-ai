@@ -136,22 +136,22 @@ class HypothesisStore:
             HypothesisORM.review.is_(None)
         ).limit(limit).all()
 
-    def get_from_text(self, text: str, threshold: float = 0.95) -> Optional[HypothesisORM]:
+    def get_from_text(self, query: str, threshold: float = 0.95) -> Optional[HypothesisORM]:
         """
         Finds exact or fuzzy match for hypothesis text.
         """
-        result = self.session.query(HypothesisORM).filter(HypothesisORM.text == text).first()
+        result = self.session.query(HypothesisORM).filter(HypothesisORM.text == query).first()
         if result:
             return result
 
         # Fallback to similarity search if needed
         # This requires pg_trgm extension in PostgreSQL
         result = self.session.query(HypothesisORM).filter(
-            HypothesisORM.text.ilike(f"%{text}%")
+            HypothesisORM.text.ilike(f"%{query}%")
         ).first()
 
         if result and result.text:
-            sim = SequenceMatcher(None, result.text, text).ratio()
+            sim = SequenceMatcher(None, result.text, query).ratio()
             if sim >= threshold:
                 return result
 
@@ -163,7 +163,7 @@ class HypothesisStore:
     def get_all(self, limit: int = 100) -> list[HypothesisORM]:
         return self.session.query(HypothesisORM).order_by(HypothesisORM.created_at.desc()).limit(limit).all()
     
-    def get_similar_hypotheses(self, query: str, limit: int = 3) -> list[str]:
+    def get_similar(self, query: str, limit: int = 3) -> list[str]:
         """
         Get top N hypotheses similar to the given prompt using semantic similarity.
 
