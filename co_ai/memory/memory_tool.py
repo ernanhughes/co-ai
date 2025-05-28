@@ -40,8 +40,9 @@ class MemoryTool:
             user=self.cfg.get("db").get("user"),
             password=self.cfg.get("db").get("password"),
             host=self.cfg.get("db").get("host"),
-            port=self.cfg.get("db").get("port")
+            port=self.cfg.get("db").get("port"),
         )
+        conn.autocommit = True
         register_vector(conn)  # Register pgvector extension
 
         # Register stores
