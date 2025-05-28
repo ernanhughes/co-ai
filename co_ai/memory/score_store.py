@@ -92,7 +92,9 @@ class ScoreStore:
             "review": row.review,
             "meta_review": row.meta_review,
             "run_id": row.run_id,
-            "metadata": json.loads(row.extra_data) if row.extra_data else {},
+            "extra_data": (
+                row.extra_data if isinstance(row.extra_data, dict) else json.loads(row.extra_data)
+            ) if row.extra_data else {},
             "created_at": row.created_at,
         }
     

@@ -70,10 +70,9 @@ class EvolutionAgent(BaseAgent):
 
                 if refined_list:
                     for r in refined_list:
-                        goal = self.extract_goal_text(context.get(GOAL))
-                        evolved_goal = f"Evolved from top-ranked {goal}"
+                        goal = context.get(GOAL)
                         hyp = HypothesisORM(
-                            goal=evolved_goal,
+                            goal=goal,
                             text=h,
                             pipeline_signature=context.get(PIPELINE)
                         )

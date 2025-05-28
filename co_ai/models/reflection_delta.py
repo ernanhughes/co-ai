@@ -18,6 +18,8 @@ class ReflectionDeltaORM(Base):
     score_a = Column(Float)
     score_b = Column(Float)
     score_delta = Column(Float)
+    pipeline_a = Column(JSON)
+    pipeline_b = Column(JSON)
     pipeline_diff = Column(JSON)
     strategy_diff = Column(Boolean, default=False)
     model_diff = Column(Boolean, default=False)
