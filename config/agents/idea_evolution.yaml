@@ -13,7 +13,7 @@ idea_evolution:
     api_key: null
   prompt_mode: file
   prompt_file: evolve.txt
-  input_keys: ["goal", "ideas"]
-  input_key: ideas
-  output_key: evolved_ideas
+  input_keys: ["goal", "hypotheses"]
+  input_key: hypotheses
+  output_key: evolved_hypotheses
 

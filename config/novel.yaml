@@ -15,6 +15,7 @@ defaults:
   - agents/idea_innovation
   - agents/idea_sharpening
   - agents/idea_evaluator
+  - agents/idea_evolution
   - agents/knowledge_loader
   - logging/json_logger
 
@@ -64,7 +65,7 @@ embeddings:
 
 pipeline:
   name: default_pipeline
-  description: "Default hypothesis generation and refinement pipeline"
+  description: "NOVELSEEK pipeline for exploring the question: 'Will AI ever be able to reprogram itself?'"
   stages:
      - name: survey
        cls: co_ai.agents.survey.SurveyAgent
@@ -94,7 +95,11 @@ pipeline:
        cls: co_ai.agents.idea_evaluator.IdeaEvaluatorAgent
        enabled: true
        iterations: 1
+     - name: idea_evolution
+       cls: co_ai.agents.idea_evolution.IdeaEvolutionAgent
+       enabled: true
+       iterations: 3
      - name: method_planner
        cls: co_ai.agents.method_planner.MethodPlannerAgent
-       enabled: false
+       enabled: true
        iterations: 1

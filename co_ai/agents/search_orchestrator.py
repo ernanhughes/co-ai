@@ -21,8 +21,7 @@ class SearchOrchestratorAgent(BaseAgent):
 
         for query in queries:
             search_query = query.get("goal_text")
-            #source = self.route_query(goal, search_query)
-            source ="wikipedia"
+            source = self.route_query(goal, search_query)
             try:
                 if source == "arxiv":
                     hits = await search_arxiv([search_query])
