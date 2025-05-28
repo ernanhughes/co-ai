@@ -1,0 +1,4 @@
+# Direct Answer Format
+
+Question: {{ goal.query }}
+Answer: {{ "<ANSWER>" }}

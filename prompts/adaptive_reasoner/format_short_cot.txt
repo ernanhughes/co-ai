@@ -1,0 +1,8 @@
+# Short Chain-of-Thought Format
+
+Question: {{ goal.query }}
+Let's think through this briefly.
+
+Step 1: 
+Step 2: 
+Answer: {{ "<ANSWER>" }}

@@ -1,11 +1,14 @@
-# configs/agents/proximity.yaml
-defaults:
-  - /prompt_refiner/disabled
+# configs/agents/adaptive_reasoner.yaml
 
 adaptive_reasoner:
   name: adaptive_reasoner
   enabled: true
 
+  format_priority_by_difficulty:
+    easy: ["direct", "short_cot", "code", "long_cot"]
+    medium: ["short_cot", "code", "long_cot", "direct"]
+    hard: ["long_cot", "code", "short_cot", "direct"]
+    default: ["short_cot", "long_cot", "code", "direct"]
 
   save_prompt: true
   save_context: false

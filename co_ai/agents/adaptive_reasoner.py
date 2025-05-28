@@ -50,14 +50,42 @@ class AdaptiveReasonerAgent(BaseAgent):
         scores = {}
         results = {}
 
-        for fmt in self.format_list:
+        prioritized = self._get_prioritized_formats(goal)
+
+        for fmt in prioritized:
             result = self._generate_with_format(goal, fmt)
             results[fmt] = result
+
             if self.judge:
                 scores[fmt] = self.judge.score(goal, result["response"])
             else:
-                # fallback: favor shorter formats randomly if no judge
-                scores[fmt] = random.uniform(0.5, 1.0) - 0.1 * self.format_list.index(fmt)
+                # Prefer earlier formats slightly
+                scores[fmt] = 1.0 - 0.05 * prioritized.index(fmt)
 
         best_format = max(scores, key=scores.get)
         return results[best_format]
+
+
+    def get_format_for_goal(self, goal:dict):
+        if hasattr(goal, "preferred_format"):
+            return goal.preferred_format
+        goal_type = goal.get("goal_type", "default")
+        if goal_type == "math":
+            return "code"
+        elif goal_type == "commonsense":
+            return "short_cot"
+        else:
+            return "long_cot"
+    
+    def _get_prioritized_formats(self, goal):
+        # Prefer explicit format if provided
+        if "preferred_format" in goal:
+            return [goal["preferred_format"]]
+
+        # Read config-defined format priorities
+        priority_map = self.config.get("format_priority_by_difficulty", {})
+
+        difficulty = goal.get("difficulty", "default").lower()
+        formats = priority_map.get(difficulty, priority_map.get("default", ["long_cot"]))
+
+        return formats

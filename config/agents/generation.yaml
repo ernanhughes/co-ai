@@ -1,6 +1,4 @@
 # config/agents/generation.yaml
-defaults:
-  - /prompt_refiner/default
 
 generation:
   name: generation
