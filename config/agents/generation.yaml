@@ -1,4 +1,4 @@
-Wasn't just a # config/agents/generation.yaml
+# config/agents/generation.yaml
 defaults:
   - /prompt_refiner/default
 
