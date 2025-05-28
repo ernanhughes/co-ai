@@ -1,9 +1,11 @@
 # stores/prompt_store.py
 import json
 from typing import Optional
+
 from sqlalchemy.orm import Session
-from co_ai.models.prompt import PromptORM
+
 from co_ai.models.goal import GoalORM
+from co_ai.models.prompt import PromptORM
 
 
 class PromptStore:

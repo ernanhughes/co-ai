@@ -1,5 +1,5 @@
 import json
-from typing import Optional, List
+from typing import List, Optional
 
 from co_ai.memory.base import BaseStore
 from co_ai.models.reflection_delta import ReflectionDeltaORM

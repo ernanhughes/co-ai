@@ -1,7 +1,9 @@
 # stores/score_store.py
 import json
-from typing import List, Dict
+from typing import Dict, List
+
 from sqlalchemy.orm import Session
+
 from co_ai.models.goal import GoalORM
 from co_ai.models.score import ScoreORM
 

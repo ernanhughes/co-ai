@@ -2,22 +2,7 @@
 defaults:
   - _self_
   - db: postgres
-  - agents/literature
-  - agents/literature_ranking
-  - agents/prompt_tuning
-  - agents/generation
-  - agents/refiner
-  - agents/review
-  - agents/reflection
-  - agents/ranking
-  - agents/evolution
-  - agents/meta_review
-  - agents/proximity
-  - agents/sharpening
-  - agents/judge
-  - agents/cot_generator
-  - agents/cot_dspy_generator
-  - agents/supervisor
+  - agents/adaptive_reasoner
   - logging/json_logger
 
 # The goal of the pipeline, e.g., "Generate a hypothesis about the impact of climate change on biodiversity."
@@ -45,17 +30,9 @@ embeddings:
 
 pipeline:
   name: default_pipeline
-  description: "Default hypothesis generation and refinement pipeline"
+  description: "ARM: Adaptive Reasoning Mode - 2505.20258 implementation"
   stages:
-    - name: cot_generator
-      cls: co_ai.agents.cot_generator.ChainOfThoughtGeneratorAgent
-      enabled: true
-      iterations: 1
-    # - name: ranking
-    #   cls: co_ai.agents.ranking.RankingAgent
-    #   enabled: true
-    #   iterations: 1
-    - name: cot_dspy_generator
-      cls: co_ai.agents.cot_dspy_generator.ChainOfThoughtDSPyGeneratorAgent
+    - name: adaptive_reasoner
+      cls: co_ai.agents.adaptive_reasoner.AdaptiveReasonerAgent
       enabled: true
       iterations: 1

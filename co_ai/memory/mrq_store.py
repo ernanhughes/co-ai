@@ -1,10 +1,12 @@
 # stores/mrq_store.py
 import json
-from typing import Optional, Dict, Any
+from datetime import datetime
+from typing import Any, Dict, Optional
+
 from sqlalchemy.orm import Session
+
 from co_ai.models import ReflectionDeltaORM
 from co_ai.models.mrq_memory_entry import MRQMemoryEntryORM
-from datetime import datetime
 
 
 class MRQStore:

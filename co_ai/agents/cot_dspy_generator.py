@@ -4,7 +4,8 @@ import dspy
 from dspy import InputField, OutputField, Signature
 
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import GOAL, GOAL_TEXT, GOAL_TYPE, PIPELINE, PROMPT_PATH, STRATEGY
+from co_ai.constants import (GOAL, GOAL_TEXT, GOAL_TYPE, PIPELINE, PROMPT_PATH,
+                             STRATEGY)
 from co_ai.models import HypothesisORM
 
 

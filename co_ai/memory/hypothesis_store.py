@@ -1,11 +1,14 @@
 # stores/hypothesis_store.py
-from typing import Optional
-from sqlalchemy.orm import Session
-from co_ai.models.hypothesis import HypothesisORM
 from difflib import SequenceMatcher
-from co_ai.models.goal import GoalORM
-from sqlalchemy import text
+from typing import Optional
+
 import numpy as np
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from co_ai.models.goal import GoalORM
+from co_ai.models.hypothesis import HypothesisORM
+
 
 class HypothesisStore:
     def __init__(self, session: Session, logger=None, embedding_store=None):

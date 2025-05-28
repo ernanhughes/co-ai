@@ -1,6 +1,7 @@
+from omegaconf import OmegaConf
+
 from co_ai.agents import BaseAgent
 from co_ai.constants import GOAL
-from omegaconf import OmegaConf
 
 DEFAULT_PIPELINES = [
     ["generation", "judge"],

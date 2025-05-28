@@ -5,7 +5,7 @@ import re
 import numpy as np
 
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import EVOLVED, GOAL, HYPOTHESES, RANKING, PIPELINE
+from co_ai.constants import EVOLVED, GOAL, HYPOTHESES, PIPELINE, RANKING
 from co_ai.models import HypothesisORM
 from co_ai.tools.embedding_tool import get_embedding
 

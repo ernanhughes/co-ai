@@ -1,15 +1,16 @@
 from co_ai.agents import BaseAgent
-from co_ai.judges.base_judge import BaseJudge
-from co_ai.models.llm import call_llm
-import random
+from co_ai.evaluator import LLMJudgeEvaluator, MRQSelfEvaluator
+
 
 class AdaptiveReasonerAgent(BaseAgent):
     def __init__(self, config):
         super().__init__(config)
         self.modes = ["adaptive", "instruction_guided", "consensus_guided"]
-        self.mode = self.config.get("mode", "adaptive")
-        self.format_list = ["direct", "short_cot", "code", "long_cot"]
-        self.judge: BaseJudge = self.registry.get("judge") if self.registry else None
+        self.mode = self.cfg.get("mode", "adaptive")
+        self.format_list = self.cfg.get(
+            "format_list", ["direct", "short_cot", "code", "long_cot"]
+        )
+        self.judge = self._init_judge()
 
     def run(self, goal):
         if self.mode == "instruction_guided":
@@ -22,13 +23,11 @@ class AdaptiveReasonerAgent(BaseAgent):
         else:  # default to adaptive
             return self._run_adaptive_mode(goal)
 
-    def _generate_with_format(self, goal, format_name):
-        prompt = self.prompt_loader.render(f"format_{format_name}.j2", goal=goal)
-        response = call_llm(prompt, config=self.config.model)
-        return {
-            "response": response,
-            "format": format_name
-        }
+    def _generate_with_format(self, format_name, context):
+        prompt = self.prompt_loader.from_file(
+            f"format_{format_name}.j2", self.cfg, context
+        )
+        response = self.call_llm(self.cfg, prompt=prompt, format=format_name)
 
     def _run_consensus_mode(self, goal):
         outputs = {}
@@ -41,7 +40,7 @@ class AdaptiveReasonerAgent(BaseAgent):
             return {
                 "response": responses[0],
                 "format": "consensus-simple",
-                "source_formats": list(outputs.keys())
+                "source_formats": list(outputs.keys()),
             }
         else:
             return self._generate_with_format(goal, "long_cot")
@@ -65,8 +64,7 @@ class AdaptiveReasonerAgent(BaseAgent):
         best_format = max(scores, key=scores.get)
         return results[best_format]
 
-
-    def get_format_for_goal(self, goal:dict):
+    def get_format_for_goal(self, goal: dict):
         if hasattr(goal, "preferred_format"):
             return goal.preferred_format
         goal_type = goal.get("goal_type", "default")
@@ -76,7 +74,7 @@ class AdaptiveReasonerAgent(BaseAgent):
             return "short_cot"
         else:
             return "long_cot"
-    
+
     def _get_prioritized_formats(self, goal):
         # Prefer explicit format if provided
         if "preferred_format" in goal:
@@ -86,6 +84,25 @@ class AdaptiveReasonerAgent(BaseAgent):
         priority_map = self.config.get("format_priority_by_difficulty", {})
 
         difficulty = goal.get("difficulty", "default").lower()
-        formats = priority_map.get(difficulty, priority_map.get("default", ["long_cot"]))
+        formats = priority_map.get(
+            difficulty, priority_map.get("default", ["long_cot"])
+        )
 
         return formats
+
+    def _init_judge(self):
+        judge_strategy = self.cfg.get("judge", "mrq")
+        if judge_strategy == "llm":
+            llm = self.cfg.get("judge_model", self.cfg.get("model"))
+            prompt_file = self.cfg.get(
+                "judge_prompt_file", "judge_pairwise_comparison.txt"
+            )
+            self.logger.log(
+                "EvaluatorInit", {"strategy": "LLM", "prompt_file": prompt_file}
+            )
+            return LLMJudgeEvaluator(
+                self.cfg, llm, prompt_file, self.call_llm, self.logger
+            )
+        else:
+            self.logger.log("EvaluatorInit", {"strategy": "MRQ"})
+            return MRQSelfEvaluator(self.memory, self.logger)
