@@ -7,6 +7,7 @@ from co_ai.reasoning.arm import detect_format
 
 from co_ai.dataloaders.arm_to_mrq_dpo import ARMDataLoader
 
+
 class AdaptiveReasonerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
@@ -18,9 +19,19 @@ class AdaptiveReasonerAgent(BaseAgent):
         )
         self.judge = ARMReasoningSelfEvaluator(memory, logger)
 
-    async def run(self, context:dict):
-        adapter = ARMDataLoader(dataset_name="aqua_rat", split="train")
+    async def run(self, context: dict):
+        adapter = ARMDataLoader(
+            dataset_name="aqua_rat",
+            split="train",
+            max_samples=10,
+            memory=self.memory,
+            logger=self.logger,
+        )
         adapter.adapt(context)
+
+        self.judge.train_from_context(
+            context, {"lr": 1e-4, "batch_size": 16, "epochs": 20, "patience": 3}
+        )
 
         response = ""
         if self.mode == "instruction_guided":
@@ -31,6 +42,8 @@ class AdaptiveReasonerAgent(BaseAgent):
         else:  # default to adaptive
             response = self._run_adaptive_mode(context)
 
+        self.logger.log("AdaptiveReasoningResponse", response)
+
         context[self.output_key] = response
         return context
 
@@ -40,7 +53,7 @@ class AdaptiveReasonerAgent(BaseAgent):
         return {
             "prompt": prompt,
             "response": response,
-            "format_used": detect_format(response) or fmt
+            "format_used": detect_format(response) or fmt,
         }
 
     def _run_consensus_mode(self, goal):
@@ -63,7 +76,7 @@ class AdaptiveReasonerAgent(BaseAgent):
                 "response": long_cot_response["response"],
                 "format": "long_cot",
                 "source_formats": list(outputs.keys()),
-                "fallback_reason": "no_consensus"
+                "fallback_reason": "no_consensus",
             }
 
     def _run_adaptive_mode(self, context):
@@ -81,7 +94,7 @@ class AdaptiveReasonerAgent(BaseAgent):
             # Base score from judge
             if isinstance(self.judge, (MRQSelfEvaluator, ARMReasoningSelfEvaluator)):
                 base_score = self.judge.score(context, response)
-            elif hasattr(self.judge, 'score'):
+            elif hasattr(self.judge, "score"):
                 base_score = self.judge.score(context, response)
             else:
                 base_score = 1.0 - 0.05 * prioritized.index(fmt)
@@ -103,11 +116,10 @@ class AdaptiveReasonerAgent(BaseAgent):
         chosen_result = results[best_format]
 
         # Log decision
-        self.logger.log("AdaptiveModeDecision", {
-            "goal": context,
-            "scores": scores,
-            "chosen": best_format
-        })
+        self.logger.log(
+            "AdaptiveModeDecision",
+            {"goal": context, "scores": scores, "chosen": best_format},
+        )
 
         return chosen_result
 
@@ -134,19 +146,23 @@ class AdaptiveReasonerAgent(BaseAgent):
         judge_strategy = self.cfg.get("judge", "mrq")
         if judge_strategy == "llm":
             llm = self.cfg.get("judge_model", self.cfg.get("model"))
-            prompt_file = self.cfg.get("judge_prompt_file", "judge_pairwise_comparison.txt")
-            self.logger.log("EvaluatorInit", {"strategy": "LLM", "prompt_file": prompt_file})
-            return LLMJudgeEvaluator(self.cfg, llm, prompt_file, self.call_llm, self.logger)
-
+            prompt_file = self.cfg.get(
+                "judge_prompt_file", "judge_pairwise_comparison.txt"
+            )
+            self.logger.log(
+                "EvaluatorInit", {"strategy": "LLM", "prompt_file": prompt_file}
+            )
+            return LLMJudgeEvaluator(
+                self.cfg, llm, prompt_file, self.call_llm, self.logger
+            )
         elif judge_strategy == "arm":
             self.logger.log("EvaluatorInit", {"strategy": "ARM"})
-            return ARMReasoningSelfEvaluator(self.memory, self.logger, device="cuda")
-
+            return ARMFormatEvaluator(self.memory, self.logger, device="cuda")
         else:
             self.logger.log("EvaluatorInit", {"strategy": "MRQ"})
             return MRQSelfEvaluator(self.memory, self.logger)
 
-class MyAdaptiveAgent(ARMReasoningSelfEvaluator):
+class ARMFormatEvaluator(ARMReasoningSelfEvaluator):
     def __init__(self, model, tokenizer, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.model = model
@@ -168,4 +184,8 @@ class MyAdaptiveAgent(ARMReasoningSelfEvaluator):
         inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.device)
         output_ids = self.model.generate(**inputs, max_new_tokens=512)
         response = self.tokenizer.decode(output_ids[0], skip_special_tokens=False)
+        self.logger.log(
+            "ARMFormatEvaluatorResponse",
+            {"prompt": full_prompt, "response": response, "format": fmt}
+        )
         return response

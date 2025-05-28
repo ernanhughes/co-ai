@@ -1,9 +1,9 @@
 import torch
 import torch.nn.functional as F
+import torch.optim as optim
 
 from co_ai.reasoning.arm.utils import detect_format
 from co_ai.evaluator import TextEncoder, HypothesisValuePredictor, MRQSelfEvaluator
-
 
 class ARMReasoningSelfEvaluator(MRQSelfEvaluator):
     def __init__(self, memory, logger, device="cpu"):
@@ -23,6 +23,7 @@ class ARMReasoningSelfEvaluator(MRQSelfEvaluator):
         # ARM-specific modules
         self.encoder = TextEncoder().to(device)
         self.value_predictor = HypothesisValuePredictor(512, 1024).to(self.device)
+        self.ref_value_predictor = HypothesisValuePredictor(512, 1024).to(self.device)
 
     def _score_response(self, prompt_emb, response_emb):
         """Score a single response using prompt-response encoder + value predictor"""
@@ -92,6 +93,9 @@ class ARMReasoningSelfEvaluator(MRQSelfEvaluator):
         if fmt not in self.format_freq:
             self.format_freq[fmt] = 0
             self.format_rewards[fmt] = []
+
+        if fmt == "unknown":
+            print(f"[WARNING] Unknown format detected in response:\n{fmt[:100]}...")
 
         self.format_freq[fmt] += 1
         self.format_rewards[fmt].append(reward)
@@ -202,23 +206,138 @@ class ARMReasoningSelfEvaluator(MRQSelfEvaluator):
 
         self.logger.log("TrainingComplete", {"goal": goal})
 
-def select_best_format(self, prompt: str, options: dict[str, str]):
-    prompt_emb = torch.tensor(
-        self.memory.embedding.get_or_create(prompt), device=self.device
-    ).unsqueeze(0)
-
-    scores = {}
-    for fmt, response in options.items():
-        response_emb = torch.tensor(
-            self.memory.embedding.get_or_create(response), device=self.device
+    def select_best_format(self, prompt: str, options: dict[str, str]):
+        prompt_emb = torch.tensor(
+            self.memory.embedding.get_or_create(prompt), device=self.device
         ).unsqueeze(0)
 
-        value, _ = self._score_response(prompt_emb, response_emb)
-        token_len = len(response.split())
-        rarity_bonus = 1.0 / (1 + self.format_freq.get(fmt, 0))
+        scores = {}
+        for fmt, response in options.items():
+            response_emb = torch.tensor(
+                self.memory.embedding.get_or_create(response), device=self.device
+            ).unsqueeze(0)
 
-        final_score = value.item() - 0.01 * token_len + rarity_bonus
-        scores[fmt] = final_score
+            value, _ = self._score_response(prompt_emb, response_emb)
+            token_len = len(response.split())
+            rarity_bonus = 1.0 / (1 + self.format_freq.get(fmt, 0))
 
-    best_format = max(scores, key=scores.get)
-    return best_format, scores
+            final_score = value.item() - 0.01 * token_len + rarity_bonus
+            scores[fmt] = final_score
+
+        best_format = max(scores, key=scores.get)
+        return best_format, scores
+
+    def train_from_context(self, context: dict, cfg: dict):
+        """
+        Trains the value predictor using DPO samples stored in the context.
+        Applies format-aware reward shaping and KL penalty.
+        """
+        dpo_samples = context.get("dpo_samples", [])
+        if not dpo_samples:
+            self.logger.log(
+                "TrainingError", {"message": "No DPO samples found in context."}
+            )
+            return
+
+        self.logger.log(
+            "TrainingStarted", {"sample_count": len(dpo_samples), "config": cfg}
+        )
+
+        inputs, labels = [], []
+
+        # Extract preference data
+        for item in dpo_samples:
+            prompt_emb = self.memory.embedding.get_or_create(item["prompt"])
+            output_a_emb = self.memory.embedding.get_or_create(item["chosen"])
+            output_b_emb = self.memory.embedding.get_or_create(item["rejected"])
+
+            zsa_a = self.encoder(
+                torch.tensor(prompt_emb).unsqueeze(0).to(self.device),
+                torch.tensor(output_a_emb).unsqueeze(0).to(self.device),
+            )
+            zsa_b = self.encoder(
+                torch.tensor(prompt_emb).unsqueeze(0).to(self.device),
+                torch.tensor(output_b_emb).unsqueeze(0).to(self.device),
+            )
+
+            diff = zsa_a - zsa_b if item["preferred_format"] == "a" else zsa_b - zsa_a
+            inputs.append(diff.squeeze(0).detach())
+            labels.append(torch.tensor([1.0]))
+
+        dataset = torch.utils.data.TensorDataset(
+            torch.stack(inputs), torch.stack(labels)
+        )
+        dataloader = torch.utils.data.DataLoader(
+            dataset, batch_size=cfg.get("batch_size", 16), shuffle=True
+        )
+
+        opt = optim.Adam(self.value_predictor.parameters(), lr=cfg.get("lr", 1e-4))
+        self.value_predictor.train()
+
+        epochs = cfg.get("epochs", 20)
+        best_loss = float("inf")
+        patience_counter = 0
+        patience = cfg.get("patience", 3)
+
+        for epoch in range(epochs):
+            total_loss = 0.0
+            for x_batch, y_batch in dataloader:
+                preds = self.value_predictor(x_batch)
+                policy_log_probs = torch.log_softmax(preds, dim=-1)
+
+                with torch.no_grad():
+                    ref_preds = self.ref_value_predictor(x_batch)
+                    ref_log_probs = torch.log_softmax(ref_preds, dim=-1)
+
+                advantages = policy_log_probs - ref_log_probs
+                advantages = (advantages - advantages.mean()) / (
+                    advantages.std() + 1e-6
+                )
+
+                ratios = torch.exp(policy_log_probs - ref_log_probs)
+                clipped_ratios = torch.clamp(ratios, 1 - self.epsilon, 1 + self.epsilon)
+                unclipped_loss = ratios * advantages
+                clipped_loss = clipped_ratios * advantages
+
+                policy_loss = -torch.min(unclipped_loss, clipped_loss).mean()
+                kl = F.kl_div(ref_log_probs, policy_log_probs, reduction="batchmean")
+                loss = policy_loss + self.kl_penalty_coeff * kl
+
+                loss.backward()
+                opt.step()
+                opt.zero_grad()
+
+                total_loss += loss.item()
+
+            avg_loss = total_loss / len(dataloader)
+            self.logger.log(
+                "TrainingEpoch",
+                {
+                    "epoch": epoch + 1,
+                    "avg_loss": round(avg_loss, 5),
+                    "goal": "arm_dpo",
+                    "format_usage": self.format_freq.copy(),
+                    "format_rewards": {
+                        k: round(sum(v) / len(v), 5) if v else 0
+                        for k, v in self.format_rewards.items()
+                    },
+                },
+            )
+
+            if avg_loss < best_loss - 0.0001:
+                best_loss = avg_loss
+                patience_counter = 0
+            else:
+                patience_counter += 1
+
+            if patience_counter >= patience:
+                self.logger.log("EarlyStopping", {
+                    "stopped_epoch": epoch + 1,
+                    "best_loss": round(best_loss, 5)
+                })
+                break
+
+        self.logger.log("TrainingComplete", {
+            "total_epochs": epoch + 1,
+            "final_loss": round(avg_loss, 5)
+        })

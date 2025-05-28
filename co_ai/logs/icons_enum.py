@@ -20,7 +20,6 @@ EVENT_ICONS = {
     "ContextAfterStage": "🗃️",
     "ContextYAMLDumpSaved": "📄",
     "debug": "🐞",
-
     # Pipeline Execution
     "PipelineStart": "🔬",
     "PipelineStageStart": "🚀",
@@ -36,7 +35,9 @@ EVENT_ICONS = {
     "AgentRunStarted": "🚀",
     "AgentRunCompleted": "🏁",
     "AgentRanSuccessfully": "✅",
-
+    "TrainingEpoch": "🏋️‍♂️",
+    "EarlyStopping": "⏹️⏳",
+    "TrainingComplete": "🎉✅",
     # Prompt Processing & Tuning
     "Prompt": "📜",
     "PromptGenerated": "📝",
@@ -66,20 +67,22 @@ EVENT_ICONS = {
     "MRQTraining": "📊🛠️",
     "MRQTrainingDataLoaded": "🧠📥",
     "MRQPipelineSuggested": "🧠🛤️",
-
     # goals
-    "GoalCreated":"🎯💾",
-
+    "GoalCreated": "🎯💾",
     # Hypotheses Generation
     "GenerationAgent": "🧪",
     "GeneratedHypotheses": "💡",
     "GenerationStart": "✨",
     "GenerationStarted": "🎯",
+    "DatasetLoading": "⏳📦",
+    "DatasetLoaded": "✅📂",
+    "DPOGenerated": "🔁🧠",
+    "TrainingStarted": "🚀📊",
+    "AdaptiveReasoningResponse": "🤖🪄",
     "GenerationCompleted": "✅",
     "HypothesisStored": "💾",
     "HypothesisStoreFailed": "❌",
     "HypothesisInserted": "💡📥",
-
     # Hypotheses Evaluation & Ranking
     "RankingAgent": "🏆",
     "RankedHypotheses": "🏅",
@@ -92,7 +95,6 @@ EVENT_ICONS = {
     "ReviewScoreComputed": "🧑‍⚖️📊✅",
     "ReflectionScoreComputed": "🪞📊✅",
     "ScoreStored": "💾",
-
     # Evolution
     "EvolutionAgent": "🧬",
     "EvolvingTopHypotheses": "🔄",
@@ -101,7 +103,6 @@ EVENT_ICONS = {
     "EvolutionCompleted": "🦾",
     "EvolutionError": "⚠️",
     "GraftingPair": "🌿",
-
     # Review & Reflection
     "ReflectionAgent": "🪞",
     "ReflectionStart": "🤔",
@@ -121,7 +122,6 @@ EVENT_ICONS = {
     "RefinedSkipped": "⏭️",
     "RefinedUpdated": "🔄",
     "CoTGenerated": "🧠🔗📝",
-
     # Refiner Agent
     "RefinerStart": "🔄",
     "RefinerPromptGenerated": "💡",
@@ -132,7 +132,6 @@ EVENT_ICONS = {
     "RefinerImprovementPromptLoaded": "📜",
     "RefinerNoHistoryFound": "🚫",
     "RefinerError": "❌",
-
     # Literature & Research
     "LiteratureAgentInit": "📚",
     "LiteratureQuery": "📚",
@@ -149,20 +148,17 @@ EVENT_ICONS = {
     "LLMResponseReceived_SearchQuery": "📥🔍",
     "LLMPromptGenerated_Summarize": "🧠📄",
     "LLMResponseReceived_Summarize": "📥📄",
-
     # Reporting
     "ReportGenerated": "📊",
     "GoalFetchedByText": "📄🔍",
     "GoalExists": "✔️📌",
     "BatchProcessingStart": "📥",
-
     # Rubric Patterns
     "RubricPatternsStored": "📚🧩💾",
     "PatternStatsStored": "📊🧩💾",
     "RubricClassified": "📌",
     "ClassificationStarted": "🔍",
     "ClassificationCompleted": "📋",
-
     # SQL
     # ────────────────────────────────────────────
     "SQLQuery": "🧮",

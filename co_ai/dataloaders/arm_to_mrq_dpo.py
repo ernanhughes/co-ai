@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import List, Dict, Optional, Union
 from collections import Counter
+import random
 
 # Required for loading Hugging Face datasets
 from datasets import load_dataset
@@ -13,12 +14,14 @@ class ARMDataLoader:
         dataset_name: str = "aqua_rat",
         subset: Optional[str] = None,
         split: str = "train",
+        max_samples: int = 500,
         memory=None,
         logger=None,
     ):
         self.dataset_name = dataset_name
         self.subset = subset
         self.split = split
+        self.max_samples = max_samples
         self.memory = memory
         self.logger = logger
 
@@ -38,37 +41,62 @@ class ARMDataLoader:
         self._debug_count = 0
         self.dataset = None
 
+    def log(self, event_name: str, payload: dict):
+        if self.logger:
+            self.logger.log(event_name, payload)
+        else:
+            print(f"[{event_name}] {json.dumps(payload)}")
+
     def adapt(self, context: dict):
-        """Main method: loads → converts → saves into context"""
-        print(f"[INFO] Loading dataset '{self.dataset_name}'...")
+        self.log("DatasetLoading", {"name": self.dataset_name, "split": self.split})
         self.dataset = load_dataset(self.dataset_name, self.subset, split=self.split)
-        print(f"[INFO] Loaded {len(self.dataset)} samples.")
+        self.log("DatasetLoaded", {"count": len(self.dataset)})
+        total_samples = len(self.dataset)
+        indices = random.sample(
+            range(total_samples), min(self.max_samples, total_samples)
+        )
 
         dpo_samples = []
-        difficulty = context.get("difficulty")
-
-        for sample in self.dataset:
-            pairs = self.build_preference_pairs(sample, difficulty=difficulty)
+        for idx in indices:
+            sample = self.dataset[idx]
+            pairs = self.build_preference_pairs(sample)
             dpo_samples.extend(pairs)
 
         context["dpo_samples"] = dpo_samples
-        print(
-            f"[INFO] Generated {len(dpo_samples)} DPO preference pairs and saved to context."
-        )
+        self.log("DPOGenerated", {"count": len(dpo_samples)})
 
     def load_dataset(self):
-        """Load dataset from Hugging Face."""
         try:
             self.dataset = load_dataset(
                 self.dataset_name, self.subset, split=self.split
             )
-            print(
-                f"[INFO] Loaded {len(self.dataset)} samples from Hugging Face dataset '{self.dataset_name}'"
-            )
+            self.log("DatasetLoaded", {"count": len(self.dataset)})
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to load dataset '{self.dataset_name}': {str(e)}"
-            )
+            self.log("DatasetLoadError", {"error": str(e)})
+            raise RuntimeError(f"Failed to load dataset '{self.dataset_name}': {str(e)}")
+
+    def summarize_difficulties(self):
+        counts = Counter()
+        for sample in self.dataset:
+            question = sample.get("question", "")
+            detected = self._detect_difficulty(question)
+            counts[detected] += 1
+        self.log("DifficultySummary", dict(counts))
+        return counts
+
+    def print_samples_by_difficulty(self, count_per_level=3):
+        buckets = {"easy": [], "medium": [], "hard": []}
+        for sample in self.dataset:
+            question = sample.get("question", "")
+            difficulty = self._detect_difficulty(question)
+            if len(buckets[difficulty]) < count_per_level:
+                buckets[difficulty].append(question)
+
+        for diff, questions in buckets.items():
+            self.log("SampleByDifficulty", {
+                "difficulty": diff,
+                "examples": questions
+            })
 
     def _detect_difficulty(self, question: str) -> str:
         """Basic heuristic to infer difficulty based on question length."""
@@ -111,30 +139,6 @@ class ARMDataLoader:
             "Reflection: This approach ensures correctness by exploring multiple paths.\n"
             f"Final Answer: {answer}"
         )
-
-    def summarize_difficulties(self):
-        """Summarize how many questions fall into each difficulty level."""
-        counts = Counter()
-        for sample in self.dataset:
-            question = sample.get("question", "")
-            detected = self._detect_difficulty(question)
-            counts[detected] += 1
-        print("[SUMMARY] Detected difficulty distribution:", dict(counts))
-        return counts
-
-    def print_samples_by_difficulty(self, count_per_level=3):
-        """Print a few examples per difficulty level for debugging."""
-        buckets = {"easy": [], "medium": [], "hard": []}
-        for sample in self.dataset:
-            question = sample.get("question", "")
-            difficulty = self._detect_difficulty(question)
-            if len(buckets[difficulty]) < count_per_level:
-                buckets[difficulty].append(question)
-
-        for diff, questions in buckets.items():
-            print(f"\n--- {diff.upper()} EXAMPLES ---")
-            for q in questions:
-                print(f"- {q}")
 
     def wrap_with_format_token(self, text: str, fmt: str) -> str:
         """Wrap response in format token."""
