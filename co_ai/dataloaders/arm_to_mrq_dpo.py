@@ -1,11 +1,14 @@
 import json
-from pathlib import Path
-from typing import List, Dict, Optional, Union
-from collections import Counter
 import random
+from collections import Counter
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
-# Required for loading Hugging Face datasets
+# Hugging Face dataset loading
 from datasets import load_dataset
+
+# Your internal modules
+from co_ai.reasoning.arm.utils import detect_format
 
 
 class ARMDataLoader:
@@ -16,7 +19,7 @@ class ARMDataLoader:
         split: str = "train",
         max_samples: int = 500,
         memory=None,
-        logger=None,
+        logger=None
     ):
         self.dataset_name = dataset_name
         self.subset = subset
@@ -30,14 +33,15 @@ class ARMDataLoader:
             "direct": "<Direct>",
             "short_cot": "<Short_CoT>",
             "code": "<Code>",
-            "long_cot": "<Long_CoT>",
+            "long_cot": "<Long_CoT>"
         }
         self.format_end_tokens = {
             "direct": "</Direct>",
             "short_cot": "</Short_CoT>",
             "code": "</Code>",
-            "long_cot": "</Long_CoT>",
+            "long_cot": "</Long_CoT>"
         }
+
         self._debug_count = 0
         self.dataset = None
 
@@ -48,32 +52,150 @@ class ARMDataLoader:
             print(f"[{event_name}] {json.dumps(payload)}")
 
     def adapt(self, context: dict):
+        """Main method: Load → Convert → Save to Memory"""
         self.log("DatasetLoading", {"name": self.dataset_name, "split": self.split})
-        self.dataset = load_dataset(self.dataset_name, self.subset, split=self.split)
-        self.log("DatasetLoaded", {"count": len(self.dataset)})
-        total_samples = len(self.dataset)
-        indices = random.sample(
-            range(total_samples), min(self.max_samples, total_samples)
-        )
+        self.load_dataset()
+        self.summarize_difficulties()
+        self.print_samples_by_difficulty()
 
-        dpo_samples = []
+        total_samples = len(self.dataset)
+        indices = random.sample(range(total_samples), min(self.max_samples, total_samples))
+
+        count = 0
+        goal_text = context.get("goal").get("goal_text")
+        run_id = context.get("run_id")
         for idx in indices:
             sample = self.dataset[idx]
             pairs = self.build_preference_pairs(sample)
-            dpo_samples.extend(pairs)
+            for pair in pairs:
+                prompt = pair["prompt"]
+                chosen = pair["chosen"]
+                rejected = pair["rejected"]
+                preferred = pair["preferred_format"]
 
-        context["dpo_samples"] = dpo_samples
-        self.log("DPOGenerated", {"count": len(dpo_samples)})
+                # Embed everything once
+                prompt_emb = self._get_or_cache_embedding(prompt)
+                chosen_emb = self._get_or_cache_embedding(chosen)
+                rejected_emb = self._get_or_cache_embedding(rejected)
+
+                # Save to database
+                try:
+                    self.memory.mrq.add_preference_pair(
+                        goal=goal_text,
+                        prompt=prompt,
+                        output_a=chosen,
+                        output_b=rejected,
+                        preferred=preferred,
+                        run_id=run_id
+                    )
+                    count += 1
+                except Exception as e:
+                    self.log("PreferencePairSaveError", {
+                        "error": str(e),
+                        "prompt": prompt[:80],
+                        "chosen": chosen[:80],
+                        "rejected": rejected[:80]
+                    })
+
+        self.log("PreferencePairsSaved", {
+            "count": count,
+            "goal": "arm_dpo"
+        })
+        context["dpo_samples"] = count
+        return context
+
+    def _get_or_cache_embedding(self, text: str) -> List[float]:
+        """
+        Get embedding from cache or compute and store.
+        Uses your existing memory.embedding.get_or_create() method.
+        """
+        emb = self.memory.embedding.get_or_create(text)
+        return emb
 
     def load_dataset(self):
+        """Load dataset from Hugging Face."""
         try:
-            self.dataset = load_dataset(
-                self.dataset_name, self.subset, split=self.split
-            )
+            self.dataset = load_dataset(self.dataset_name, self.subset, split=self.split)
             self.log("DatasetLoaded", {"count": len(self.dataset)})
         except Exception as e:
-            self.log("DatasetLoadError", {"error": str(e)})
             raise RuntimeError(f"Failed to load dataset '{self.dataset_name}': {str(e)}")
+
+    def _detect_difficulty(self, question: str) -> str:
+        words = question.split()
+        if len(words) < 20:
+            return "easy"
+        elif len(words) < 50:
+            return "medium"
+        else:
+            return "hard"
+
+    def build_preference_pairs(self, sample: Dict) -> List[Dict]:
+        """
+        Build DPO-style preference pairs by comparing formats.
+        Returns list of dicts like:
+        {
+          'prompt': ..., 
+          'chosen': ..., 
+          'rejected': ..., 
+          'preferred_format': ..., 
+          'difficulty': ...
+        }
+        """
+        question = sample.get("question", "").strip()
+        ground_truth = sample.get("correct", "").strip()
+        difficulty = self._detect_difficulty(question)
+
+        # Generate all four reasoning formats
+        direct = self.generate_direct(ground_truth)
+        short_cot = self.generate_short_cot(question, ground_truth)
+        code = self.generate_code(question, ground_truth)
+        long_cot = self.generate_long_cot(question, ground_truth)
+
+        format_to_response = {
+            "direct": direct,
+            "short_cot": short_cot,
+            "code": code,
+            "long_cot": long_cot
+        }
+
+        # Filter out empty responses
+        valid_formats = [fmt for fmt, resp in format_to_response.items() if resp.strip()]
+        format_to_response = {k: v for k, v in format_to_response.items() if k in valid_formats}
+
+        # Define which formats are preferred based on difficulty
+        if difficulty == "easy":
+            preferred_formats = ["direct", "short_cot", "code"]
+            non_preferred_formats = ["long_cot"]
+        elif difficulty == "medium":
+            preferred_formats = ["short_cot", "code"]
+            non_preferred_formats = ["direct", "long_cot"]
+        elif difficulty == "hard":
+            preferred_formats = ["long_cot", "code"]
+            non_preferred_formats = ["direct", "short_cot"]
+        else:
+            preferred_formats = ["short_cot", "code"]
+            non_preferred_formats = ["direct", "long_cot"]
+
+        # Build all possible pairs
+        pairs = []
+        for pref in preferred_formats:
+            p_resp = format_to_response.get(pref)
+            if not p_resp:
+                continue
+            for non_pref in non_preferred_formats:
+                np_resp = format_to_response.get(non_pref)
+                if not np_resp:
+                    continue
+                pairs.append({
+                    "prompt": question,
+                    "chosen": p_resp,
+                    "rejected": np_resp,
+                    "preferred_format": pref,
+                    "rejected_format": non_pref,
+                    "difficulty": difficulty
+                })
+
+        return pairs
 
     def summarize_difficulties(self):
         counts = Counter()
@@ -83,7 +205,7 @@ class ARMDataLoader:
             counts[detected] += 1
         self.log("DifficultySummary", dict(counts))
         return counts
-
+    
     def print_samples_by_difficulty(self, count_per_level=3):
         buckets = {"easy": [], "medium": [], "hard": []}
         for sample in self.dataset:
@@ -139,96 +261,3 @@ class ARMDataLoader:
             "Reflection: This approach ensures correctness by exploring multiple paths.\n"
             f"Final Answer: {answer}"
         )
-
-    def wrap_with_format_token(self, text: str, fmt: str) -> str:
-        """Wrap response in format token."""
-        start = self.format_tokens.get(fmt, "")
-        end = self.format_end_tokens.get(fmt, "")
-        if not start or not end:
-            return text
-        return f"{start}\n{text}\n{end}"
-
-    def build_preference_pairs(
-        self, sample: Dict, difficulty: Optional[str] = None
-    ) -> List[Dict]:
-        """
-        Build preference pairs from one sample using format-based reward shaping.
-
-        Args:
-            sample: AQuA-Rat style sample with question, options, rationale, correct answer
-            difficulty: Optional override for task difficulty
-
-        Returns:
-            List of DPO-style preference samples
-        """
-        question = sample.get("question", "").strip()
-        options = sample.get("options", [])
-        ground_truth = sample.get("correct", "").strip()
-
-        if not question or not ground_truth:
-            return []
-
-        # Use sample difficulty or fallback to basic logic
-        difficulty = difficulty or self._detect_difficulty(question)
-
-        preferred_formats = []
-        non_preferred_formats = []
-
-        # Define format priority by difficulty
-        if difficulty == "easy":
-            preferred_formats = ["direct", "short_cot", "code"]
-            non_preferred_formats = ["long_cot"]
-        elif difficulty == "medium":
-            preferred_formats = ["short_cot", "code"]
-            non_preferred_formats = ["direct", "long_cot"]
-        elif difficulty == "hard":
-            preferred_formats = ["long_cot", "code"]
-            non_preferred_formats = ["direct", "short_cot"]
-        else:
-            preferred_formats = ["short_cot", "code"]
-            non_preferred_formats = ["direct", "long_cot"]
-
-        # Generate all four formats per question
-        direct_answer = self.generate_direct(ground_truth)
-        short_cot_answer = self.generate_short_cot(question, ground_truth)
-        code_answer = self.generate_code(question, ground_truth)
-        long_cot_answer = self.generate_long_cot(question, ground_truth)
-
-        # Map format names to generated responses
-        format_to_response = {
-            "direct": direct_answer,
-            "short_cot": short_cot_answer,
-            "code": code_answer,
-            "long_cot": long_cot_answer,
-        }
-
-        # Filter out empty responses
-        valid_formats = [
-            fmt for fmt in format_to_response if format_to_response[fmt]
-        ]
-        format_to_response = {
-            k: v for k, v in format_to_response.items() if k in valid_formats
-        }
-
-        # Build all possible pairs
-        pairs = []
-        for pref in preferred_formats:
-            p_resp = format_to_response.get(pref)
-            if not p_resp:
-                continue
-            for non_pref in non_preferred_formats:
-                np_resp = format_to_response.get(non_pref)
-                if not np_resp:
-                    continue
-                pairs.append(
-                    {
-                        "prompt": question,
-                        "chosen": self.wrap_with_format_token(p_resp, pref),
-                        "rejected": self.wrap_with_format_token(np_resp, non_pref),
-                        "preferred_format": pref,
-                        "rejected_format": non_pref,
-                        "difficulty": difficulty,
-                    }
-                )
-
-        return pairs

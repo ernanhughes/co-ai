@@ -1,12 +1,10 @@
 from co_ai.agents import BaseAgent
-from co_ai.evaluator import LLMJudgeEvaluator, MRQSelfEvaluator
-from co_ai.reasoning.arm import ARMReasoningSelfEvaluator  # New import
-
-# Optional utility for detecting reasoning formats
-from co_ai.reasoning.arm import detect_format
-
 from co_ai.dataloaders.arm_to_mrq_dpo import ARMDataLoader
-
+from co_ai.evaluator import LLMJudgeEvaluator, MRQSelfEvaluator
+# Optional utility for detecting reasoning formats
+from co_ai.reasoning.arm import ARMReasoningSelfEvaluator  # New import
+from co_ai.reasoning.arm import detect_format
+from co_ai.constants import GOAL
 
 class AdaptiveReasonerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -17,21 +15,20 @@ class AdaptiveReasonerAgent(BaseAgent):
         self.format_list = self.cfg.get(
             "format_list", ["direct", "short_cot", "code", "long_cot"]
         )
-        self.judge = ARMReasoningSelfEvaluator(memory, logger)
+        self.judge = self._init_judge()
 
     async def run(self, context: dict):
-        adapter = ARMDataLoader(
-            dataset_name="aqua_rat",
-            split="train",
-            max_samples=10,
-            memory=self.memory,
-            logger=self.logger,
-        )
-        adapter.adapt(context)
+        goal = context.get(GOAL) 
+        # adapter = ARMDataLoader(
+        #     dataset_name="aqua_rat",
+        #     split="train",
+        #     max_samples=500,
+        #     memory=self.memory,
+        #     logger=self.logger,
+        # )
+        # adapter.adapt(context)
 
-        self.judge.train_from_context(
-            context, {"lr": 1e-4, "batch_size": 16, "epochs": 20, "patience": 3}
-        )
+        self.judge.train_from_database(goal.get("goal_text"), self.cfg)
 
         response = ""
         if self.mode == "instruction_guided":
@@ -155,18 +152,13 @@ class AdaptiveReasonerAgent(BaseAgent):
             return LLMJudgeEvaluator(
                 self.cfg, llm, prompt_file, self.call_llm, self.logger
             )
-        elif judge_strategy == "arm":
-            self.logger.log("EvaluatorInit", {"strategy": "ARM"})
-            return ARMFormatEvaluator(self.memory, self.logger, device="cuda")
         else:
-            self.logger.log("EvaluatorInit", {"strategy": "MRQ"})
-            return MRQSelfEvaluator(self.memory, self.logger)
+            self.logger.log("EvaluatorInit", {"strategy": "ARM"})
+            return ARMFormatEvaluator(self.memory, self.logger)
 
 class ARMFormatEvaluator(ARMReasoningSelfEvaluator):
-    def __init__(self, model, tokenizer, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.model = model
-        self.tokenizer = tokenizer
+    def __init__(self, memory, logger):
+        super().__init__(memory, logger)
 
     def _generate_with_format(self, prompt: str, fmt: str) -> str:
         """

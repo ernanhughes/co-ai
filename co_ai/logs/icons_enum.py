@@ -157,6 +157,10 @@ EVENT_ICONS = {
     "RubricPatternsStored": "📚🧩💾",
     "PatternStatsStored": "📊🧩💾",
     "RubricClassified": "📌",
+    "DifficultySummary": "📋🧩",
+    "SampleByDifficulty": "🧪📚",
+    "PreferencePairSaveError": "❌💾",
+    "TrainingError": "🔧💥",
     "ClassificationStarted": "🔍",
     "ClassificationCompleted": "📋",
     # SQL

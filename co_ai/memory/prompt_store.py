@@ -2,8 +2,8 @@
 import json
 from typing import Optional
 
-from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from co_ai.models.goal import GoalORM
 from co_ai.models.prompt import PromptORM

@@ -1,7 +1,10 @@
 import random
+
 import torch
+
 from co_ai.reasoning.arm.interface import ReasoningFormatSelector
 from co_ai.reasoning.arm.utils import REASONING_FORMATS
+
 
 class AdaptiveReasoningSelector(ReasoningFormatSelector):
     def __init__(self, *args, num_samples=8, **kwargs):

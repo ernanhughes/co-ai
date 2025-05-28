@@ -2,8 +2,10 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
+from co_ai.evaluator import (HypothesisValuePredictor, MRQSelfEvaluator,
+                             TextEncoder)
 from co_ai.reasoning.arm.utils import detect_format
-from co_ai.evaluator import TextEncoder, HypothesisValuePredictor, MRQSelfEvaluator
+
 
 class ARMReasoningSelfEvaluator(MRQSelfEvaluator):
     def __init__(self, memory, logger, device="cpu"):
@@ -123,7 +125,7 @@ class ARMReasoningSelfEvaluator(MRQSelfEvaluator):
 
         return weights
 
-    def train_from_database(self, goal: str, cfg: dict):
+    def train_from_database(self, goal_text: str, cfg: dict):
         """
         Trains the value predictor using preference pairs stored in memory.
         Includes KL penalty and format-aware reward shaping.
@@ -133,7 +135,7 @@ class ARMReasoningSelfEvaluator(MRQSelfEvaluator):
         lr = cfg.get("lr", 1e-4)
         batch_size = cfg.get("batch_size", 16)
 
-        samples = self.memory.mrq.get_training_pairs(goal=goal, limit=limit)
+        samples = self.memory.mrq.get_training_preferece_pairs(goal=goal_text, limit=limit)
         if not samples or len(samples) == 0:
             print("[ERROR] No training samples found.")
             return
@@ -197,14 +199,14 @@ class ARMReasoningSelfEvaluator(MRQSelfEvaluator):
             self.logger.log("TrainingEpoch", {
                 "epoch": epoch + 1,
                 "avg_loss": round(avg_loss, 5),
-                "goal": goal,
+                "goal": goal_text,
                 "format_usage": self.format_freq.copy(),
                 "format_rewards": {k: sum(v)/len(v) for k, v in self.format_rewards.items()}
             })
 
             self.current_step += 1
 
-        self.logger.log("TrainingComplete", {"goal": goal})
+        self.logger.log("TrainingComplete", {"goal": goal_text})
 
     def select_best_format(self, prompt: str, options: dict[str, str]):
         prompt_emb = torch.tensor(

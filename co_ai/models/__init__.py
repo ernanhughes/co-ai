@@ -5,6 +5,7 @@ from .idea import IdeaORM
 from .lookahead import LookaheadORM
 from .method_plan import MethodPlanORM
 from .mrq_memory_entry import MRQMemoryEntryORM
+from .mrq_preference_pair import MRQPreferencePairORM
 from .pattern_stat import PatternStatORM
 from .pipeline_run import PipelineRunORM
 from .prompt import PromptORM

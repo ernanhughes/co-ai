@@ -1,17 +1,17 @@
 # stores/mrq_store.py
 import json
 from datetime import datetime
-from sqlalchemy import text
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from co_ai.models import ReflectionDeltaORM
-from co_ai.models.mrq_memory_entry import MRQMemoryEntryORM
+from co_ai.models import MRQMemoryEntryORM, MRQPreferencePairORM, ReflectionDeltaORM
+from co_ai.reasoning.arm.utils import detect_format
 
 
 class MRQStore:
-    def __init__(self, cfg:dict, session: Session, logger=None):
-        self.session = session
+    def __init__(self, cfg: dict, session: Session, logger=None):
+        self.db = session
         self.logger = logger
         self.name = "mrq"
         self.cfg = cfg
@@ -19,8 +19,15 @@ class MRQStore:
     def log_evaluations(self):
         return self.cfg.get("log_evaluations", True)
 
-    def add(self, goal: str, strategy: str, prompt: str,
-            response: str, reward: float, metadata: dict = None):
+    def add(
+        self,
+        goal: str,
+        strategy: str,
+        prompt: str,
+        response: str,
+        reward: float,
+        metadata: dict = None,
+    ):
         """
         Adds a new entry to MRQ memory for symbolic learning or training.
         """
@@ -32,29 +39,32 @@ class MRQStore:
                 response=response,
                 reward=reward,
                 embedding=None,  # optional: compute from prompt/response
-                features=None,    # optional: extract features from metadata
+                features=None,  # optional: extract features from metadata
                 source="manual",
                 run_id=metadata.get("run_id") if metadata else None,
                 metadata_=json.dumps(metadata or {}),
-                created_at=datetime.utcnow()
+                created_at=datetime.utcnow(),
             )
 
-            self.session.add(db_entry)
-            self.session.flush()  # Get ID before commit
+            self.db.add(db_entry)
+            self.db.flush()  # Get ID before commit
 
             if self.logger:
-                self.logger.log("MRQMemoryEntryInserted", {
-                    "goal_snippet": goal[:100],
-                    "prompt_snippet": prompt[:100],
-                    "strategy": strategy,
-                    "reward": reward,
-                    "timestamp": db_entry.created_at.isoformat()
-                })
+                self.logger.log(
+                    "MRQMemoryEntryInserted",
+                    {
+                        "goal_snippet": goal[:100],
+                        "prompt_snippet": prompt[:100],
+                        "strategy": strategy,
+                        "reward": reward,
+                        "timestamp": db_entry.created_at.isoformat(),
+                    },
+                )
 
             return db_entry.id
 
         except Exception as e:
-            self.session.rollback()
+            self.db.rollback()
             if self.logger:
                 self.logger.log("MRQMemoryInsertFailed", {"error": str(e)})
             raise
@@ -65,9 +75,12 @@ class MRQStore:
         Future: can use vector similarity instead of trigram search.
         """
         try:
-            results = self.session.query(MRQMemoryEntryORM).filter(
-                MRQMemoryEntryORM.prompt.ilike(f"%{prompt}%")
-            ).limit(top_k).all()
+            results = (
+                self.db.query(MRQMemoryEntryORM)
+                .filter(MRQMemoryEntryORM.prompt.ilike(f"%{prompt}%"))
+                .limit(top_k)
+                .all()
+            )
 
             return results
 
@@ -78,15 +91,25 @@ class MRQStore:
 
     def get_by_strategy(self, strategy: str, limit: int = 100) -> list:
         """Returns all entries generated using a specific strategy."""
-        return self.session.query(MRQMemoryEntryORM).filter_by(strategy=strategy).limit(limit).all()
+        return (
+            self.db.query(MRQMemoryEntryORM)
+            .filter_by(strategy=strategy)
+            .limit(limit)
+            .all()
+        )
 
     def get_all(self, limit: int = 100) -> list:
         """Returns most recent MRQ memory entries."""
-        return self.session.query(MRQMemoryEntryORM).order_by(MRQMemoryEntryORM.created_at.desc()).limit(limit).all()
+        return (
+            self.db.query(MRQMemoryEntryORM)
+            .order_by(MRQMemoryEntryORM.created_at.desc())
+            .limit(limit)
+            .all()
+        )
 
     def train_from_reflection_deltas(self):
         """Train ranker from reflection deltas (symbolic_ranker example)"""
-        deltas = self.session.query(ReflectionDeltaORM).all()
+        deltas = self.db.query(ReflectionDeltaORM).all()
         examples = []
 
         for d in deltas:
@@ -103,14 +126,16 @@ class MRQStore:
                 continue  # Skip small differences
 
             label = "b" if score_b > score_a else "a"
-            examples.append({
-                "goal_text": d.goal.goal_text,
-                "pipeline_a": a,
-                "pipeline_b": b,
-                "score_a": score_a,
-                "score_b": score_b,
-                "label": label
-            })
+            examples.append(
+                {
+                    "goal_text": d.goal.goal_text,
+                    "pipeline_a": a,
+                    "pipeline_b": b,
+                    "score_a": score_a,
+                    "score_b": score_b,
+                    "label": label,
+                }
+            )
 
         self.training_data = examples
         self.trained_ranker = self.symbolic_ranker()
@@ -120,6 +145,7 @@ class MRQStore:
 
     def symbolic_ranker(self):
         """Simple rule-based ranker used until we train a learned one"""
+
         def score_pipeline(pipeline: list):
             base_score = len(pipeline) * 0.3
             if "verifier" in pipeline:
@@ -133,8 +159,10 @@ class MRQStore:
             return base_score
 
         return score_pipeline
-    
-    def get_training_pairs(self, goal: str, limit: int = 100, agent_name="generation") -> list[dict]:
+
+    def get_training_pairs(
+        self, goal: str, limit: int = 100, agent_name="generation"
+    ) -> list[dict]:
         try:
             sql = text("""
                 WITH top_h AS (
@@ -179,11 +207,9 @@ class MRQStore:
                 LIMIT :limit;
             """)
 
-            result = self.session.execute(sql, {
-                'goal': goal,
-                'agent_name': agent_name,
-                'limit': limit
-            })
+            result = self.db.execute(
+                sql, {"goal": goal, "agent_name": agent_name, "limit": limit}
+            )
             rows = result.fetchall()
 
             return [
@@ -199,7 +225,75 @@ class MRQStore:
             ]
 
         except Exception as e:
-            self.session.rollback()
+            self.db.rollback()
             if self.logger:
-                self.logger.log("GetMRQTrainingPairsFailed", {"error": str(e), "goal": goal})
+                self.logger.log(
+                    "GetMRQTrainingPairsFailed", {"error": str(e), "goal": goal}
+                )
             return []
+
+    def add_preference_pair(
+        self,
+        goal: str,
+        prompt: str,
+        output_a: str,
+        output_b: str,
+        preferred: str,
+        source: str = "arm_dataloader",
+        run_id: str = None
+    ):
+        """
+        Save preference pair to database with precomputed embeddings.
+        Args:
+            goal: Task name or group key (e.g., "arm_dpo")
+            prompt: Input question or instruction
+            output_a: First response (chosen or rejected)
+            output_b: Second response
+            preferred: Either "a" or "b"
+            prompt_emb: Precomputed embedding of the prompt
+            output_a_emb: Precomputed embedding of output_a
+            output_b_emb: Precomputed embedding of output_b
+        """
+        try:
+            entry = MRQPreferencePairORM(
+                goal=goal,
+                prompt=prompt,
+                output_a=output_a,
+                output_b=output_b,
+                preferred=preferred,
+                fmt_a=detect_format(output_a),
+                fmt_b=detect_format(output_b),
+                source=source,
+                run_id=run_id,
+            )
+            self.db.add(entry)
+            self.db.commit()
+        except Exception as e:
+            self.db.rollback()
+            raise RuntimeError(f"Failed to save preference pair: {str(e)}")
+        finally:
+            self.db.close()
+
+    def get_training_preferece_pairs(self, goal: str, limit: int = 1000) -> list[dict]:
+        try:
+            query = self.db.query(MRQPreferencePairORM).filter(
+                MRQPreferencePairORM.goal == goal
+            )
+            results = query.limit(limit).all()
+            return [
+                {
+                    "prompt": r.prompt,
+                    "output_a": r.output_a,
+                    "output_b": r.output_b,
+                    "preferred": r.preferred,
+                    "fmt_a": r.fmt_a,
+                    "fmt_b": r.fmt_b,
+                }
+                for r in results
+            ]
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to load preference pairs for goal '{goal}': {str(e)}"
+            )
+        finally:
+            self.db.close()

@@ -1,15 +1,8 @@
 # co_ai/agents/meta_review.py
 
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import (
-    DATABASE_MATCHES,
-    EVOLVED,
-    HYPOTHESES,
-    PROXIMITY,
-    RANKING,
-    REFLECTION,
-    REVIEW,
-)
+from co_ai.constants import (DATABASE_MATCHES, EVOLVED, HYPOTHESES, PROXIMITY,
+                             RANKING, REFLECTION, REVIEW)
 
 
 class MetaReviewAgent(BaseAgent):

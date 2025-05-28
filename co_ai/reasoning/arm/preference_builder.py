@@ -1,5 +1,6 @@
-from typing import Tuple, List
 from collections import Counter
+from typing import List, Tuple
+
 from co_ai.reasoning.arm.format_selector import ReasoningFormatSelector
 from co_ai.reasoning.arm.utils import REASONING_FORMATS
 
