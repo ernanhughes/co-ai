@@ -22,7 +22,8 @@ class RankingAgent(BaseAgent):
         self.initial_elo_score = cfg.get("initial_elo_score", 750)
         self.win_history = []
         self.preferences = cfg.get("preferences", ["novelty", "feasibility"])
-
+        self.elo_scores = {}         # map: hypothesis ID → score
+        self.hypothesis_lookup = {}  # map: hypothesis ID → full dict
 
     async def run(self, context: dict) -> dict:
         """
@@ -66,13 +67,15 @@ class RankingAgent(BaseAgent):
                     },
                 )
 
-        ranked = sorted(self.elo_scores.items(), key=lambda x: x[1], reverse=True)
-        context[self.output_key] = ranked
+        ranked_ids = sorted(self.elo_scores.items(), key=lambda x: x[1], reverse=True)
+        context[self.output_key] = [
+            (self.hypothesis_lookup[h_id], score) for h_id, score in ranked_ids
+        ]
 
         self.logger.log(
             "TournamentCompleted",
             {
-                "total_hypotheses": len(ranked),
+                "total_hypotheses": len(ranked_ids),
                 "win_loss_patterns": self._extract_win_loss_feedback(),
                 "preferences": self.preferences,
             },
@@ -82,9 +85,9 @@ class RankingAgent(BaseAgent):
 
     def _initialize_elo(self, hypotheses):
         for h in hypotheses:
-            text = h.get("text")
-            if text not in self.elo_scores:
-                self.elo_scores[text] = self.initial_elo_score
+            hyp_id = h.get("id") or h.get("text")  # fallback to text if no id
+            self.elo_scores[hyp_id] = self.initial_elo_score
+            self.hypothesis_lookup[hyp_id] = h
 
     def _build_ranking_prompt(self, hyp1, hyp2, context):
         return self.prompt_loader.load_prompt(
@@ -121,16 +124,17 @@ class RankingAgent(BaseAgent):
         return sorted(similarities, key=lambda x: x[2], reverse=True)
 
     def _extract_win_loss_feedback(self):
-        """Return summary of which hypotheses won most often"""
         win_counts = {}
-
-        for hyp1, hyp2, winner in self.win_history:
-            winner_hypothesis = hyp1 if winner == "A" else hyp2
-            win_counts[winner_hypothesis] = win_counts.get(winner_hypothesis, 0) + 1
+        for id1, id2, winner in self.win_history:
+            winner_id = id1 if winner == "A" else id2
+            win_counts[winner_id] = win_counts.get(winner_id, 0) + 1
 
         return {
             "top_performers": [
-                {"hypotheses": h, "wins": w}
+                {
+                    "hypothesis": self.hypothesis_lookup[h],
+                    "wins": w
+                }
                 for h, w in sorted(win_counts.items(), key=lambda x: x[1], reverse=True)
             ],
             "total_matches": len(self.win_history),
@@ -174,37 +178,34 @@ class RankingAgent(BaseAgent):
                 )
 
     def _update_elo(self, hyp1, hyp2, winner):
-        text1 = hyp1.get("text")
-        text2 = hyp2.get("text")
+        id1 = hyp1.get("id") or hyp1.get("text")
+        id2 = hyp2.get("id") or hyp2.get("text")
 
         K = self.cfg.get("elo_k", 32)
-        R1 = 10 ** (self.elo_scores[text1] / 400)
-        R2 = 10 ** (self.elo_scores[text2] / 400)
+        R1 = 10 ** (self.elo_scores[id1] / 400)
+        R2 = 10 ** (self.elo_scores[id2] / 400)
         E1 = R1 / (R1 + R2)
         E2 = R2 / (R1 + R2)
 
         S1 = 1 if winner == "A" else 0
         S2 = 1 - S1
 
-        self.elo_scores[text1] = max(
-            100, min(2800, self.elo_scores[text1] + K * (S1 - E1))
-        )
-        self.elo_scores[text2] = max(
-            100, min(2800, self.elo_scores[text2] + K * (S2 - E2))
-        )
+        self.elo_scores[id1] = max(100, min(2800, self.elo_scores[id1] + K * (S1 - E1)))
+        self.elo_scores[id2] = max(100, min(2800, self.elo_scores[id2] + K * (S2 - E2)))
 
-        self.memory.hypotheses.update_elo_rating(hyp1.get("id"), self.elo_scores[text1])
-        self.memory.hypotheses.update_elo_rating(hyp2.get("id"), self.elo_scores[text2])
+        self.memory.hypotheses.update_elo_rating(id1, self.elo_scores[id1])
+        self.memory.hypotheses.update_elo_rating(id2, self.elo_scores[id2])
 
-        self.win_history.append((text1, text2, winner))
+        self.win_history.append((id1, id2, winner))
+
         self.logger.log(
             "RankingUpdated",
             {
-                "hypothesis_a": text1,
-                "hypothesis_b": text2,
+                "hypothesis_a": id1,
+                "hypothesis_b": id2,
                 "winner": winner,
-                "elo_a": self.elo_scores[text1],
-                "elo_b": self.elo_scores[text2],
+                "elo_a": self.elo_scores[id1],
+                "elo_b": self.elo_scores[id2],
             },
         )
 

@@ -1,11 +1,9 @@
 # stores/score_store.py
 import json
-from typing import List, Optional, Dict
+from typing import List, Dict
 from sqlalchemy.orm import Session
-from co_ai.models.score import ScoreORM
 from co_ai.models.goal import GoalORM
 from co_ai.models.score import ScoreORM
-from datetime import datetime
 
 
 class ScoreStore:

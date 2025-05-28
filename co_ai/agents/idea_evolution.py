@@ -1,8 +1,5 @@
 # co_ai/agents/evolution.py
 import itertools
-import re
-import json
-from typing import List, Dict, Optional, Tuple
 
 import numpy as np
 
@@ -50,7 +47,7 @@ class IdeaEvolutionAgent(BaseAgent):
             return context
 
         # Decide which hypotheses to evolve
-        top_texts = [h.text for h, _ in ranked_hypotheses[:3]] if ranked_hypotheses else fallback_hypotheses
+        top_texts = [h.get("text") for h, _ in ranked_hypotheses[:3]] if ranked_hypotheses else fallback_hypotheses
 
         # Run evolution strategies
         all_variants = await self._mutate_all(top_texts, context, preferences)
@@ -95,7 +92,7 @@ class IdeaEvolutionAgent(BaseAgent):
                 "preferences": ", ".join(preferences)
             }
 
-            prompt = self.prompt_loader.load_prompt("prompts/evolve.j2", prompt_context)
+            prompt = self.prompt_loader.load_prompt(self.cfg, prompt_context)
             raw_output = self.call_llm(prompt, context)
 
             mutants = extract_hypotheses(raw_output)
@@ -153,7 +150,7 @@ class IdeaEvolutionAgent(BaseAgent):
         """
         Score variants using ScorerAgent logic and sort by total score
         """
-        scorer = self.memory.scorer
+        scorer = self.memory.scores
         scored = []
 
         for v in variants:
