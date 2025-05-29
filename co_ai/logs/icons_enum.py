@@ -102,6 +102,7 @@ EVENT_ICONS = {
     "EvolvedParsedHypotheses": "🧬",
     "EvolutionCompleted": "🦾",
     "EvolutionError": "⚠️",
+    "AdaptiveModeDecision": "🧠⚖️",
     "GraftingPair": "🌿",
     # Review & Reflection
     "ReflectionAgent": "🪞",

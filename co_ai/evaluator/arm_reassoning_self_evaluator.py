@@ -2,8 +2,7 @@ import torch
 
 from co_ai.evaluator.base import BaseEvaluator
 from co_ai.evaluator import HypothesisValuePredictor, TextEncoder
-from co_ai.reasoning.arm.utils import detect_format
-
+from co_ai.dataloaders import ARMDataLoader
 
 class ARMReasoningSelfEvaluator(BaseEvaluator):
     def __init__(self, cfg, memory, logger):
@@ -44,8 +43,8 @@ class ARMReasoningSelfEvaluator(BaseEvaluator):
         scores = {
             "value_a": value_a,
             "value_b": value_b,
-            "fmt_a": detect_format(output_a),
-            "fmt_b": detect_format(output_b),
+            "fmt_a": ARMDataLoader.detect_format(output_a),
+            "fmt_b": ARMDataLoader.detect_format(output_b),
         }
 
         return preferred_output, scores
@@ -141,7 +140,7 @@ class ARMReasoningSelfEvaluator(BaseEvaluator):
             score = self.value_predictor(zsa).item()
 
         token_len = len(response.split())
-        fmt = detect_format(response)
+        fmt = ARMDataLoader.detect_format(response)
         rarity_bonus = 1.0 / (1 + self.format_freq.get(fmt, 1))
         score -= 0.01 * token_len
         score += rarity_bonus

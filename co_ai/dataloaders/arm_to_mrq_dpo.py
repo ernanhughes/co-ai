@@ -2,12 +2,23 @@ import json
 import random
 from collections import Counter
 from typing import Dict, List, Optional
-from co_ai.reasoning.arm.utils import detect_format, detect_difficulty
 
 from datasets import load_dataset
 
 
+REASONING_FORMATS = {
+    "direct": "<Direct>",
+    "short_cot": "<Short_CoT>",
+    "code": "<Code>",
+    "long_cot": "<Long_CoT>"
+}
 
+FORMAT_END_TAGS = {
+    "direct": "</Direct>",
+    "short_cot": "</Short_CoT>",
+    "code": "</Code>",
+    "long_cot": "</Long_CoT>"
+}
 
 
 class ARMDataLoader:
@@ -73,9 +84,9 @@ class ARMDataLoader:
                 chosen = pair["chosen"]
                 rejected = pair["rejected"]
                 preferred = pair["preferred_format"]
-                fmt_a = detect_format(chosen)
-                fmt_b = detect_format(rejected)
-                difficulty = detect_difficulty(prompt)
+                fmt_a = self.detect_format(chosen)
+                fmt_b = self.detect_format(rejected)
+                difficulty = self.detect_difficulty(prompt)
                 # Embed everything once
                 self._get_or_cache_embedding(prompt)
                 self._get_or_cache_embedding(chosen)
@@ -180,13 +191,10 @@ class ARMDataLoader:
         if difficulty == "easy":
             preferred_formats = ["direct", "short_cot", "code"]
             non_preferred_formats = ["long_cot"]
-        elif difficulty == "medium":
-            preferred_formats = ["short_cot", "code"]
-            non_preferred_formats = ["direct", "long_cot"]
         elif difficulty == "hard":
             preferred_formats = ["long_cot", "code"]
             non_preferred_formats = ["direct", "short_cot"]
-        else:
+        else:  # medium or default case
             preferred_formats = ["short_cot", "code"]
             non_preferred_formats = ["direct", "long_cot"]
 
@@ -280,3 +288,46 @@ class ARMDataLoader:
             f"Final Answer: {answer}"
             f"{self.format_end_tokens['long_cot']}"
         )
+
+    def detect_difficulty(self, text: str) -> str:
+        words = text.split()
+        if len(words) < 20:
+            return "easy"
+        elif len(words) < 50:
+            return "medium"
+        else:
+            return "hard"
+
+    @staticmethod
+    def detect_format(text: str) -> str:
+        text = text.strip().lower()
+        if not text:
+            return "unknown"
+        if "<direct>" in text:
+            return "direct"
+        elif "<short_cot>" in text:
+            return "short_cot"
+        elif "<code>" in text:
+            return "code"
+        elif "<long_cot>" in text:
+            return "long_cot"
+        
+        # Direct Answer
+        if text.startswith("the answer is") or text.startswith("answer:"):
+            return "direct"
+
+        # Short CoT
+        elif text.startswith("let me think briefly"):
+            return "short_cot"
+
+        # Long CoT
+        elif text.startswith("let's analyze this step-by-step"):
+            return "long_cot"
+
+        # Code
+        elif any(kw in text for kw in ["def", "return", "solve()", "print(", "for ", "if "]):
+            return "code"
+
+        else:
+            print(f"[WARNING] Unknown format:\n{text[:100]}...")
+            return "unknown"

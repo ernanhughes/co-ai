@@ -1,10 +1,9 @@
 from typing import Union
 
 from co_ai.agents import BaseAgent
-from co_ai.evaluator import LLMJudgeEvaluator
-from co_ai.reasoning.arm import ARMFormatEvaluator
-from co_ai.reasoning.arm import detect_format
+from co_ai.evaluator import LLMJudgeEvaluator, ARMReasoningSelfEvaluator
 from co_ai.constants import GOAL
+from co_ai.dataloaders import ARMDataLoader
 
 class AdaptiveReasonerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -45,7 +44,7 @@ class AdaptiveReasonerAgent(BaseAgent):
         return {
             "prompt": prompt,
             "response": response,
-            "format_used": detect_format(response) or fmt,
+            "format_used": ARMDataLoader.detect_format(response) or fmt,
         }
 
     def _run_consensus_mode(self, context:dict):
@@ -135,5 +134,5 @@ class AdaptiveReasonerAgent(BaseAgent):
             )
         else:
             self.logger.log("EvaluatorInit", {"strategy": "ARM"})
-            return ARMFormatEvaluator(self.cfg, self.memory, self.logger)
+            return ARMReasoningSelfEvaluator(self.cfg, self.memory, self.logger)
 
