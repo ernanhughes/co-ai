@@ -2,10 +2,9 @@ from typing import Union
 
 from co_ai.agents import BaseAgent
 from co_ai.evaluator import LLMJudgeEvaluator
-from co_ai.reasoning.arm import ARMReasoningSelfEvaluator  # New import
+from co_ai.reasoning.arm import ARMFormatEvaluator
 from co_ai.reasoning.arm import detect_format
 from co_ai.constants import GOAL
-from co_ai.dataloaders import ARMDataLoader
 
 class AdaptiveReasonerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -33,7 +32,7 @@ class AdaptiveReasonerAgent(BaseAgent):
         elif self.mode == "consensus_guided":
             response = self._run_consensus_mode(context)
         else:  # default to adaptive
-            response = self._run_adaptive_mode(prompt)
+            response = self._run_adaptive_mode(prompt, context)
 
         self.logger.log("AdaptiveReasoningResponse", response)
 
@@ -49,10 +48,10 @@ class AdaptiveReasonerAgent(BaseAgent):
             "format_used": detect_format(response) or fmt,
         }
 
-    def _run_consensus_mode(self, goal):
+    def _run_consensus_mode(self, context:dict):
         outputs = {}
         for fmt in ["direct", "short_cot", "code"]:
-            outputs[fmt] = self._generate_with_format(goal, fmt)["response"]
+            outputs[fmt] = self._generate_with_format(fmt, context)["response"]
 
         responses = list(outputs.values())
         unique_responses = set(responses)
@@ -64,7 +63,7 @@ class AdaptiveReasonerAgent(BaseAgent):
                 "source_formats": list(outputs.keys()),
             }
         else:
-            long_cot_response = self._generate_with_format(goal, "long_cot")
+            long_cot_response = self._generate_with_format("long_cot", context)
             return {
                 "response": long_cot_response["response"],
                 "format": "long_cot",
@@ -72,12 +71,13 @@ class AdaptiveReasonerAgent(BaseAgent):
                 "fallback_reason": "no_consensus",
             }
 
-    def _run_adaptive_mode(self, prompt:str) -> dict[str, Union[str, float]]:
+    def _run_adaptive_mode(self, prompt:str, context:dict) -> dict[str, Union[str, float]]:
         prioritized_formats = ["direct", "short_cot", "code", "long_cot"]
 
         scores = {}
         for fmt in prioritized_formats:
-            response = self._generate_with_format(prompt, fmt)
+            dict_response = self._generate_with_format(fmt, context)
+            response = dict_response["response"]
             base_score = self.judge.score(prompt, response)
 
             token_len = len(response.split())
@@ -88,7 +88,7 @@ class AdaptiveReasonerAgent(BaseAgent):
             self.judge._update_format_stats(fmt, final_score)
 
         best_format = max(scores, key=scores.get)
-        chosen_response = self._generate_with_format(prompt, best_format)
+        chosen_response = self._generate_with_format(best_format, context)
         # Log decision
         self.logger.log(
             "AdaptiveModeDecision",
@@ -112,7 +112,7 @@ class AdaptiveReasonerAgent(BaseAgent):
         else:
             return "long_cot"
 
-    def _get_prioritized_formats(self, context):
+    def _get_prioritized_formats(self, context:dict):
         if "preferred_format" in context:
             return [context["preferred_format"]]
 
@@ -135,30 +135,5 @@ class AdaptiveReasonerAgent(BaseAgent):
             )
         else:
             self.logger.log("EvaluatorInit", {"strategy": "ARM"})
-            return ARMFormatEvaluator(self.memory, self.logger)
+            return ARMFormatEvaluator(self.cfg, self.memory, self.logger)
 
-class ARMFormatEvaluator(ARMReasoningSelfEvaluator):
-    def __init__(self, memory, logger):
-        super().__init__(memory, logger)
-
-    def _generate_with_format(self, prompt: str, fmt: str) -> str:
-        """
-        Actually generate response using the specified format.
-        Wraps the prompt with format tokens before calling the model.
-        """
-        format_prefixes = {
-            "direct": "<Direct>",
-            "short_cot": "<Short_CoT>",
-            "code": "<Code>",
-            "long_cot": "<Long_CoT>"
-        }
-
-        full_prompt = f"{format_prefixes.get(fmt, '')}{prompt}"
-        inputs = self.tokenizer(full_prompt, return_tensors="pt").to(self.device)
-        output_ids = self.model.generate(**inputs, max_new_tokens=512)
-        response = self.tokenizer.decode(output_ids[0], skip_special_tokens=False)
-        self.logger.log(
-            "ARMFormatEvaluatorResponse",
-            {"prompt": full_prompt, "response": response, "format": fmt}
-        )
-        return response
