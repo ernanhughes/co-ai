@@ -1,14 +1,13 @@
 import json
 import random
 from collections import Counter
-from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
+from co_ai.reasoning.arm.utils import detect_format, detect_difficulty
 
-# Hugging Face dataset loading
 from datasets import load_dataset
 
-# Your internal modules
-from co_ai.reasoning.arm.utils import detect_format
+
+
 
 
 class ARMDataLoader:
@@ -19,7 +18,7 @@ class ARMDataLoader:
         split: str = "train",
         max_samples: int = 500,
         memory=None,
-        logger=None
+        logger=None,
     ):
         self.dataset_name = dataset_name
         self.subset = subset
@@ -33,13 +32,13 @@ class ARMDataLoader:
             "direct": "<Direct>",
             "short_cot": "<Short_CoT>",
             "code": "<Code>",
-            "long_cot": "<Long_CoT>"
+            "long_cot": "<Long_CoT>",
         }
         self.format_end_tokens = {
             "direct": "</Direct>",
             "short_cot": "</Short_CoT>",
             "code": "</Code>",
-            "long_cot": "</Long_CoT>"
+            "long_cot": "</Long_CoT>",
         }
 
         self._debug_count = 0
@@ -59,7 +58,9 @@ class ARMDataLoader:
         self.print_samples_by_difficulty()
 
         total_samples = len(self.dataset)
-        indices = random.sample(range(total_samples), min(self.max_samples, total_samples))
+        indices = random.sample(
+            range(total_samples), min(self.max_samples, total_samples)
+        )
 
         count = 0
         goal_text = context.get("goal").get("goal_text")
@@ -72,11 +73,13 @@ class ARMDataLoader:
                 chosen = pair["chosen"]
                 rejected = pair["rejected"]
                 preferred = pair["preferred_format"]
-
+                fmt_a = detect_format(chosen)
+                fmt_b = detect_format(rejected)
+                difficulty = detect_difficulty(prompt)
                 # Embed everything once
-                prompt_emb = self._get_or_cache_embedding(prompt)
-                chosen_emb = self._get_or_cache_embedding(chosen)
-                rejected_emb = self._get_or_cache_embedding(rejected)
+                self._get_or_cache_embedding(prompt)
+                self._get_or_cache_embedding(chosen)
+                self._get_or_cache_embedding(rejected)
 
                 # Save to database
                 try:
@@ -86,21 +89,24 @@ class ARMDataLoader:
                         output_a=chosen,
                         output_b=rejected,
                         preferred=preferred,
-                        run_id=run_id
+                        fmt_a=fmt_a,
+                        fmt_b=fmt_b,
+                        difficulty=difficulty,
+                        run_id=run_id,
                     )
                     count += 1
                 except Exception as e:
-                    self.log("PreferencePairSaveError", {
-                        "error": str(e),
-                        "prompt": prompt[:80],
-                        "chosen": chosen[:80],
-                        "rejected": rejected[:80]
-                    })
+                    self.log(
+                        "PreferencePairSaveError",
+                        {
+                            "error": str(e),
+                            "prompt": prompt[:80],
+                            "chosen": chosen[:80],
+                            "rejected": rejected[:80],
+                        },
+                    )
 
-        self.log("PreferencePairsSaved", {
-            "count": count,
-            "goal": "arm_dpo"
-        })
+        self.log("PreferencePairsSaved", {"count": count, "goal": "arm_dpo"})
         context["dpo_samples"] = count
         return context
 
@@ -115,10 +121,14 @@ class ARMDataLoader:
     def load_dataset(self):
         """Load dataset from Hugging Face."""
         try:
-            self.dataset = load_dataset(self.dataset_name, self.subset, split=self.split)
+            self.dataset = load_dataset(
+                self.dataset_name, self.subset, split=self.split
+            )
             self.log("DatasetLoaded", {"count": len(self.dataset)})
         except Exception as e:
-            raise RuntimeError(f"Failed to load dataset '{self.dataset_name}': {str(e)}")
+            raise RuntimeError(
+                f"Failed to load dataset '{self.dataset_name}': {str(e)}"
+            )
 
     def _detect_difficulty(self, question: str) -> str:
         words = question.split()
@@ -134,10 +144,10 @@ class ARMDataLoader:
         Build DPO-style preference pairs by comparing formats.
         Returns list of dicts like:
         {
-          'prompt': ..., 
-          'chosen': ..., 
-          'rejected': ..., 
-          'preferred_format': ..., 
+          'prompt': ...,
+          'chosen': ...,
+          'rejected': ...,
+          'preferred_format': ...,
           'difficulty': ...
         }
         """
@@ -155,12 +165,16 @@ class ARMDataLoader:
             "direct": direct,
             "short_cot": short_cot,
             "code": code,
-            "long_cot": long_cot
+            "long_cot": long_cot,
         }
 
         # Filter out empty responses
-        valid_formats = [fmt for fmt, resp in format_to_response.items() if resp.strip()]
-        format_to_response = {k: v for k, v in format_to_response.items() if k in valid_formats}
+        valid_formats = [
+            fmt for fmt, resp in format_to_response.items() if resp.strip()
+        ]
+        format_to_response = {
+            k: v for k, v in format_to_response.items() if k in valid_formats
+        }
 
         # Define which formats are preferred based on difficulty
         if difficulty == "easy":
@@ -186,14 +200,16 @@ class ARMDataLoader:
                 np_resp = format_to_response.get(non_pref)
                 if not np_resp:
                     continue
-                pairs.append({
-                    "prompt": question,
-                    "chosen": p_resp,
-                    "rejected": np_resp,
-                    "preferred_format": pref,
-                    "rejected_format": non_pref,
-                    "difficulty": difficulty
-                })
+                pairs.append(
+                    {
+                        "prompt": question,
+                        "chosen": p_resp,
+                        "rejected": np_resp,
+                        "preferred_format": pref,
+                        "rejected_format": non_pref,
+                        "difficulty": difficulty,
+                    }
+                )
 
         return pairs
 
@@ -205,7 +221,7 @@ class ARMDataLoader:
             counts[detected] += 1
         self.log("DifficultySummary", dict(counts))
         return counts
-    
+
     def print_samples_by_difficulty(self, count_per_level=3):
         buckets = {"easy": [], "medium": [], "hard": []}
         for sample in self.dataset:
@@ -215,10 +231,7 @@ class ARMDataLoader:
                 buckets[difficulty].append(question)
 
         for diff, questions in buckets.items():
-            self.log("SampleByDifficulty", {
-                "difficulty": diff,
-                "examples": questions
-            })
+            self.log("SampleByDifficulty", {"difficulty": diff, "examples": questions})
 
     def _detect_difficulty(self, question: str) -> str:
         """Basic heuristic to infer difficulty based on question length."""
@@ -231,27 +244,32 @@ class ARMDataLoader:
             return "hard"
 
     def generate_direct(self, answer: str) -> str:
-        return f"The answer is {answer}."
+        return f"{self.format_tokens['direct']}The answer is {answer}.{self.format_end_tokens['direct']}"
 
     def generate_short_cot(self, question: str, answer: str) -> str:
         return (
+            f"{self.format_tokens['short_cot']}"
             "Let me think briefly:\n"
-            + "Step 1: Understand the question.\n"
-            + "Step 2: Apply basic logic.\n"
-            + f"Final Answer: {answer}"
+            "Step 1: Understand the question.\n"
+            "Step 2: Apply basic logic.\n"
+            f"Final Answer: {answer}"
+            f"{self.format_end_tokens['short_cot']}"
         )
 
     def generate_code(self, question: str, answer: str) -> str:
         return (
+            f"{self.format_tokens['code']}"
             "def solve():\n"
             "    # Placeholder code generated by GPT-4o\n"
             f"    return '{answer}'\n"
             "solve()\n"
             f"# Output: {answer}"
+            f"{self.format_end_tokens['code']}"
         )
 
     def generate_long_cot(self, question: str, answer: str) -> str:
         return (
+            f"{self.format_tokens['long_cot']}"
             "Let's analyze this step-by-step:\n\n"
             "1. Read the question carefully.\n"
             "2. Identify key information.\n"
@@ -260,4 +278,5 @@ class ARMDataLoader:
             "...\n"
             "Reflection: This approach ensures correctness by exploring multiple paths.\n"
             f"Final Answer: {answer}"
+            f"{self.format_end_tokens['long_cot']}"
         )

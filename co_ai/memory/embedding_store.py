@@ -32,7 +32,6 @@ class EmbeddingStore(BaseStore):
                 cur.execute("SELECT embedding FROM embeddings WHERE text_hash  = %s", (text_hash,))
                 row = cur.fetchone()
                 if row:
-                    print("Embedding DB SCore")
                     return row[0]  # Force conversion to list of floats
         except Exception as e:
             print(f"❌ Exception: {type(e).__name__}: {e}")

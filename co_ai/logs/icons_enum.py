@@ -61,7 +61,7 @@ EVENT_ICONS = {
     "ComparisonPromptConstructed": "🛠️",
     "ComparisonResponseReceived": "📩",
     "LLMCacheHit": "✅",
-    "MRQTrainingStart": "🚀",
+    "MRQTrainingStart": "So it's very",
     "MRQTrainingEpoch": "📈",
     "MRQTrainingComplete": "🏁",
     "MRQTraining": "📊🛠️",

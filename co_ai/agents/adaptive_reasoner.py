@@ -1,10 +1,11 @@
+from typing import Union
+
 from co_ai.agents import BaseAgent
-from co_ai.dataloaders.arm_to_mrq_dpo import ARMDataLoader
-from co_ai.evaluator import LLMJudgeEvaluator, MRQSelfEvaluator
-# Optional utility for detecting reasoning formats
+from co_ai.evaluator import LLMJudgeEvaluator
 from co_ai.reasoning.arm import ARMReasoningSelfEvaluator  # New import
 from co_ai.reasoning.arm import detect_format
 from co_ai.constants import GOAL
+from co_ai.dataloaders import ARMDataLoader
 
 class AdaptiveReasonerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -19,16 +20,11 @@ class AdaptiveReasonerAgent(BaseAgent):
 
     async def run(self, context: dict):
         goal = context.get(GOAL) 
-        # adapter = ARMDataLoader(
-        #     dataset_name="aqua_rat",
-        #     split="train",
-        #     max_samples=500,
-        #     memory=self.memory,
-        #     logger=self.logger,
-        # )
-        # adapter.adapt(context)
+
 
         self.judge.train_from_database(goal.get("goal_text"), self.cfg)
+
+        prompt = goal.get("goal_text")
 
         response = ""
         if self.mode == "instruction_guided":
@@ -37,7 +33,7 @@ class AdaptiveReasonerAgent(BaseAgent):
         elif self.mode == "consensus_guided":
             response = self._run_consensus_mode(context)
         else:  # default to adaptive
-            response = self._run_adaptive_mode(context)
+            response = self._run_adaptive_mode(prompt)
 
         self.logger.log("AdaptiveReasoningResponse", response)
 
@@ -76,49 +72,34 @@ class AdaptiveReasonerAgent(BaseAgent):
                 "fallback_reason": "no_consensus",
             }
 
-    def _run_adaptive_mode(self, context):
+    def _run_adaptive_mode(self, prompt:str) -> dict[str, Union[str, float]]:
+        prioritized_formats = ["direct", "short_cot", "code", "long_cot"]
+
         scores = {}
-        results = {}
+        for fmt in prioritized_formats:
+            response = self._generate_with_format(prompt, fmt)
+            base_score = self.judge.score(prompt, response)
 
-        prioritized = self._get_prioritized_formats(context)
-        format_usage_freq = {fmt: 0 for fmt in prioritized}
-
-        for fmt in prioritized:
-            result = self._generate_with_format(fmt, context)
-            results[fmt] = result
-            response = result["response"]
-
-            # Base score from judge
-            if isinstance(self.judge, (MRQSelfEvaluator, ARMReasoningSelfEvaluator)):
-                base_score = self.judge.score(context, response)
-            elif hasattr(self.judge, "score"):
-                base_score = self.judge.score(context, response)
-            else:
-                base_score = 1.0 - 0.05 * prioritized.index(fmt)
-
-            # Token efficiency penalty
             token_len = len(response.split())
-            token_efficiency_penalty = 0.01 * token_len
+            rarity_bonus = 1.0 / (1 + self.judge.format_freq.get(fmt, 0))
 
-            # Format rarity bonus
-            rarity_bonus = 1.0 / (1 + format_usage_freq.get(fmt, 0))
-
-            # Total score
-            final_score = base_score - token_efficiency_penalty + rarity_bonus
-
+            final_score = base_score - 0.01 * token_len + rarity_bonus
             scores[fmt] = final_score
-            format_usage_freq[fmt] += 1
+            self.judge._update_format_stats(fmt, final_score)
 
         best_format = max(scores, key=scores.get)
-        chosen_result = results[best_format]
-
+        chosen_response = self._generate_with_format(prompt, best_format)
         # Log decision
         self.logger.log(
             "AdaptiveModeDecision",
-            {"goal": context, "scores": scores, "chosen": best_format},
+            {"goal": prompt, "scores": scores, "chosen": best_format},
         )
 
-        return chosen_result
+        return {
+            "response": chosen_response,
+            "format_used": best_format,
+            "scores": scores,
+        }
 
     def get_format_for_goal(self, goal: dict):
         if "preferred_format" in goal:

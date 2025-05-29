@@ -1,8 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import (JSON, Column, DateTime, Float, ForeignKey, Integer,
-                        String, Text)
-from sqlalchemy.dialects.postgresql import ARRAY, REAL
+from sqlalchemy import (JSON, Column, DateTime, Integer, Text)
 
 from co_ai.models.base import Base
 
@@ -22,7 +20,28 @@ class MRQPreferencePairORM(Base):
     fmt_a = Column(Text)  # e.g., direct, short_cot, code, long_cot
     fmt_b = Column(Text)
     
+    difficulty = Column(Text)
+    
     features = Column(JSON)  # Optional: extra metadata
     run_id = Column(Text)
-    source = Column(Text)  # e.g., arm_dataloader, user, agent
+    source = Column(Text)  # e.g., arm_dataloader, user, 
+    
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "goal": self.goal,
+            "prompt": self.prompt,
+            "output_a": self.output_a,
+            "output_b": self.output_b,
+            "preferred": self.preferred,
+            "fmt_a": self.fmt_a,
+            "fmt_b": self.fmt_b,
+            "difficulty": self.difficulty,
+            "features": self.features or {},
+            "run_id": self.run_id,
+            "source": self.source,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

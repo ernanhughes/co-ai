@@ -4,7 +4,7 @@ adaptive_reasoner:
   name: adaptive_reasoner
   enabled: true
 
-  mode: instruction_guided
+  mode: adaptive
 
   format_list:
     - direct

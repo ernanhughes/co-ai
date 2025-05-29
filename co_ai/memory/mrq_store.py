@@ -6,7 +6,6 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from co_ai.models import MRQMemoryEntryORM, MRQPreferencePairORM, ReflectionDeltaORM
-from co_ai.reasoning.arm.utils import detect_format
 
 
 class MRQStore:
@@ -239,6 +238,9 @@ class MRQStore:
         output_a: str,
         output_b: str,
         preferred: str,
+        fmt_a: str,
+        fmt_b: str,
+        difficulty: str,
         source: str = "arm_dataloader",
         run_id: str = None
     ):
@@ -261,8 +263,9 @@ class MRQStore:
                 output_a=output_a,
                 output_b=output_b,
                 preferred=preferred,
-                fmt_a=detect_format(output_a),
-                fmt_b=detect_format(output_b),
+                fmt_a=fmt_a,
+                fmt_b=fmt_b,
+                difficulty=difficulty,
                 source=source,
                 run_id=run_id,
             )
