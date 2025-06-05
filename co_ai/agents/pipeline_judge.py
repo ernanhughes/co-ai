@@ -5,7 +5,7 @@ from co_ai.analysis.rule_analytics import RuleAnalytics
 from co_ai.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from co_ai.constants import GOAL, PIPELINE, PIPELINE_RUN_ID, RUN_ID
 from co_ai.models import ScoreORM
-
+from tabulate import tabulate
 
 class PipelineJudgeAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -109,12 +109,43 @@ class PipelineJudgeAgent(BaseAgent):
                 print(f"{rule_id:<10}{count:<15}{avg_score:<12.2f}")
             print("-" * 40)
 
+    from tabulate import tabulate
+
     def run_rule_effects_evaluation(self, context: dict):
         analyzer = RuleEffectAnalyzer(session=self.memory.session, logger=self.logger)
         summary = analyzer.analyze(context.get(PIPELINE_RUN_ID))
-        top_rules = sorted(summary.items(), key=lambda x: x[1]["avg_score"], reverse=True)
-        print("\nTop Performing Rules:")
+
+        # Sort by average score descending
+        top_rules = sorted(
+            summary.items(), key=lambda x: x[1]["avg_score"], reverse=True
+        )
+
+        # Prepare table data
+        table_data = []
         for rule_id, data in top_rules[:5]:
-            print(f"Rule {rule_id}: avg {data['avg_score']:.3f} over {data['count']} applications")
+            table_data.append(
+                [
+                    rule_id,
+                    f"{data['avg_score']:.2f}",
+                    data["count"],
+                    f"{data['min']} / {data['max']}",
+                    f"{data['std']:.2f}",
+                    f"{data['success_rate']:.2%}",
+                ]
+            )
+
+        # Define headers
+        headers = [
+            "Rule ID",
+            "Avg Score",
+            "Count",
+            "Min / Max",
+            "Std Dev",
+            "Success Rate ≥50",
+        ]
+
+        # Print table
+        print("\n📈 Top Performing Rules:")
+        print(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))
 
         analyzer.pipeline_run_scores(context=context)

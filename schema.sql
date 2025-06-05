@@ -539,3 +539,23 @@ CREATE TABLE IF NOT EXISTS score_rule_links (
     rule_application_id INTEGER NOT NULL REFERENCES rule_applications(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE prompt_programs (
+    id TEXT PRIMARY KEY,
+    goal TEXT NOT NULL,
+    template TEXT NOT NULL,
+    inputs JSON DEFAULT '{}',
+    version INTEGER DEFAULT 1,
+    parent_id TEXT REFERENCES prompt_programs(id),
+    prompt_id INTEGER REFERENCES prompts(id),
+    pipeline_run_id INTEGER REFERENCES pipeline_runs(id),
+    strategy TEXT DEFAULT 'default',
+    prompt_text TEXT,
+    hypothesis TEXT,
+    score FLOAT,
+    rationale TEXT,
+    mutation_type TEXT,
+    execution_trace TEXT,
+    extra_data JSON DEFAULT '{}'
+);
+Let's see i'm OK

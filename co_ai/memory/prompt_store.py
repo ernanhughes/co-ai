@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from co_ai.models.goal import GoalORM
 from co_ai.models.prompt import PromptORM
-
+from sqlalchemy.dialects.postgresql import dialect
 
 class PromptStore:
     def __init__(self, session: Session, logger=None):
@@ -187,10 +187,10 @@ class PromptStore:
 
         return [p.to_dict() for p in query.limit(10).all()]
 
-    def get_prompt_training_set(self, goal: str, limit: int = 5, agent_name: str = 'generation') -> list[dict]:
+    def get_prompt_training_set(self, goal: str, limit: int = 500) -> list[dict]:
         try:
             sql = text("""
-                SELECT DISTINCT ON (p.id)
+                SELECT 
                     p.id,
                     g.goal_text AS goal,
                     p.prompt_text,
@@ -203,14 +203,15 @@ class PromptStore:
                 JOIN prompts p ON p.goal_id = g.id
                 JOIN hypotheses h ON h.prompt_id = p.id AND h.goal_id = g.id
                 WHERE g.goal_text = :goal
-                AND p.agent_name = :agent_name
                 AND h.enabled = TRUE
                 ORDER BY p.id, h.elo_rating DESC, h.updated_at DESC
                 LIMIT :limit
             """)
+            print("\n🔍 Final SQL Query:")
+            print(sql.compile(dialect=dialect(), compile_kwargs={"literal_binds": True}).string)
+
             result = self.session.execute(sql, {
                 'goal': goal,
-                'agent_name': agent_name,
                 'limit': limit
             })
 
