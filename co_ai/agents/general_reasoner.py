@@ -13,7 +13,7 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
     def __init__(self, cfg, memory, logger):
         super().__init__(cfg, memory, logger)
         self.logger.log("AgentInit", {"agent": "GeneralReasonerAgent"})
-        self.judge = self._init_judge()
+        self.evaluator = self._init_judge()
         self.prompt_loader = PromptLoader(self.cfg, self.logger)
 
     async def run(self, context: dict) -> dict:
@@ -50,7 +50,7 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
                 judging_prompt_template, self.cfg, judge_context
             )
 
-            preferred, score = self.judge.judge(prompt_text, goal, hyp_a.get("text"), hyp_b.get("text"))
+            preferred, score = self.evaluator.judge(prompt_text, hyp_a.get("text"), hyp_b.get("text"), context)
 
             # Save scores
             goal_id = self.get_goal_id(goal)

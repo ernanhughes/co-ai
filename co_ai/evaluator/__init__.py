@@ -3,3 +3,4 @@ from .hypothesis_value_predictor import HypothesisValuePredictor
 from .llm_judge_evaluator import LLMJudgeEvaluator
 from .mrq_self_evaluator import MRQSelfEvaluator
 from .text_encoder import TextEncoder
+from .evaluator_loader import get_evaluator

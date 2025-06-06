@@ -1,7 +1,3 @@
-from inspect import Signature
-
-from dspy import BootstrapFewShot, Predict, Example, InputField, OutputField
-
 from co_ai.agents.base import BaseAgent
 from co_ai.agents.mixins.prompt_evolver_mixin import PromptEvolverMixin
 from co_ai.compiler.llm_compiler import LLMCompiler

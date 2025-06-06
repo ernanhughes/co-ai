@@ -83,7 +83,7 @@ class PromptEvolver:
                     mutations = self.strategy_pass.apply(base_prompt, metadata)
                     for mut in mutations:
                         prompt_text = mut["prompt"]
-                        score = self.score_prompt(prompt_text, goal=metadata["goal"], reference_output=metadata["hypotheses"])
+                        score = self.score_prompt(prompt_text, reference_output=metadata["hypotheses"], context=context)
                         if score >= 0:  # optionally apply a score threshold
                             refined_prompts.append(prompt_text)
                 except Exception as e:
@@ -92,19 +92,5 @@ class PromptEvolver:
 
         return refined_prompts
 
-    def score_prompt(self, prompt: str, goal: str, reference_output: str = "") -> float:
-        if not self.evaluator:
-            return 0.0
-
-        try:
-            if hasattr(self.evaluator, "score_single"):
-                return self.evaluator.score_single(prompt, reference_output)
-            else:
-                preferred, scores = self.evaluator.judge(
-                    prompt=prompt, goal=goal, output_a=reference_output, output_b=""
-                )
-                return scores.get("score_a", 0)
-        except Exception as e:
-            if self.logger:
-                self.logger.log("PromptScoreError", {"prompt": prompt[:100], "error": str(e)})
-            return 0.0
+    def score_prompt(self, prompt: str, reference_output: str = "", context:dict={}) -> float:
+        return self.evaluator.score_single(prompt, reference_output, context)

@@ -29,11 +29,15 @@ class LLMJudgeEvaluator(BaseEvaluator):
         """
 
         # Step 1: Merge context with hypotheses and optional notes
+        goal_text = context.get("goal").get("goal_text", "")
         eval_context = {
             **context,
-            "hypothesis_a": output_a,
-            "hypothesis_b": output_b,
-            "comparison_notes": self.cfg.get("comparison_notes", "")
+            **{
+                "goal": goal_text,
+                "hypothesis_a": output_a,
+                "hypothesis_b": output_b,
+                "comparison_notes": self.cfg.get("comparison_notes", ""),
+            },
         }
 
         # Step 2: Load the evaluation prompt
@@ -55,16 +59,19 @@ class LLMJudgeEvaluator(BaseEvaluator):
         }
 
         # Step 5: Logging
-        self.logger.log("LLMJudgeResult", {
-            "prompt": prompt,
-            "output_a": output_a[:100],
-            "output_b": output_b[:100],
-            "winner": parsed["winner"],
-            "score_a": parsed["score_a"],
-            "score_b": parsed["score_b"],
-            "reason": parsed["reason"],
-            "raw_response": cleaned_response[:300],
-        })
+        self.logger.log(
+            "LLMJudgeResult",
+            {
+                "prompt": prompt,
+                "output_a": output_a[:100],
+                "output_b": output_b[:100],
+                "winner": parsed["winner"],
+                "score_a": parsed["score_a"],
+                "score_b": parsed["score_b"],
+                "reason": parsed["reason"],
+                "raw_response": cleaned_response[:300],
+            },
+        )
 
         return preferred_output, scores
 
@@ -86,7 +93,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
         eval_context = {
             **context,
             "hypothesis": output,
-            "comparison_notes": self.cfg.get("comparison_notes", "")
+            "comparison_notes": self.cfg.get("comparison_notes", ""),
         }
 
         # Step 2: Load the evaluation prompt
@@ -100,14 +107,17 @@ class LLMJudgeEvaluator(BaseEvaluator):
 
         # Step 4: Determine preferred output and package scores
         # Step 5: Logging
-        self.logger.log("LLMJudgeSinglwResult", {
-            "prompt": prompt,
-            "output": output[:100],
-            "score_a": parsed["score_a"],
-            "score_b": parsed["score_b"],
-            "reason": parsed["reason"],
-            "raw_response": cleaned_response[:300],
-        })
+        self.logger.log(
+            "LLMJudgeSinglwResult",
+            {
+                "prompt": prompt,
+                "output": output[:100],
+                "score_a": parsed["score_a"],
+                "score_b": parsed["score_b"],
+                "reason": parsed["reason"],
+                "raw_response": cleaned_response[:300],
+            },
+        )
 
         return parsed
 
@@ -115,17 +125,27 @@ class LLMJudgeEvaluator(BaseEvaluator):
 def parse_response(response: str):
     # Normalize spacing
     lines = response.strip().splitlines()
-    text = "\n".join([line.strip() for line in lines if line.strip()])  # remove extra spaces
+    text = "\n".join(
+        [line.strip() for line in lines if line.strip()]
+    )  # remove extra spaces
 
     # Flexible matchers
-    winner_match = re.search(r"better hypothesis[:：]\s*<?([AB])>?", text, re.IGNORECASE)
-    reason_match = re.search(r"reason[:：]\s*(.+?)(?=\n(?:score_a|score_b)[:：])", text, re.IGNORECASE | re.DOTALL)
+    winner_match = re.search(
+        r"better hypothesis[:：]\s*<?([AB])>?", text, re.IGNORECASE
+    )
+    reason_match = re.search(
+        r"reason[:：]\s*(.+?)(?=\n(?:score_a|score_b)[:：])",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
     score_a_match = re.search(r"score_a[:：]\s*<?(\d{1,3})>?", text, re.IGNORECASE)
     score_b_match = re.search(r"score_b[:：]\s*<?(\d{1,3})>?", text, re.IGNORECASE)
 
     return {
         "winner": (winner_match.group(1).upper() if winner_match else "A"),
-        "reason": (reason_match.group(1).strip() if reason_match else "No reason provided."),
+        "reason": (
+            reason_match.group(1).strip() if reason_match else "No reason provided."
+        ),
         "score_a": int(score_a_match.group(1)) if score_a_match else 0,
         "score_b": int(score_b_match.group(1)) if score_b_match else 0,
     }
