@@ -29,15 +29,11 @@ class LLMJudgeEvaluator(BaseEvaluator):
         """
 
         # Step 1: Merge context with hypotheses and optional notes
-        goal_text = context.get("goal").get("goal_text", "")
         eval_context = {
             **context,
-            **{
-                "goal": goal_text,
-                "hypothesis_a": output_a,
-                "hypothesis_b": output_b,
-                "comparison_notes": self.cfg.get("comparison_notes", ""),
-            },
+            "hypothesis_a": output_a,
+            "hypothesis_b": output_b,
+            "comparison_notes": self.cfg.get("comparison_notes", ""),
         }
 
         # Step 2: Load the evaluation prompt
