@@ -14,7 +14,7 @@ class LLMJudgeEvaluator(BaseEvaluator):
         self.llm = llm  # callable: prompt, context, llm_cfg -> response
         self.logger = logger
 
-    def judge(self, prompt, goal, output_a, output_b):
+    def judge(self, prompt, goal, output_a, output_b, context:dict):
         context = {
             "goal": goal,
             "hypothesis_a": output_a,

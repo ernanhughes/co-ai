@@ -11,7 +11,16 @@ prompt_compiler:
   # How many prompts to generate once tuned
   generate_count: 5
 
+  use_memory_for_fast_prompts: false
+
   model:
+    name: ollama_chat/qwen3
+    api_base: http://localhost:11434
+    api_key: null
+
+  judge: llm
+  judge_prompt_file: evaluator.txt
+  judge_model:
     name: ollama_chat/qwen3
     api_base: http://localhost:11434
     api_key: null

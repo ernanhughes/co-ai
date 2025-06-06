@@ -141,7 +141,7 @@ class GeneralReasonerAgent(BaseAgent, RubricClassifierMixin):
         context[self.output_key] = best_hypothesis
         return context
 
-    def _create_score_orm(self, *, goal_id: int, hypothesis: HypothesisORM,
+    def _create_score_orm(self, *, goal_id: int, hypothesis: dict,
                          preferred: str, score_data: dict, model_name: str,
                          judge_name: str, pipeline_run_id: Optional[int] = None) -> ScoreORM:
         """
