@@ -29,6 +29,9 @@ class BaseScore(ABC):
 
         # 3. Store in scores table
         if self.memory:
+            # Optional dimensions dict (can be overridden in subclass)
+            dimensions = getattr(self, "dimensions", None)
+
             s = ScoreORM(
                 goal_id=hypothesis.get("goal_id"),
                 hypothesis_id=hypothesis.get("id"),
@@ -37,6 +40,7 @@ class BaseScore(ABC):
                 evaluator_name=self.evaluator_name,
                 score_type=self.name,
                 score=score,
+                dimensions=dimensions,
                 pipeline_run_id=context.get("pipeline_run_id"),
             )
             try:

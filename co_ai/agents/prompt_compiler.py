@@ -3,6 +3,7 @@ from co_ai.agents.mixins.prompt_evolver_mixin import PromptEvolverMixin
 from co_ai.compiler.llm_compiler import LLMCompiler
 from co_ai.compiler.passes.strategy_mutation_pass import StrategyMutationPass
 from co_ai.constants import GOAL
+from co_ai.models import HypothesisORM
 import dspy
 from co_ai.evaluator.evaluator_loader import get_evaluator
 
@@ -27,10 +28,11 @@ class PromptCompilerAgent(BaseAgent, PromptEvolverMixin):
 
 
     async def run(self, context: dict) -> dict:
-        goal = self.extract_goal_text(context.get(GOAL))
+        goal = context.get(GOAL)
+        goal_text = self.extract_goal_text(goal)
         total_count = self.sample_size + self.generate_count
 
-        examples = self.memory.prompt.get_prompt_training_set(goal, total_count)
+        examples = self.memory.prompt.get_prompt_training_set(goal_text, total_count)
         if not examples:
             self.logger.log("PromptCompilerSkipped", {"reason": "no_examples", "goal": goal})
             return context
@@ -39,16 +41,33 @@ class PromptCompilerAgent(BaseAgent, PromptEvolverMixin):
             examples, context=context, sample_size=self.sample_size
         )
 
+        scored = []
+        hypotheses = []
         for prompt in refined_prompts:
-            self.memory.prompt.save(
-                goal={"goal_text": goal},
-                agent_name=self.name,
-                prompt_key=self.prompt_key,
-                prompt_text=prompt,
-                strategy="dspy_compilation",
-                version=self.version + 1,
+            # Generate hypothesis from the compiled prompt
+            hypothesis_text = self.call_llm(prompt, context).strip()
+            prompt_id  = self.get_prompt_id(prompt)
+            self.logger.log("CompiledPromptHypothesisGenerated", {
+                "prompt": prompt[:100],
+                "hypothesis": hypothesis_text[:100]
+            })
+            hyp = HypothesisORM(
+                goal_id=goal.get("id"),
+                prompt_id=prompt_id,
+                source=self.name,
+                text=hypothesis_text,
+                strategy=self.strategy,
+                features={"source": "compiled_prompt"},
                 pipeline_run_id=context.get("pipeline_run_id"),
             )
+            self.memory.hypotheses.insert(hyp)
+            hypotheses.append(hyp.to_dict())
+            score = self.score_prompt(
+                prompt=prompt,
+                reference_output=examples[0].get("hypothesis_text", ""),
+                context=context
+            )
+            scored.append((prompt, score))
             self.add_to_prompt_history(context, prompt, {"source": "dspy_compiler"})
 
         self.logger.log(
@@ -56,19 +75,11 @@ class PromptCompilerAgent(BaseAgent, PromptEvolverMixin):
             {"goal": goal, "generated_count": len(refined_prompts)},
         )
 
-        # Score and sort prompts
-        scored = []
-        for prompt_text in refined_prompts:
-            score = self.score_prompt(
-                prompt=prompt_text,
-                reference_output=examples[0].get("hypothesis_text", ""),
-                context=context
-            )
-            scored.append((prompt_text, score))
 
-        scored_sorted = sorted(scored, key=lambda x: x[1], reverse=True)
+        scored_sorted = sorted(scored, key=lambda x: get_winner_score(x[1]), reverse=True)
 
         context["refined_prompts"] = scored_sorted
+        context["hypotheses"] = hypotheses
 
         # Log top results
         if self.logger:
@@ -77,6 +88,16 @@ class PromptCompilerAgent(BaseAgent, PromptEvolverMixin):
                     "CompiledPromptScore",
                     {"rank": i + 1, "score": score, "prompt": text[:200]},
                 )
+        sorted_prompt = scored_sorted[0][0] if scored_sorted else None
+        best_score_dict = scored_sorted[0][1] if scored_sorted else {}
+
+        # Assume you already have: sorted_prompt, best_score_dict
+        context["compiled_prompt"] = {
+            "text": sorted_prompt,  # best-performing prompt
+            "score_summary": best_score_dict,
+            "compiler_agent": self.name,
+        }
+        self.logger.log("CompiledPromptSelected", context["compiled_prompt"])
 
         return context
 
@@ -84,8 +105,20 @@ class PromptCompilerAgent(BaseAgent, PromptEvolverMixin):
         if not self.evaluator:
             return 0.0
         try:
-            return self.evaluator.score_single(prompt, reference_output, context)
+            score = self.evaluator.score_single(prompt, reference_output, context)
+            if self.logger:
+                self.logger.log("ScoringPrompt", {"score": score, "prompt": prompt[:100], "reference_output": reference_output[:100]})
+            return score 
         except Exception as e:
             if self.logger:
                 self.logger.log("PromptScoreError", {"prompt": prompt[:100], "error": str(e)})
             return 0.0
+
+def get_winner_score(score_dict):
+    if isinstance(score_dict, float):
+        return score_dict
+    if score_dict["winner"] == "A":
+        return score_dict.get("score_a", 0)
+    elif score_dict["winner"] == "B":
+        return score_dict.get("score_b", 0)
+    return 0  # fallback

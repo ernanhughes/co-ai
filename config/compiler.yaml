@@ -5,6 +5,7 @@ defaults:
   - agents/generation
   - agents/reflection
   - agents/review
+  - agents/ranking
   - agents/proximity
   - agents/pipeline_judge
   - agents/mrq_scoring
@@ -38,14 +39,14 @@ symbolic:
 
 planner:
   name: planner
-  enabled: false
+  enabled: true
   cls: co_ai.agents.planner.PipelinePlannerAgent
   dots_enabled: true
   lookahead_enabled: true
 
 dynamic:
   name: lookahead
-  enabled: false
+  enabled: true
   cls: co_ai.agents.lookahead.LookaheadAgent
 
 post_judgment:
@@ -74,8 +75,8 @@ pipeline:
   name: default_pipeline
   description: "Default hypothesis generation and refinement pipeline"
   stages:
-     - name: generation
-       cls: co_ai.agents.generation.GenerationAgent
+     - name: prompt_compiler
+       cls: co_ai.agents.prompt_compiler.PromptCompilerAgent
        enabled: true
        iterations: 1
      - name: reflection
@@ -90,7 +91,7 @@ pipeline:
        cls: co_ai.agents.proximity.ProximityAgent
        enabled: false
        iterations: 1
-     - name: prompt_compiler
-       cls: co_ai.agents.prompt_compiler.PromptCompilerAgent
+     - name: ranking
+       cls: co_ai.agents.ranking.RankingAgent
        enabled: true
        iterations: 1

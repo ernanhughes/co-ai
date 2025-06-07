@@ -53,7 +53,7 @@ class MRQSelfEvaluator(BaseEvaluator):
 
         return preferred_output, scores
 
-    def score_single(self, prompt: str, output: str) -> float:
+    def score_single(self, prompt: str, output: str, context:dict) -> float:
         prompt_emb = torch.tensor(self.memory.embedding.get_or_create(prompt), device=self.device).unsqueeze(0)
         output_emb = torch.tensor(self.memory.embedding.get_or_create(output), device=self.device).unsqueeze(0)
         zsa = self.encoder(prompt_emb, output_emb)

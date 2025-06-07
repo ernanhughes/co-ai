@@ -23,10 +23,10 @@ class ReviewScore(BaseScore):
             if not self.scores:
                 return self.default_value
 
-            # Cache full dict for later use
+            # Cache full dict on hypothesis
             hypothesis["review_scores"] = self.scores
 
-            # Save each dimension as a separate score
+            # Save each dimension score individually
             for dimension, data in self.scores.items():
                 if dimension == "overall":
                     score_type = "overall"
@@ -36,10 +36,28 @@ class ReviewScore(BaseScore):
                     score_type = dimension
                     score = data.get("score", 0.0)
                     rationale = data.get("rationale", "")
-
                 self._store_score(hypothesis, context, score_type, score, rationale)
 
-            return self.scores.get("overall", {}).get("score", self.default_value)
+            # Save composite score with all dimensions in one object
+            dimensions = {k: v.get("score", 0.0) for k, v in self.scores.items()}
+            composite_score = self.scores.get("overall", {}).get("score", self.default_value)
+
+            composite_score_obj = ScoreORM(
+                goal_id=hypothesis.get("goal_id"),
+                hypothesis_id=hypothesis.get("id"),
+                agent_name=self.agent_name,
+                model_name=self.model_name,
+                evaluator_name="ReviewScore",
+                score_type="review_composite",
+                score=composite_score,
+                rationale=self.scores.get("overall", {}).get("summary", "Composite from structured review."),
+                dimensions=dimensions,
+                pipeline_run_id=context.get("pipeline_run_id"),
+                metadata={"source": "structured_review"},
+            )
+            self.memory.scores.insert(composite_score_obj)
+
+            return composite_score
 
         except Exception as e:
             self.logger.log("ReviewScoreParseFailed", {

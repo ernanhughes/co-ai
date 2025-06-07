@@ -33,8 +33,29 @@ class ReflectionScore(BaseScore):
             for dimension, data in self.scores.items():
                 self._store_score(hypothesis, context, dimension, data)
 
+
+            # Save composite score with dimensions included
+            composite = self._composite_score(self.scores)
+            dimensions = {k: v["score"] for k, v in self.scores.items()}
+
+            composite_score_obj = ScoreORM(
+                goal_id=hypothesis.get("goal_id"),
+                hypothesis_id=hypothesis.get("id"),
+                agent_name=self.agent_name,
+                model_name=self.model_name,
+                evaluator_name="ReflectionScore",
+                score_type="reflection_composite",
+                score=composite,
+                rationale="Composite score from structured reflection.",
+                dimensions=dimensions,  # ✅ This is new
+                pipeline_run_id=context.get("pipeline_run_id"),
+                metadata={"source": "structured_reflection"},
+            )
+            self.memory.scores.insert(composite_score_obj)
+
+
             # Return correctness if available, otherwise average
-            return self.scores.get("correctness", {}).get("score") or self._composite_score(self.scores)
+            return self.scores.get("correctness", {}).get("score") or composite
 
         except Exception as e:
             self.logger.log("ReflectionScoreParseFailed", {

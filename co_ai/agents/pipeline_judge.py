@@ -7,6 +7,16 @@ from co_ai.constants import GOAL, PIPELINE, PIPELINE_RUN_ID, RUN_ID
 from co_ai.models import ScoreORM
 from tabulate import tabulate
 
+def extract_dimensions(text: str) -> dict:
+    dimensions = {}
+    for line in text.splitlines():
+        match = re.match(r"(\w+)\s*[:=]\s*([0-9]+(?:\.[0-9]+)?)", line.strip(), re.IGNORECASE)
+        if match:
+            key = match.group(1).strip().lower()
+            val = float(match.group(2))
+            dimensions[key] = val
+    return dimensions
+
 class PipelineJudgeAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
@@ -40,14 +50,21 @@ class PipelineJudgeAgent(BaseAgent):
             self.logger.log("JudgementReceived", {"judgement": judgement[:250]})
 
             # Score extraction
+            # Extract main score and rationale
             score_match = re.search(r"(?:\*\*?score[:=]?\*\*?\s*)?([0-9]+(?:\.[0-9]+)?)", judgement, re.IGNORECASE)
             if score_match:
                 score = float(score_match.group(1))
                 rationale = judgement[score_match.end():].strip()
-                self.logger.log("ScoreParsed", {"score": score, "rationale": rationale[:100]})
+                dimensions = extract_dimensions(rationale)
+                self.logger.log("ScoreParsed", {
+                    "score": score,
+                    "dimensions": dimensions,
+                    "rationale": rationale[:100]
+                })
             else:
                 score = None
                 rationale = judgement
+                dimensions = {}
                 self.logger.log("PipelineScoreParseFailed", {
                     "agent": self.name,
                     "judgement": judgement,
@@ -67,6 +84,7 @@ class PipelineJudgeAgent(BaseAgent):
                 rationale=rationale,
                 pipeline_run_id=context.get(PIPELINE_RUN_ID),
                 extra_data={"raw_response": judgement},
+                dimensions=dimensions,
             )
             self.memory.scores.insert(score_obj)
             self.logger.log("ScoreSaved", {"score_id": score_obj.id, "run_id": context.get(RUN_ID)})

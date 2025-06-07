@@ -23,6 +23,7 @@ class ScoreORM(Base):
     score = Column(Float)
     score_text = Column(Text)
     strategy = Column(String)
+    dimensions = Column(JSON, default={})
     reasoning_strategy = Column(String)
     rationale = Column(Text)
     reflection = Column(Text)
@@ -50,6 +51,7 @@ class ScoreORM(Base):
             "score": self.score,
             "score_text": self.score_text,
             "strategy": self.strategy,
+            "dimensions": self.dimensions,
             "reasoning_strategy": self.reasoning_strategy,
             "rationale": self.rationale,
             "reflection": self.reflection,

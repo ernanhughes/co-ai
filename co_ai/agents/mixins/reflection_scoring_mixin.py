@@ -83,7 +83,8 @@ class ReflectionScoringMixin:
             evaluator_name="ReflectionAgent",
             score_type="self_reward",
             score=reflection_score,
-            extra_data=self.cfg,  # Optional: track adapter or config
+            dimensions=scorer.scores,  
+            extra_data=self.cfg,
         )
         score_id = self.memory.scores.insert(score_obj)
 

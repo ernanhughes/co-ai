@@ -1,4 +1,5 @@
 import re
+import json
 from dataclasses import asdict
 from datetime import datetime
 
@@ -42,16 +43,17 @@ class PipelineJudgeAgent(BaseAgent):
         self.logger.log("PromptLoaded", {"prompt": prompt[:200]})
 
         judgement = self.call_llm(prompt, prompt_context).strip()
-        self.logger.log("JudgementReceived", {"judgement": judgement[:250]})
+        self.logger.log("JudgementReceived", {"judgement": judgement[:300]})
 
-        # Score extraction
+        # Parse main score
         score_match = re.search(
             r"\*\*?score[:=]?\*\*?\s*([0-9]+(?:\.[0-9]+)?)", judgement, re.IGNORECASE
         )
 
-        if not score_match:
-            score = None
-            rationale = judgement
+        score = float(score_match.group(1)) if score_match else None
+        rationale = judgement[score_match.end():].strip() if score_match else judgement
+
+        if score is None:
             self.logger.log("ScoreParseFailed", {
                 "agent": self.name,
                 "judgement": judgement,
@@ -60,9 +62,17 @@ class PipelineJudgeAgent(BaseAgent):
                 "emoji": "🚨❓🧠"
             })
         else:
-            score = float(score_match.group(1))
-            rationale = judgement[score_match.end():].strip()
             self.logger.log("ScoreParsed", {"score": score, "rationale": rationale[:100]})
+
+        # Parse extra dimensions (look for: relevance, clarity, originality, correctness, etc.)
+        dimension_fields = ["relevance", "clarity", "originality", "correctness", "novelty", "feasibility"]
+        dimensions = {}
+        for field in dimension_fields:
+            match = re.search(rf"{field}\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)", judgement, re.IGNORECASE)
+            if match:
+                dimensions[field.lower()] = float(match.group(1))
+
+        self.logger.log("ScoreDimensionsParsed", {"dimensions": dimensions})
 
         # Link rule application if available
         rule_application_id = context.get("symbolic_rule_application_id")
@@ -76,9 +86,10 @@ class PipelineJudgeAgent(BaseAgent):
             score_type="pipeline_judgment",
             score=score,
             rationale=rationale,
-            run_id=context.get(RUN_ID),
-            rule_application_id=rule_application_id,
-            metadata={"raw_response": judgement}
+            pipeline_run_id=context.get(RUN_ID),
+            symbolic_rule_id=rule_application_id,
+            extra_data={"raw_response": judgement},
+            dimensions=dimensions  # new: parsed dimensions
         )
 
         self.memory.scores.insert(score_obj)

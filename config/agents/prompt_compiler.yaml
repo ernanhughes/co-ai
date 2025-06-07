@@ -12,19 +12,21 @@ prompt_compiler:
   generate_count: 5
 
   use_memory_for_fast_prompts: false
+  use_strategy_mutation: true
 
   model:
     name: ollama_chat/qwen3
     api_base: http://localhost:11434
     api_key: null
 
-  judge: llm
+  judge: mrq
   judge_prompt_file: evaluator.txt
   judge_model:
     name: ollama_chat/qwen3
     api_base: http://localhost:11434
     api_key: null
 
+  strategy: dspy_compilation
 
   # Required keys for the agent ot effectively process the context
   required_keys: ["goal", "hypotheses"]   # add nodes

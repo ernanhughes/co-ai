@@ -88,6 +88,20 @@ class ProximityAgent(BaseAgent):
             },
         )
 
+        # Compute additional dimensions
+        cluster_count = len(clusters)
+        top_k_sims = [sim for _, _, sim in similarities[:self.max_graft_candidates]]
+        avg_top_k_sim = sum(top_k_sims) / len(top_k_sims) if top_k_sims else 0.0
+        graft_count = len(graft_candidates)
+
+        dimensions = {
+            "proximity_score": score,
+            "cluster_count": cluster_count,
+            "avg_similarity_top_k": round(avg_top_k_sim, 4),
+            "graft_pair_count": graft_count,
+        }
+
+        # Save dimensional score for each hypothesis
         for hypothesis in current_hypotheses:
             score_obj = ScoreORM(
                 agent_name=self.name,
@@ -97,7 +111,8 @@ class ProximityAgent(BaseAgent):
                 score_type=self.name,
                 evaluator_name=self.name,
                 score=score,
-                extra_data={"score": score},
+                extra_data={"summary": summary_output},
+                dimensions=dimensions,  # ✅ Added here
                 pipeline_run_id=context.get(PIPELINE_RUN_ID),
             )
             self.memory.scores.insert(score_obj)
