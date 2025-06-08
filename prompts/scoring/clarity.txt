@@ -1,0 +1,14 @@
+Evaluate the clarity of the following hypothesis.
+
+### Goal
+{{ goal }}
+
+### Hypothesis
+{{ hypothesis }}
+
+Is the expression clear, coherent, and precise?
+
+Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+score: <0–100>
+rationale: <brief explanation>

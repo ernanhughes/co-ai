@@ -1,5 +1,5 @@
+from co_ai.analysis.score_evaluator import ScoreEvaluator
 from co_ai.constants import HYPOTHESES, REVIEW
-from co_ai.scoring.review import ReviewScore
 
 
 class ReviewScoringMixin:
@@ -12,13 +12,14 @@ class ReviewScoringMixin:
         super().__init__(*args, **kwargs)
         self.review_scorer = None  # Will be initialized on first use
 
+
     def get_review_scorer(self):
-        """
-        Lazily initialize the ReviewScore instance.
-        """
         if not self.review_scorer:
-            self.review_scorer = ReviewScore(
-                self.cfg, memory=self.memory, logger=self.logger
+            config_path = self.cfg.get("review_score_config", "config/scoring/review.yaml")
+            self.review_scorer = ScoreEvaluator(
+                self.cfg,
+                self.prompt_loader,
+                ScoreEvaluator.load_dimensions_from_config(config_path)
             )
         return self.review_scorer
 
@@ -36,20 +37,17 @@ class ReviewScoringMixin:
         hyp_text = hyp.get("text")
         hyp_id = self.get_hypothesis_id(hyp)
 
-        # If no review exists yet, generate one
-        if not hyp.get(REVIEW):
-            prompt = self.prompt_loader.load_prompt(
-                self.cfg, {**context, **{HYPOTHESES: hyp_text}}
-            )
-            review = self.call_llm(prompt, context)
-            hyp[REVIEW] = review
-            self.memory.hypotheses.update_review(hyp_id, review)
-        else:
-            review = hyp[REVIEW]
-
         # Score the hypothesis based on the review
         scorer = self.get_review_scorer()
-        score = scorer.get_score(hyp, context)
+
+        score = scorer.evaluate(
+            goal=context.get("goal", ""),
+            hypothesis=hyp_text,
+            context=context,
+            llm_fn=self.call_llm
+        )
         # Log the scoring event
-        self.logger.log("ReviewScoreComputed", {"hypothesis_id": hyp_id, "score": score, "review": review})
-        return {"id": hyp_id, "score": score, REVIEW: review, "scores": scorer.scores}
+        self.logger.log("ReviewScoreComputed", {"hypothesis_id": hyp_id, "score": score, "scores": scorer.scores})
+        return {"id": hyp_id, "score": score, "scores": scorer.scores}
+
+

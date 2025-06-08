@@ -1,4 +1,3 @@
-from co_ai.memory import Memory
 
 class RuleTuner:
     """

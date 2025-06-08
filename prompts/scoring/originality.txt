@@ -1,0 +1,14 @@
+Evaluate the originality of the following hypothesis.
+
+### Goal
+{{ goal }}
+
+### Hypothesis
+{{ hypothesis }}
+
+Does the idea offer a novel or creative insight?
+
+Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+score: <0–100>
+rationale: <brief explanation>

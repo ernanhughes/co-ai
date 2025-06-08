@@ -495,7 +495,7 @@ CREATE TABLE IF NOT EXISTS symbolic_rules
     pipeline_run_id integer,
     prompt_id integer,
     agent_name text,
-No     target text NOT NULL,
+    target text NOT NULL,
     rule_text text,
     source text,
     attributes jsonb,
@@ -540,7 +540,7 @@ CREATE TABLE IF NOT EXISTS score_rule_links (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE prompt_programs (
+CREATE TABLE IF NOT EXISTS prompt_programs (
     id TEXT PRIMARY KEY,
     goal TEXT NOT NULL,
     template TEXT NOT NULL,
@@ -558,4 +558,14 @@ CREATE TABLE prompt_programs (
     execution_trace TEXT,
     extra_data JSON DEFAULT '{}'
 );
-Let's see i'm OK
+
+
+CREATE TABLE IF NOT EXISTS score_dimensions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL UNIQUE,
+    stage VARCHAR,
+    prompt_template TEXT NOT NULL,
+    weight FLOAT DEFAULT 1.0,
+    notes TEXT,
+    extra_data JSON DEFAULT '{}'
+);

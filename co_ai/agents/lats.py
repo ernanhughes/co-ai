@@ -4,7 +4,7 @@ from dataclasses import asdict
 from datetime import datetime
 
 from co_ai.agents.base import BaseAgent
-from co_ai.constants import PIPELINE, RUN_ID
+from co_ai.constants import PIPELINE, RUN_ID, PIPELINE_RUN_ID
 from co_ai.models import RuleApplicationORM, ScoreORM
 
 
@@ -95,7 +95,7 @@ class PipelineJudgeAgent(BaseAgent):
         self.memory.scores.insert(score_obj)
         self.logger.log("ScoreSaved", {
             "score_id": score_obj.id,
-            "run_id": context.get(RUN_ID),
+            "pipeline_run_id": context.get(PIPELINE_RUN_ID),
             "rule_application_id": rule_application_id,
         })
 
