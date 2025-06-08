@@ -12,7 +12,7 @@ class ReviewAgent(ScoringMixin, BaseAgent):
 
         for hyp in hypotheses:
             # Score and update review
-            score = self.score_hypothesis(hyp, context, stage="review")
+            score = self.score_hypothesis(hyp, context, metrics="review")
             self.logger.log(
                 "ReviewScoreComputed",
                 score,

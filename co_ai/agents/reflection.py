@@ -11,7 +11,7 @@ class ReflectionAgent(ScoringMixin, BaseAgent):
 
         reflections = []
         for hyp in hypotheses:
-            score = self.score_hypothesis(hyp, context, stage="reflection")
+            score = self.score_hypothesis(hyp, context, metrics="reflection")
             self.logger.log(
                 "ReflectionScoreComputed",
                 score,

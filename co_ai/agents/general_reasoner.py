@@ -29,7 +29,7 @@ class GeneralReasonerAgent(ScoringMixin, RubricClassifierMixin, BaseAgent):
 
         dimension_scores = []
         for hyp in hypotheses:
-            scored = self.score_hypothesis(hyp, context, stage="reasoning")
+            scored = self.score_hypothesis(hyp, context, metrics="reasoning_cor")
             hyp["final_score"] = scored["score"]
             hyp["dimension_scores"] = scored["scores"]
             dimension_scores.append(scored)
@@ -51,11 +51,10 @@ class GeneralReasonerAgent(ScoringMixin, RubricClassifierMixin, BaseAgent):
         summarized = self._summarize_pattern(pattern)
         context["pattern"] = summarized
 
-        goal_id, hypothesis_id, pattern_stats = self.generate_pattern_stats(
+        pattern_stats = self.generate_pattern_stats(
             goal=goal,
             hypothesis=best_hypothesis,
             pattern_dict=summarized,
-            memory=self.memory,
             cfg=self.cfg,
             agent_name=self.name,
             confidence_score=best_hypothesis.get("confidence")
@@ -65,6 +64,8 @@ class GeneralReasonerAgent(ScoringMixin, RubricClassifierMixin, BaseAgent):
         context["pattern_stats"] = summarized
 
         context[self.output_key] = best_hypothesis
+        context["ranked_hypotheses"] = sorted(hypotheses, key=lambda h: h["final_score"], reverse=True)
+
         return context
 
     def generate_hypotheses(self, context: dict) -> list[dict]:

@@ -28,24 +28,24 @@ class ScoringMixin:
             )
         return self._scorers[stage]
 
-    def score_hypothesis(self, hypothesis: dict, context: dict, stage: str = "review") -> dict:
+    def score_hypothesis(self, hypothesis: dict, context: dict, metrics: str = "review") -> dict:
         """
         Score a hypothesis for a given evaluation stage.
 
         Args:
             hyp (dict): Hypothesis object with a "text" key.
             context (dict): Pipeline context, must include 'goal'.
-            stage (str): Evaluation stage (e.g., "review", "reasoning", "reflection").
+            metrics (str): Evaluation metrics (e.g., "review", "reasoning", "reflection").
 
         Returns:
             dict: {
                 "id": hypothesis_id,
                 "score": float,
                 "scores": {dimension_name: {score, rationale, weight}, ...},
-                "stage": stage
+                "metrics": metrics
             }
         """
-        scorer = self.get_scorer(stage)
+        scorer = self.get_scorer(metrics)
         dimension_scores = scorer.evaluate(
             hypothesis=hypothesis,
             context=context,
@@ -63,12 +63,12 @@ class ScoringMixin:
             "score": final_score,
             "dimension_scores": dimension_scores,
             "hypothesis": hypothesis,
-            "stage": stage
+            "metrics": metrics
         })
 
         return {
             "id": hypothesis.get("id"),
             "score": final_score,
             "scores": dimension_scores,
-            "stage": stage
+            "metrics": metrics
         }

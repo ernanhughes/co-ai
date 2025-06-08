@@ -15,6 +15,7 @@ class ScoreEvaluator:
         self.cfg = cfg
         self.logger = logger
         self.memory = memory
+        self.output_format = cfg.get("output_format", "simple")  # default fallback
 
     @classmethod
     def from_db(
@@ -37,18 +38,27 @@ class ScoreEvaluator:
     def from_file(cls, filepath: str, prompt_loader, cfg, logger, memory):
         with open(Path(filepath), "r") as f:
             data = yaml.safe_load(f)
+
+        # Default to 'simple' if not provided
+        output_format = data.get("output_format", "simple")
+
         dimensions = [
             {
                 "name": d["name"],
                 "file": d.get("file"),
-                "prompt_template": d.get("prompt_template"),
+                "prompt_template": d.get("prompt_template", d.get("file")),  # fallback to file
                 "weight": d.get("weight", 1.0),
                 "parser": cls.get_parser(d.get("extra_data", {})),
             }
             for d in data["dimensions"]
         ]
+
+        # Ensure the output_format is accessible in instance
+        cfg = cfg.copy()
+        cfg["output_format"] = output_format
+
         return cls(
-            dimensions,
+            dimensions=dimensions,
             prompt_loader=prompt_loader,
             cfg=cfg,
             logger=logger,
@@ -60,6 +70,9 @@ class ScoreEvaluator:
         parser_type = extra_data.get("parser", "numeric")
         if parser_type == "numeric":
             return lambda r: ScoreEvaluator.extract_score_from_last_line(r)
+        if parser_type == "numeric_cor":
+            return lambda r: ScoreEvaluator.parse_numeric_cor(r)
+        
         return lambda r: 0.0
 
     @staticmethod
@@ -74,7 +87,76 @@ class ScoreEvaluator:
                 return float(match.group(1))
         return 0.0
 
+    @staticmethod
+    def parse_numeric_cor(response: str) -> float:
+        """
+        Extracts the numeric score from a <answer>All right [[X]]</answer> block.
+        Example: <answer>[[3]]</answer> → 3.0
+        """
+        match = re.search(r"(?:<answer>\s*)?\[\[(\d+(?:\.\d+)?)\]\](?:\s*</answer>)?", response, re.IGNORECASE)
+        if not match:
+            raise ValueError(f"Could not extract numeric score from CoR-style answer: {response}")
+        return float(match.group(1))
+
     def evaluate(self, hypothesis: dict, context: dict = {}, llm_fn=None):
+        if self.output_format == "cor":
+            return self._evaluate_cor(hypothesis=hypothesis, context=context, llm_fn=llm_fn)
+        else:
+            return self._evaluate_simple(hypothesis=hypothesis, context=context, llm_fn=llm_fn)
+
+    def _evaluate_cor(self, hypothesis: dict, context: dict = {}, llm_fn=None):
+        """
+        Evaluate using Chain-of-Rubrics (CoR) format with rubric, eval, and <answer>[[score]]</answer>.
+        """
+        if llm_fn is None:
+            raise ValueError(
+                "You must pass a call_llm function (e.g., agent.call_llm) to ScoreEvaluator.evaluate"
+            )
+
+        results = {}
+        for dim in self.dimensions:
+            # Load prompt using prompt_loader and dimension-specific CoR template
+            if self.prompt_loader and dim.get("file"):
+                prompt = self.prompt_loader.from_file(
+                    file_name=dim["file"],
+                    config=self.cfg,
+                    context={"hypothesis": hypothesis, **context},
+                )
+            elif dim.get("prompt_template"):
+                prompt = Template(dim["prompt_template"]).render(
+                    hypothesis=hypothesis, **context
+                )
+            else:
+                raise ValueError(f"No prompt found for dimension {dim['name']}")
+
+            response = llm_fn(prompt, context=context)
+            try:
+                score = dim["parser"](response)
+            except Exception as e:
+                self.logger.log("ScoreParseError", {
+                    "dimension": dim["name"],
+                    "response": response,
+                    "error": str(e)
+                })
+                score = 0.0
+
+            self.logger.log("DimensionEvaluated", {
+                "dimension": dim["name"],
+                "score": score,
+                "response": response
+            })
+
+            results[dim["name"]] = {
+                "score": score,
+                "rationale": response,
+                "weight": dim["weight"],
+            }
+
+        self.save_score_to_memory(results, hypothesis, context)
+        return results
+
+
+    def _evaluate_simple(self, hypothesis: dict, context: dict = {}, llm_fn=None):
         if llm_fn is None:
             raise ValueError(
                 "You must pass a call_llm function (e.g., agent.call_llm) to ScoreEvaluator.evaluate"
