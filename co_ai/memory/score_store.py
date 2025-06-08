@@ -98,6 +98,12 @@ class ScoreStore:
         results = self.session.query(ScoreORM).filter(ScoreORM.run_id == run_id).all()
         return [self._orm_to_dict(r) for r in results]
 
+    def get_by_pipeline_run_id(self, pipeline_run_id: int) -> list[dict]:
+        """Returns all scores associated with a specific pipeline run."""
+        results = self.session.query(ScoreORM).filter(ScoreORM.pipeline_run_id == pipeline_run_id).all()
+        return [self._orm_to_dict(r) for r in results]
+
+
     def get_by_evaluator(self, evaluator_name: str) -> list[dict]:
         """Returns all scores produced by a specific evaluator (LLM, MRQ, etc.)"""
         results = self.session.query(ScoreORM).filter(ScoreORM.evaluator_name == evaluator_name).all()
@@ -122,15 +128,11 @@ class ScoreStore:
             "agent_name": row.agent_name,
             "model_name": row.model_name,
             "evaluator_name": row.evaluator_name,
-            "score_type": row.score_type,
-            "score": row.score,
-            "score_text": row.score_text,
+            "scores": (
+                row.scores if isinstance(row.scores, dict) else json.loads(row.scores)
+            ) if row.scores else {},
             "strategy": row.strategy,
             "reasoning_strategy": row.reasoning_strategy,
-            "rationale": row.rationale,
-            "reflection": row.reflection,
-            "review": row.review,
-            "meta_review": row.meta_review,
             "pipeline_run_id": row.pipeline_run_id,
             "extra_data": (
                 row.extra_data if isinstance(row.extra_data, dict) else json.loads(row.extra_data)

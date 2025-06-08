@@ -1,3 +1,4 @@
+# config/scoring/reasoning_cor.yaml
 stage: reasoning
 output_format: cor
 
