@@ -11,7 +11,6 @@ from co_ai.constants import (AGENT, API_BASE, API_KEY, BATCH_SIZE, CONTEXT,
                              OUTPUT_KEY, PROMPT_MATCH_RE, PROMPT_PATH,
                              SAVE_CONTEXT, SAVE_PROMPT, SOURCE, STRATEGY)
 from co_ai.logs import JSONLogger
-from co_ai.models import HypothesisORM
 from co_ai.prompts import PromptLoader
 from co_ai.rules import SymbolicRuleApplier
 
@@ -31,7 +30,7 @@ class BaseAgent(ABC):
         self.model_config = cfg.get(MODEL, {})
         self.prompt_loader = PromptLoader(memory=self.memory, logger=self.logger)
         self.prompt_match_re = cfg.get(PROMPT_MATCH_RE, "")
-        self.llm = self.init_llm()
+        self.llm = self.init_llm() #TODO do we need to init here?
         self.strategy = cfg.get(STRATEGY, "default")
         self.model_name = self.llm.get(NAME, "")
         self.source = cfg.get(SOURCE, CONTEXT)

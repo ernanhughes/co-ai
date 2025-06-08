@@ -19,16 +19,11 @@ class ScoreORM(Base):
     agent_name = Column(String, nullable=False)
     model_name = Column(String, nullable=False)
     evaluator_name = Column(String, nullable=False)
-    score_type = Column(String, nullable=False)
-    score = Column(Float)
-    score_text = Column(Text)
     strategy = Column(String)
-    dimensions = Column(JSON, default={})
     reasoning_strategy = Column(String)
-    rationale = Column(Text)
-    reflection = Column(Text)
-    review = Column(Text)
-    meta_review = Column(Text)
+    
+    scores = Column(JSON, default={})
+    
     extra_data = Column(JSON)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
 

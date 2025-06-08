@@ -35,7 +35,7 @@ class ScoreStore:
                         "hypothesis_id": score.hypothesis_id,
                         "agent": score.agent_name,
                         "model": score.model_name,
-                        "score": score.score,
+                        "scores": score.scores,
                         "timestamp": score.created_at.isoformat(),
                     },
                 )
