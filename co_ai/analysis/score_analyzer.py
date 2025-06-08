@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 class ScoreAnalyzer:
     def __init__(self, score_data: pd.DataFrame):
         """
-        Expected format:
+        Expected format:All right
         - 'hypothesis_id': str
         - 'dimension': str
         - 'score': float

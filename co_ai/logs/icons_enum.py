@@ -16,6 +16,9 @@ EVENT_ICONS = {
     "ContextAfterStage": "🗃️",
     "ContextYAMLDumpSaved": "📄",
     "debug": "🐞",
+    "StageContext": "🎯",
+    "AgentInit": "🤖",
+    "EvaluatorInit": "🧪",
     "RuleApplicationUpdated": "🧩",      # Suggests a symbolic piece being modified
     "MRQScoringComplete": "📈",          # Indicates successful scoring/completion
     "NoSymbolicAgentRulesApplied": "🚫", # Signifies nothing matched/applied
