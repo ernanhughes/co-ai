@@ -2,10 +2,8 @@ from co_ai.models.score_dimension import ScoreDimensionORM
 from sqlalchemy.orm import Session
 import yaml
 from pathlib import Path
-
-import yaml
-from pathlib import Path
 from jinja2 import Template
+import re
 
 class ScoreEvaluator:
     def __init__(self, dimensions, prompt_loader=None, agent_config=None):
@@ -48,8 +46,20 @@ class ScoreEvaluator:
     def get_parser(extra_data):
         parser_type = extra_data.get("parser", "numeric")
         if parser_type == "numeric":
-            return lambda r: float(r.strip().split()[0].replace("score:", "").strip()) if r.strip() else 0.0
+            return lambda r: ScoreEvaluator.extract_score_from_last_line(r)
         return lambda r: 0.0
+
+    @staticmethod
+    def extract_score_from_last_line(response: str) -> float:
+        """
+        Looks for a line ending with 'score: <number>' (case-insensitive).
+        """
+        lines = response.strip().splitlines()
+        for line in reversed(lines):
+            match = re.search(r'score:\s*(\d+(\.\d+)?)', line.strip(), re.IGNORECASE)
+            if match:
+                return float(match.group(1))
+        return 0.0
 
     def evaluate(self, goal: str, hypothesis: str, context: dict = {}, llm_fn=None):
         if llm_fn is None:
@@ -67,6 +77,7 @@ class ScoreEvaluator:
                 prompt = Template(dim["prompt_template"]).render(goal=goal, hypothesis=hypothesis, **context)
 
             response = llm_fn(prompt, context=context)
+            print (f"Evaluating dimension: {dim['name']}, response: {response}")
             score = dim["parser"](response)
             results[dim["name"]] = {
                 "score": score,

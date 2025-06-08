@@ -1,4 +1,4 @@
-Evaluate the originality of the following hypothesis.
+Evaluate the logical correctness of the following hypothesis in relation to the stated goal.
 
 ### Goal
 {{ goal }}
@@ -6,9 +6,10 @@ Evaluate the originality of the following hypothesis.
 ### Hypothesis
 {{ hypothesis }}
 
-Does the idea offer a novel or creative insight?
+Is the reasoning logically valid and consistent with the goal?
 
 Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
 
-score: <0–100>
 rationale: <brief explanation>
+
+score: <0–100>
