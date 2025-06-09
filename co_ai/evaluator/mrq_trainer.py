@@ -1,4 +1,5 @@
 # co_ai/evaluator/mrq_trainer.py
+import copy
 from collections import defaultdict
 
 import torch
@@ -90,52 +91,44 @@ class MRQTrainer:
                     })
                     break
 
-        self.logger.log("MRQTrainerTrainingComplete", {
-            "epochs_trained": epoch + 1,
-            "final_loss": round(avg_loss, 5)
-        })
+        self.logger.log(
+            "MRQTrainerTrainingComplete",
+            {"epochs_trained": epoch + 1, "final_loss": round(avg_loss, 5)},
+        )
 
     def train_multidimensional_model(self, contrast_pairs, cfg=None):
         """
-        Train one MRQ predictor per dimension.
-        contrast_pairs: List of (better_text, worse_text, dimension)
-        cfg: Training config (epochs, lr, etc.)
-        Returns a dict of {dimension: trained_model}
+        Trains a separate model for each scoring dimension using the provided contrast pairs.
+        Each pair is a dict with: output_a, output_b, prompt, preferred, dimension.
         """
-        cfg = cfg or {}
-        grouped_pairs = defaultdict(list)
-        for better, worse, dim in contrast_pairs:
-            grouped_pairs[dim].append((better, worse))
+        from collections import defaultdict
+
+        # Group contrast pairs by dimension
+        by_dimension = defaultdict(list)
+        for pair in contrast_pairs:
+            dim = pair["dimension"]
+            by_dimension[dim].append(pair)
 
         trained_models = {}
 
-        for dim, pairs in grouped_pairs.items():
-            # Prepare training samples in the same format your `prepare_training_data` expects
-            samples = []
-            for better, worse in pairs:
-                samples.append({
-                    "prompt": "",  # Empty if not used in training
-                    "output_a": better,
-                    "output_b": worse,
-                    "preferred": "a"
-                })
+        for dim, samples in by_dimension.items():
+            if not samples:
+                self.logger.log("DimensionSkippedNoSamples", {"dimension": dim})
+                continue
 
-            dataloader = self.prepare_training_data(samples)
-
-            # Clone model + encoder to train separately for this dimension
-            model_copy = copy.deepcopy(self.value_predictor)
-            encoder_copy = copy.deepcopy(self.encoder)
-
-            trainer = MRQTrainer(
-                memory=self.memory,
-                logger=self.logger,
-                value_predictor=model_copy,
-                encoder=encoder_copy,
-                device=self.device
+            self.logger.log(
+                "TrainingDimensionStart",
+                {"dimension": dim, "num_samples": len(samples)},
             )
 
-            trainer.train(dataloader, cfg)
-            trained_models[dim] = model_copy
+            dataloader = self.prepare_training_data(samples)
+            self.train(dataloader, cfg or {})
+
+            # Save model for this dimension if needed
+            trained_models[dim] = self.value_predictor.state_dict()
+
+            self.logger.log(
+                "TrainingDimensionComplete", {"dimension": dim, "samples": len(samples)}
+            )
 
         return trained_models
-

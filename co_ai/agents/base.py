@@ -88,7 +88,7 @@ class BaseAgent(ABC):
         # 🔁 Check cache
         if self.memory and use_memory_for_fast_prompts:
             previous = self.memory.prompt.find_similar_prompt(
-                agent_name=agent_name, prompt_text=prompt, strategy=strategy
+                agent_name=agent_name, prompt_text=prompt, strategy=strategy, similarity_threshold=0.7
             )
             if previous:
                 chosen = random.choice(previous)

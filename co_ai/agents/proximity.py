@@ -8,6 +8,7 @@ from co_ai.constants import (DATABASE_MATCHES, GOAL, GOAL_TEXT,
                              PIPELINE_RUN_ID, TEXT)
 from co_ai.models import EvaluationORM
 from co_ai.scoring.proximity import ProximityScore
+from co_ai.utils import compute_similarity_matrix
 
 
 class ProximityAgent(BaseAgent):
@@ -44,7 +45,7 @@ class ProximityAgent(BaseAgent):
             self.logger.log("NoHypothesesForProximity", {"reason": "empty_input"})
             return context
 
-        similarities = self._compute_similarity_matrix(all_hypotheses)
+        similarities = compute_similarity_matrix(all_hypotheses, self.memory, self.logger)
         self.logger.log(
             "ProximityGraphComputed",
             {
@@ -157,28 +158,6 @@ class ProximityAgent(BaseAgent):
             self.memory.evaluations.insert(score_obj)
 
         return context
-
-    def _compute_similarity_matrix(self, hypotheses: list[str]) -> list[tuple]:
-        vectors = []
-        valid_hypotheses = []
-
-        for h in hypotheses:
-            vec = self.memory.embedding.get_or_create(h)
-            if vec is None:
-                self.logger.log("MissingEmbedding", {"hypothesis_snippet": h[:60]})
-                continue
-            vectors.append(vec)
-            valid_hypotheses.append(h)
-
-        similarities = []
-        for i, j in itertools.combinations(range(len(valid_hypotheses)), 2):
-            h1 = valid_hypotheses[i]
-            h2 = valid_hypotheses[j]
-            sim = self._cosine(vectors[i], vectors[j])
-            similarities.append((h1, h2, sim))
-
-        similarities.sort(key=lambda x: x[2], reverse=True)
-        return similarities
 
     def _cosine(self, a, b):
         a = np.array(list(a), dtype=float)

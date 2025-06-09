@@ -7,7 +7,7 @@ import numpy as np
 from co_ai.agents.base import BaseAgent
 from co_ai.evaluator.mrq_trainer import MRQTrainer
 from co_ai.models.unified_mrq import UnifiedMRQModelORM
-from co_ai.tools.cos_sim_tool import cosine_similarity
+from co_ai.utils.similarity_utils import compute_similarity_matrix
 
 
 class UnifiedMRQAgent(BaseAgent):
@@ -44,11 +44,16 @@ class UnifiedMRQAgent(BaseAgent):
         # Step 2: Embed and index hypotheses
         embedded = self._index_embeddings(hypotheses)
 
+        print(f"Embedded: {[(k, v[1][:5]) for k, v in embedded.items()]}")
+
         # Step 3: Collect dimension-wise scores
         score_map = self._group_scores(scores)
 
+        print("Score map keys:", list(score_map.keys()))
+        print("Example score entry:", next(iter(score_map.items()), None))
+
         # Step 4: Generate contrast pairs
-        contrast_pairs = self._generate_contrast_pairs(embedded, score_map)
+        contrast_pairs = self._generate_contrast_pairs(embedded, score_map, context)
 
         # Step 5: Train model per dimension
         trained_models = self.trainer.train_multidimensional_model(contrast_pairs)
@@ -67,11 +72,12 @@ class UnifiedMRQAgent(BaseAgent):
             with open(path, "wb") as f:
                 pickle.dump(model, f)
 
+            pair_count = len([p for p in contrast_pairs if p["dimension"] == dim])
             self.memory.session.add(
                 UnifiedMRQModelORM(
                     dimension=dim,
                     model_path=path,
-                    pair_count=len([p for p in contrast_pairs if p[2] == dim]),
+                    pair_count=pair_count,
                     trainer_version="v1.0",
                     context={
                         "similarity_threshold": self.similarity_threshold,
@@ -94,15 +100,14 @@ class UnifiedMRQAgent(BaseAgent):
     def _index_embeddings(self, hypotheses):
         index = {}
         for hyp in hypotheses:
-            emb_id = hyp.get("embedding_id")
-            vector = hyp.get("embedding_vector")  # optional shortcut
+            text = hyp.get("text")
+            if not text:
+                continue
 
+            vector = self.memory.embedding.get_or_create(text)
             if vector is not None:
                 index[hyp["id"]] = (hyp, np.array(vector))
-            elif emb_id:
-                embedding = self.memory.embeddings.get_by_id(emb_id)
-                if embedding:
-                    index[hyp["id"]] = (hyp, np.array(embedding["vector"]))
+
         return index
 
     def _group_scores(self, scores):
@@ -113,23 +118,72 @@ class UnifiedMRQAgent(BaseAgent):
                 grouped[hypothesis_id][s.dimension] = s.score
         return grouped
 
-    def _generate_contrast_pairs(self, embedded, score_map):
-        pairs = []
-        items = list(embedded.items())
-        for i, (id1, (hyp1, vec1)) in enumerate(items):
-            for id2, (hyp2, vec2) in items[i + 1 :]:
-                sim = cosine_similarity(vec1, vec2)
-                if sim < self.similarity_threshold:
+    def _generate_contrast_pairs(self, embedded: dict, score_map: dict, context: dict) -> list[dict]:
+        """
+        Given a map of hypothesis_id -> (hypothesis_dict, embedding), and a score_map,
+        return all valid contrast pairs where two hypotheses have scores for the same dimensions.
+        """
+        contrast_pairs = []
+        dim_seen = set()
+
+        all_ids = list(embedded.keys())
+        self.logger.log(
+            "ContrastPairGenerationStart",
+            {
+                "total_hypotheses": len(all_ids),
+                "score_map_keys": list(score_map.keys())[:10],
+            },
+        )
+
+        for i in range(len(all_ids)):
+            for j in range(i + 1, len(all_ids)):
+                id_a, id_b = all_ids[i], all_ids[j]
+
+                if id_a not in score_map or id_b not in score_map:
                     continue
-                for dim in self.target_dimensions:
-                    s1 = score_map.get(id1, {}).get(dim)
-                    s2 = score_map.get(id2, {}).get(dim)
-                    if (
-                        s1 is not None
-                        and s2 is not None
-                        and abs(s1 - s2) >= self.min_score_difference
-                    ):
-                        better = hyp1 if s1 > s2 else hyp2
-                        worse = hyp2 if s1 > s2 else hyp1
-                        pairs.append((better["text"], worse["text"], dim))
-        return pairs
+
+                scores_a = score_map[id_a]
+                scores_b = score_map[id_b]
+
+                shared_dims = set(scores_a.keys()) & set(scores_b.keys())
+
+                for dim in shared_dims:
+                    score_a = scores_a[dim]
+                    score_b = scores_b[dim]
+
+                    # Skip if scores are equal
+                    if score_a == score_b:
+                        continue
+
+                    dim_seen.add(dim)
+
+                    # Get embedding vectors
+                    emb_a = embedded[id_a][1]
+                    emb_b = embedded[id_b][1]
+
+                    if emb_a is None or emb_b is None:
+                        self.logger.log(
+                            "MissingEmbeddingInContrast",
+                            {"id_a": id_a, "id_b": id_b, "dim": dim},
+                        )
+                        continue
+
+                    preferred = "a" if score_a > score_b else "b"
+                    pair = {
+                        "dimension": dim,
+                        "prompt": context.get("goal").get("goal_text"),  # Optional: use goal or reasoning task if desired
+                        "output_a": embedded[id_a][0]["text"],
+                        "output_b": embedded[id_b][0]["text"],
+                        "preferred": preferred,
+                    }
+                    contrast_pairs.append(pair)
+
+        self.logger.log(
+            "ContrastPairGenerationComplete",
+            {
+                "pairs_generated": len(contrast_pairs),
+                "dimensions_covered": list(dim_seen),
+            },
+        )
+
+        return contrast_pairs

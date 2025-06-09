@@ -8,6 +8,7 @@ from tabulate import tabulate
 
 from co_ai.models.evaluation import EvaluationORM
 from co_ai.models.score_dimension import ScoreDimensionORM
+from co_ai.models.score import ScoreORM
 
 
 class ScoreEvaluator:
@@ -205,7 +206,7 @@ class ScoreEvaluator:
         return results
 
     def save_score_to_memory(self, results, hypothesis, context):
-        """Save all dimension scores in one record using unified 'scores' JSON field."""
+        """Save all dimension scores and associated ScoreORM entries."""
         goal = context.get("goal")
         pipeline_run_id = context.get("pipeline_run_id")
         hypothesis_id = hypothesis.get("id")
@@ -220,20 +221,34 @@ class ScoreEvaluator:
             "final_score": round(weighted_score, 2),
         }
 
-        self.memory.evaluations.insert(
-            EvaluationORM(
-                goal_id=goal.get("id"),
-                pipeline_run_id=pipeline_run_id,
-                hypothesis_id=hypothesis_id,
-                agent_name=self.cfg.get("name"),
-                model_name=self.cfg.get("model", {}).get("name"),
-                evaluator_name=self.cfg.get("evaluator", "ScoreEvaluator"),
-                strategy=self.cfg.get("strategy"),
-                reasoning_strategy=self.cfg.get("reasoning_strategy"),
-                scores=scores_json,
-                extra_data={"source": "ScoreEvaluator"},
-            )
+        # Step 1: Insert EvaluationORM
+        eval_orm = EvaluationORM(
+            goal_id=goal.get("id"),
+            pipeline_run_id=pipeline_run_id,
+            hypothesis_id=hypothesis_id,
+            agent_name=self.cfg.get("name"),
+            model_name=self.cfg.get("model", {}).get("name"),
+            evaluator_name=self.cfg.get("evaluator", "ScoreEvaluator"),
+            strategy=self.cfg.get("strategy"),
+            reasoning_strategy=self.cfg.get("reasoning_strategy"),
+            scores=scores_json,
+            extra_data={"source": "ScoreEvaluator"},
         )
+        self.memory.session.add(eval_orm)
+        self.memory.session.flush()  # Get eval_orm.id before committing
+
+        # Step 2: Insert ScoreORM entries
+        for dimension_name, result in results.items():
+            score = ScoreORM(
+                evaluation_id=eval_orm.id,
+                dimension=dimension_name,
+                score=result["score"],
+                weight=result["weight"],
+                rationale=result["rationale"],
+            )
+            self.memory.session.add(score)
+
+        self.memory.session.commit()
 
         self.logger.log(
             "ScoreSavedToMemory",
