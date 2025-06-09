@@ -1,0 +1,12 @@
+Rubric:
+- Is the hypothesis clearly written and easy to understand?
+- Are terms and concepts explained adequately?
+- Is the structure logical and organized?
+
+<eval>
+Evaluate the clarity of the following hypothesis.
+Goal: {{goal.goal_text}}
+Hypothesis: {{hypothesis.text}}
+</eval>
+
+<answer>[[0]]</answer>

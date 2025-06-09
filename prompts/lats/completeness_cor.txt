@@ -1,0 +1,12 @@
+Rubric:
+- Does the hypothesis consider all relevant aspects of the problem?
+- Are edge cases or alternative scenarios addressed?
+- Is the explanation self-contained and detailed enough for clarity?
+
+<eval>
+Evaluate the completeness of the following hypothesis.
+Goal: {{goal.goal_text}}
+Hypothesis: {{hypothesis.text}}
+</eval>
+
+<answer>[[0]]</answer>

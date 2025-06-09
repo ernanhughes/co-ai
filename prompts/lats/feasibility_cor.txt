@@ -1,0 +1,12 @@
+Rubric:
+- Can the proposed solution be executed with available tools or actions?
+- Does it respect environmental constraints (e.g., tool limits, API calls)?
+- Are there any impractical or unrealistic assumptions?
+
+<eval>
+Evaluate the feasibility of the following hypothesis.
+Goal: {{goal.goal_text}}
+Hypothesis: {{hypothesis.text}}
+</eval>
+
+<answer>[[0]]</answer>

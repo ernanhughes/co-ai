@@ -1,0 +1,12 @@
+Rubric:
+- Does the hypothesis directly address the stated goal or question?
+- Are all logical steps valid and free from contradictions?
+- Is the final conclusion supported by the reasoning provided?
+
+<eval>
+Evaluate the following hypothesis based on the rubric above.
+Goal: {{goal.goal_text}}
+Hypothesis: {{hypothesis.text}}
+</eval>
+
+<answer>[[0]]</answer>

@@ -6,6 +6,11 @@ lats:
   save_prompt: true
   save_context: false
   skip_if_completed: false
+  max_depth: 5
+  branching_factor: 3
+  ucb_weight: 1.41
+  num_simulations: 50
+  
   model:
     name: ollama/qwen3
     api_base: http://localhost:11434
@@ -13,6 +18,5 @@ lats:
   input_keys: ["goal"]   # add nodes
   output_key: lats  # change
   prompt_mode: file
-  prompt_file: query_and_summarize.txt
+  prompt_file: lats.txt
   extraction_regex: "search query:<([^>]+)>\n(.*)"
-  strategy: query_and_summarize

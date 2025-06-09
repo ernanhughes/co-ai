@@ -1,0 +1,12 @@
+Rubric:
+- Does the hypothesis introduce a new perspective or non-obvious idea?
+- Does it go beyond surface-level analysis or repetition of known facts?
+- Does it offer generalizable insights applicable to similar problems?
+
+<eval>
+Assess how insightful the following hypothesis is.
+Goal: {{goal.goal_text}}
+Hypothesis: {{hypothesis.text}}
+</eval>
+
+<answer>[[0]]</answer>

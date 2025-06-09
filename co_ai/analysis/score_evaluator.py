@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from tabulate import tabulate
 
 from co_ai.models.evaluation import EvaluationORM
-from co_ai.models.score_dimension import ScoreDimensionORM
 from co_ai.models.score import ScoreORM
+from co_ai.models.score_dimension import ScoreDimensionORM
 
 
 class ScoreEvaluator:

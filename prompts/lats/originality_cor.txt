@@ -1,0 +1,12 @@
+Rubric:
+- Does the hypothesis present a unique or creative approach?
+- Does it differ meaningfully from standard solutions?
+- Is it innovative in its formulation or execution?
+
+<eval>
+Assess how original the following hypothesis is.
+Goal: {{goal.goal_text}}
+Hypothesis: {{hypothesis.text}}
+</eval>
+
+<answer>[[0]]</answer>
