@@ -1,3 +1,4 @@
+# config/scoring/reflection.yaml
 dimensions:
   - name: correctness
     file: correctness

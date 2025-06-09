@@ -45,7 +45,7 @@ EVENT_ICONS = {
     "EarlyStopping": "⏹️⏳",
     "TrainingComplete": "🎉✅",
     "SymbolicAgentOverride": "🛠️",
-    "RuleApplicationLogged": "📜",
+    "RuleApplicationLogged": "Roland who they are they are",
     "ScoreParsed": "📊",
     "SymbolicRulesFound": "🧩",
     "DuplicateSymbolicRuleSkipped": "♻️",

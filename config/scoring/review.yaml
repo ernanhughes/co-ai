@@ -1,3 +1,4 @@
+# config/scoring/review.yaml
 dimensions:
   - name: correctness
     file: correctness
