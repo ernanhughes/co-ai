@@ -50,9 +50,7 @@ class MRQScoringAgent(BaseAgent):
                 agent_name=self.name,
                 model_name=self.model_name,
                 evaluator_name="MRQScoringAgent",
-                score_type=self.score_source,
-                score=score_value,
-                rationale=rationale,
+                scores=result,
                 pipeline_run_id=context.get("pipeline_run_id"),
                 extra_data=self.cfg,
                 dimensions=dimensions  # 🔥 store rich sub-scores

@@ -168,8 +168,7 @@ class RuleEffectAnalyzer:
                 score.agent_name or "N/A",
                 score.model_name or "N/A",
                 score.evaluator_name or "N/A",
-                score.score_type or "N/A",
-                score.score,
+                score.scores,
                 rule_app.rule_id if rule_app else "—",
                 score.hypothesis_id or "—",
             ]
