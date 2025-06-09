@@ -1,5 +1,6 @@
 from co_ai.analysis.score_evaluator import ScoreEvaluator
 
+
 class ScoringMixin:
     """
     A generic scoring mixin that supports dynamic, stage-aware evaluation using ScoreEvaluator.

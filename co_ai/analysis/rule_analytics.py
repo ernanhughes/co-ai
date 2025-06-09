@@ -1,8 +1,10 @@
 from collections import defaultdict
 from typing import Dict, List, Optional
 
-from co_ai.models.rule_application import RuleApplicationORM
 from tabulate import tabulate
+
+from co_ai.models.rule_application import RuleApplicationORM
+
 
 class RuleAnalytics:
     def __init__(self, db, logger=None):

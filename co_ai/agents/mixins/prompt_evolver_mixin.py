@@ -1,5 +1,6 @@
 from co_ai.compiler.prompt_evolver import PromptEvolver
 
+
 class PromptEvolverMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,7 +1,8 @@
 # co_ai/compiler/prompt_tuning_signature.py
 
 import dspy
-from dspy import Signature, InputField, OutputField
+from dspy import InputField, OutputField, Signature
+
 
 class PromptTuningSignature(Signature):
     goal = InputField(desc="Scientific research goal or question")

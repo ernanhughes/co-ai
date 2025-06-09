@@ -5,9 +5,9 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from co_ai.models import RuleApplicationORM
-from co_ai.models.goal import GoalORM
 from co_ai.models.evaluation import EvaluationORM
 from co_ai.models.evaluation_rule_link import EvaluationRuleLinkORM
+from co_ai.models.goal import GoalORM
 
 
 class EvaluationStore:
@@ -147,3 +147,21 @@ class EvaluationStore:
             .all()
         )
         return [rid for (rid,) in links]
+    
+    def get_by_hypothesis_ids(self, hypothesis_ids: list[int]) -> list[EvaluationORM]:
+        if not hypothesis_ids:
+            return []
+        try:
+            return (
+                self.session.query(EvaluationORM)
+                .filter(EvaluationORM.hypothesis_id.in_(hypothesis_ids))
+                .all()
+            )
+        except Exception as e:
+            if self.logger:
+                self.logger.log("EvaluationStoreError", {
+                    "method": "get_by_hypothesis_ids",
+                    "error": str(e),
+                    "hypothesis_ids": hypothesis_ids,
+                })
+            return []

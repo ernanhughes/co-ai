@@ -1,5 +1,5 @@
 # co_ai/db/orm/score_dimension.py
-from sqlalchemy import Column, Integer, String, Float, Text, JSON
+from sqlalchemy import JSON, Column, Float, Integer, String, Text
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()

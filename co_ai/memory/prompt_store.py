@@ -1,14 +1,15 @@
 # stores/prompt_store.py
 import json
+from difflib import SequenceMatcher
 from typing import Optional
 
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import dialect
 from sqlalchemy.orm import Session
 
 from co_ai.models.goal import GoalORM
 from co_ai.models.prompt import PromptORM
-from sqlalchemy.dialects.postgresql import dialect
-from difflib import SequenceMatcher
+
 
 class PromptStore:
     def __init__(self, session: Session, logger=None):

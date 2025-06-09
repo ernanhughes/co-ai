@@ -1,11 +1,13 @@
-from co_ai.models.score_dimension import ScoreDimensionORM
-from co_ai.models.evaluation import EvaluationORM
-from sqlalchemy.orm import Session
-import yaml
-from pathlib import Path
-from jinja2 import Template
 import re
+from pathlib import Path
+
+import yaml
+from jinja2 import Template
+from sqlalchemy.orm import Session
 from tabulate import tabulate
+
+from co_ai.models.evaluation import EvaluationORM
+from co_ai.models.score_dimension import ScoreDimensionORM
 
 
 class ScoreEvaluator:

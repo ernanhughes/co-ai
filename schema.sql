@@ -580,3 +580,13 @@ CREATE TABLE IF NOT EXISTS unified_mrq_models (
     notes TEXT,                           -- Optional notes (e.g., goal type filter, dataset slice)
     context JSONB                         -- Optional: additional metadata (e.g., embedding model, goal_type, etc.)
 );
+
+
+CREATE TABLE IF NOT EXISTS scores (
+    id SERIAL PRIMARY KEY,
+    evaluation_id INTEGER REFERENCES evaluations(id) ON DELETE CASCADE,
+    dimension TEXT NOT NULL,
+    score FLOAT,
+    weight FLOAT,
+    rationale TEXT
+);

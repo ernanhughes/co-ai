@@ -31,6 +31,7 @@ class EvaluationORM(Base):
     hypothesis = relationship("HypothesisORM", back_populates="scores")
     symbolic_rule = relationship("SymbolicRuleORM", back_populates="scores")
     pipeline_run = relationship("PipelineRunORM", back_populates="scores")
+    dimension_scores = relationship("ScoreORM", back_populates="evaluation", cascade="all, delete-orphan")
 
     def to_dict(self, include_relationships: bool = False) -> dict:
         data = {

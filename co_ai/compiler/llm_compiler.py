@@ -1,5 +1,7 @@
-from jinja2 import Environment, BaseLoader
+from jinja2 import BaseLoader, Environment
+
 from co_ai.models.prompt_program import PromptProgramORM
+
 
 class LLMCompiler:
     def __init__(self, llm, evaluator=None, logger=None):

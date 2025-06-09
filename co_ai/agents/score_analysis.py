@@ -1,6 +1,7 @@
 # co_ai/agents/score_analysis_agent.py
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
+
 from co_ai.agents.base import BaseAgent
 from co_ai.analysis.score_analyzer import ScoreAnalyzer
 from co_ai.constants import PIPELINE_RUN_ID

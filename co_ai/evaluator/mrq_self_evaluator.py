@@ -2,8 +2,8 @@ import torch
 
 from co_ai.evaluator.base import BaseEvaluator
 from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
-from co_ai.evaluator.text_encoder import TextEncoder
 from co_ai.evaluator.mrq_trainer import MRQTrainer
+from co_ai.evaluator.text_encoder import TextEncoder
 from co_ai.models.sharpening_prediction import SharpeningPredictionORM
 
 
@@ -73,9 +73,6 @@ class MRQSelfEvaluator(BaseEvaluator):
         return value
 
     def train_from_database(self, goal: str, cfg: dict):
-        if self.memory is None:
-            raise ValueError("Database connection not provided.")
-
         samples = self.memory.mrq.get_training_pairs(
             goal=goal, limit=cfg.get("limit", 1000)
         )
@@ -89,7 +86,8 @@ class MRQSelfEvaluator(BaseEvaluator):
             )
             return
 
-        self.trainer.train(samples, cfg)
+        dataloader = self.trainer.prepare_training_data(samples)
+        self.trainer.train(dataloader, cfg)
 
     def train_from_context(self, context: dict, cfg: dict):
         samples = context.get("mrq_training_pairs", [])
@@ -100,4 +98,5 @@ class MRQSelfEvaluator(BaseEvaluator):
             )
             return
 
-        self.trainer.train(samples, goal="context", cfg=cfg)
+        dataloader = self.trainer.prepare_training_data(samples)
+        self.trainer.train(dataloader, cfg)

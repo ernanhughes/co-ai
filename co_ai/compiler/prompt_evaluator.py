@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class EvaluationResult:
     def __init__(self, score: float, reason: str):
         self.score = score

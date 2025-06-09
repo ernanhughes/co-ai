@@ -1,9 +1,11 @@
-from collections import defaultdict
 import statistics
+from collections import defaultdict
 
 from co_ai.agents.base import BaseAgent
-from co_ai.models import PipelineRunORM, EvaluationORM, RuleApplicationORM, SymbolicRuleORM
 from co_ai.constants import PIPELINE_RUN_ID
+from co_ai.models import (EvaluationORM, PipelineRunORM, RuleApplicationORM,
+                          SymbolicRuleORM)
+
 
 class RuleGeneratorAgent(BaseAgent):
     def __init__(self, *args, min_score_threshold=7.5, min_repeat_count=2, **kwargs):

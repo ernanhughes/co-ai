@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON
 from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, Integer, String, Text
+
 from co_ai.models.base import Base
+
 
 class UnifiedMRQModelORM(Base):
     __tablename__ = "unified_mrq_models"

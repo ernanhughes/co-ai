@@ -1,11 +1,13 @@
 import re
 
+from tabulate import tabulate
+
 from co_ai.agents.base import BaseAgent
 from co_ai.analysis.rule_analytics import RuleAnalytics
 from co_ai.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from co_ai.constants import GOAL, PIPELINE, PIPELINE_RUN_ID, RUN_ID
 from co_ai.models import EvaluationORM
-from tabulate import tabulate
+
 
 def extract_dimensions(text: str) -> dict:
     dimensions = {}

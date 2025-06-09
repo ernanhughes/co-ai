@@ -1,7 +1,9 @@
-from co_ai.agents.base import BaseAgent
-from co_ai.constants import PIPELINE_RUN_ID, GOAL
-from collections import defaultdict
 import statistics
+from collections import defaultdict
+
+from co_ai.agents.base import BaseAgent
+from co_ai.constants import GOAL, PIPELINE_RUN_ID
+
 
 class CompilerOptimizerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

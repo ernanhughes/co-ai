@@ -6,9 +6,9 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from tabulate import tabulate
 
-from co_ai.models import (PipelineRunORM, RuleApplicationORM, EvaluationORM,
-                          EvaluationRuleLinkORM)
-from tabulate import tabulate
+from co_ai.models import (EvaluationORM, EvaluationRuleLinkORM, PipelineRunORM,
+                          RuleApplicationORM)
+
 
 class RuleEffectAnalyzer:
     def __init__(self, session: Session, logger=None):

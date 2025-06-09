@@ -1,11 +1,12 @@
 import os
 import pickle
-import numpy as np
 from collections import defaultdict
 
+import numpy as np
+
 from co_ai.agents.base import BaseAgent
-from co_ai.models.unified_mrq import UnifiedMRQModelORM
 from co_ai.evaluator.mrq_trainer import MRQTrainer
+from co_ai.models.unified_mrq import UnifiedMRQModelORM
 from co_ai.tools.cos_sim_tool import cosine_similarity
 
 
@@ -34,8 +35,12 @@ class UnifiedMRQAgent(BaseAgent):
 
         # Step 1: Load hypotheses and scores
         hypotheses = context.get("hypotheses") or self.memory.hypotheses.get_all()
-        scores = self.memory.evaluations.get_all()
 
+        hypothesis_ids = [h["id"] for h in hypotheses]
+        evaluations = self.memory.evaluations.get_by_hypothesis_ids(hypothesis_ids)
+        evaluation_ids = [e.id for e in evaluations]
+        scores = self.memory.scores.get_by_evaluation_ids(evaluation_ids)
+        
         # Step 2: Embed and index hypotheses
         embedded = self._index_embeddings(hypotheses)
 
@@ -103,7 +108,9 @@ class UnifiedMRQAgent(BaseAgent):
     def _group_scores(self, scores):
         grouped = defaultdict(dict)
         for s in scores:
-            grouped[s.hypothesis_id][s.dimension_name] = s.score
+            hypothesis_id = getattr(s.evaluation, "hypothesis_id", None)
+            if hypothesis_id and s.dimension:
+                grouped[hypothesis_id][s.dimension] = s.score
         return grouped
 
     def _generate_contrast_pairs(self, embedded, score_map):

@@ -1,9 +1,10 @@
 # analysis/score_analyzer.py
-import pandas as pd
-from sklearn.linear_model import LinearRegression
-from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.linear_model import LinearRegression
+
 
 class ScoreAnalyzer:
     def __init__(self, score_data: pd.DataFrame):

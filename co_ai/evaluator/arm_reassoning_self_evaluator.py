@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 
 import torch
 import torch.nn.functional as F
@@ -7,7 +8,6 @@ from co_ai.dataloaders import ARMDataLoader
 from co_ai.evaluator.base import BaseEvaluator
 from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
 from co_ai.evaluator.text_encoder import TextEncoder
-from copy import deepcopy
 
 
 class ARMReasoningSelfEvaluator(BaseEvaluator):

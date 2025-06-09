@@ -2,6 +2,7 @@
 import re
 from string import Template
 
+
 class StructuredScoringEngine:
     def __init__(self, dimensions, prompt_loader=None, cfg=None, logger=None):
         self.dimensions = dimensions

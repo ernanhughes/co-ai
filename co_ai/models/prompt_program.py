@@ -1,6 +1,7 @@
-from sqlalchemy import Column, String, Integer, Float, Text, ForeignKey, JSON
-from sqlalchemy.orm import declarative_base, relationship
 import uuid
+
+from sqlalchemy import JSON, Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
