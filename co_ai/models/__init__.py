@@ -18,3 +18,4 @@ from .sharpening_prediction import SharpeningPredictionORM
 from .sharpening_result import SharpeningResultORM
 from .symbolic_rule import SymbolicRuleORM
 from .score_dimension import ScoreDimensionORM
+from .unified_mrq import UnifiedMRQModelORM

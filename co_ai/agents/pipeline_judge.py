@@ -79,12 +79,9 @@ class PipelineJudgeAgent(BaseAgent):
                 agent_name=self.name,
                 model_name=self.model_name,
                 evaluator_name="PipelineJudgeAgent",
-                score_type="pipeline_judgment",
-                score=score,
-                rationale=rationale,
+                scores=dimensions,
                 pipeline_run_id=context.get(PIPELINE_RUN_ID),
                 extra_data={"raw_response": judgement},
-                dimensions=dimensions,
             )
             self.memory.scores.insert(score_obj)
             self.logger.log("ScoreSaved", {"score_id": score_obj.id, "run_id": context.get(RUN_ID)})

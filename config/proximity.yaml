@@ -4,6 +4,7 @@ defaults:
   - db: postgres
   - agents/generation
   - agents/proximity
+  - agents/unified_mrq
   - logging/json_logger
 
 # The goal of the pipeline, e.g., "Generate a hypothesis about the impact of climate change on biodiversity."
@@ -59,5 +60,9 @@ pipeline:
        iterations: 1
      - name: proximity
        cls: co_ai.agents.proximity.ProximityAgent
+       enabled: true
+       iterations: 1
+     - name: unified_mrq
+       cls: co_ai.agents.unified_mrq.UnifiedMRQAgent
        enabled: true
        iterations: 1

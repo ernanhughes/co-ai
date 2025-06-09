@@ -1,15 +1,24 @@
 # co_ai/evaluator/mrq_trainer.py
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from co_ai.evaluator.text_encoder import TextEncoder
 
 
 class MRQTrainer:
-    def __init__(self, encoder, value_predictor, memory, logger, device="cpu"):
-        self.encoder = encoder.to(device)
-        self.value_predictor = value_predictor.to(device)
+    def __init__(self, memory, logger, encoder=None, value_predictor=None, device="cpu"):
         self.memory = memory
         self.logger = logger
         self.device = device
+        self.value_predictor = HypothesisValuePredictor(512, 1024).to(self.device)
+        if encoder is not None:
+            self.encoder = encoder.to(device)
+        else:
+            self.encoder = TextEncoder().to(device)
+        if value_predictor is not None:            
+            self.value_predictor = value_predictor.to(device)
+        else:
+            self.value_predictor = HypothesisValuePredictor(512, 1024).to(device)
 
     def prepare_training_data(self, samples):
         inputs, labels = [], []

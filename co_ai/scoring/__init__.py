@@ -1,2 +1,2 @@
-from .structured_enginee import ScoringEngine
+from .structured_engine import StructuredScoringEngine
 

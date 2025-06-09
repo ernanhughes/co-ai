@@ -569,3 +569,14 @@ CREATE TABLE IF NOT EXISTS score_dimensions (
     notes TEXT,
     extra_data JSON DEFAULT '{}'
 );
+
+CREATE TABLE IF NOT EXISTS unified_mrq_models (
+    id SERIAL PRIMARY KEY,
+    dimension TEXT NOT NULL,              -- e.g., 'correctness', 'clarity', etc.
+    model_path TEXT NOT NULL,             -- Path to saved model artifact (e.g., .pkl or .pt)
+    trained_on TIMESTAMP DEFAULT NOW(),   -- Timestamp of training
+    pair_count INTEGER,                   -- Number of contrastive pairs used
+    trainer_version TEXT,                 -- Version or hash of the MRQTrainer config
+    notes TEXT,                           -- Optional notes (e.g., goal type filter, dataset slice)
+    context JSONB                         -- Optional: additional metadata (e.g., embedding model, goal_type, etc.)
+);

@@ -56,7 +56,7 @@ class RuleEffectAnalyzer:
             score = self.session.get(ScoreORM, link.score_id)
             rule_app = self.session.get(RuleApplicationORM, link.rule_application_id)
 
-            if not score or not rule_app or score.score is None:
+            if not score or not rule_app:
                 if self.logger:
                     self.logger.log("SkipScoreLink", {
                         "reason": "missing score or rule_app or score is None",
@@ -66,7 +66,7 @@ class RuleEffectAnalyzer:
                 continue
 
             rule_id = rule_app.rule_id
-            rule_scores[rule_id].append(score.score)
+            rule_scores[rule_id].append(score.scores.get("final_score", 0.0))
 
             # Normalize stage_details as sorted JSON
             try:
@@ -80,7 +80,7 @@ class RuleEffectAnalyzer:
                     })
 
 
-            param_scores[rule_id][param_key].append(score.score)
+            param_scores[rule_id][param_key].append(score.scores.get("final_score", 0.0))
 
         # Build summary output
         results = {}
