@@ -34,7 +34,7 @@ class UnifiedMRQAgent(BaseAgent):
 
         # Step 1: Load hypotheses and scores
         hypotheses = context.get("hypotheses") or self.memory.hypotheses.get_all()
-        scores = self.memory.scores.get_all()
+        scores = self.memory.evaluations.get_all()
 
         # Step 2: Embed and index hypotheses
         embedded = self._index_embeddings(hypotheses)

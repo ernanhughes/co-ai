@@ -14,7 +14,13 @@ class MRQSelfEvaluator(BaseEvaluator):
         self.logger = logger
         self.encoder = TextEncoder().to(self.device)
         self.value_predictor = HypothesisValuePredictor(512, 1024).to(self.device)
-        self.trainer = MRQTrainer(self.value_predictor, self.encoder, self.logger, self.device)
+        self.trainer = MRQTrainer(
+            memory=self.memory,
+            logger=self.logger,
+            value_predictor=self.value_predictor,
+            encoder=self.encoder,
+            device=self.device,
+        )
 
     def judge(self, goal, prompt, output_a, output_b):
         prompt_emb = torch.tensor(
@@ -49,13 +55,19 @@ class MRQSelfEvaluator(BaseEvaluator):
                 value_b=value_b,
             )
 
-            self.memory.sharpening.insert_sharpening_prediction(prediction.to_dict(), goal)
+            self.memory.sharpening.insert_sharpening_prediction(
+                prediction.to_dict(), goal
+            )
 
         return preferred_output, scores
 
     def score_single(self, prompt: str, output: str, context: dict) -> float:
-        prompt_emb = torch.tensor(self.memory.embedding.get_or_create(prompt), device=self.device).unsqueeze(0)
-        output_emb = torch.tensor(self.memory.embedding.get_or_create(output), device=self.device).unsqueeze(0)
+        prompt_emb = torch.tensor(
+            self.memory.embedding.get_or_create(prompt), device=self.device
+        ).unsqueeze(0)
+        output_emb = torch.tensor(
+            self.memory.embedding.get_or_create(output), device=self.device
+        ).unsqueeze(0)
         zsa = self.encoder(prompt_emb, output_emb)
         value = self.value_predictor(zsa).item()
         return value
@@ -64,22 +76,28 @@ class MRQSelfEvaluator(BaseEvaluator):
         if self.memory is None:
             raise ValueError("Database connection not provided.")
 
-        samples = self.memory.mrq.get_training_pairs(goal=goal, limit=cfg.get("limit", 1000))
+        samples = self.memory.mrq.get_training_pairs(
+            goal=goal, limit=cfg.get("limit", 1000)
+        )
         if not samples:
-            self.logger.log("MRQTrainingError", {
-                "error": "No training samples found for the given goal.",
-                "goal": goal
-            })
+            self.logger.log(
+                "MRQTrainingError",
+                {
+                    "error": "No training samples found for the given goal.",
+                    "goal": goal,
+                },
+            )
             return
 
-        self.trainer.train(samples, goal, cfg)
+        self.trainer.train(samples, cfg)
 
     def train_from_context(self, context: dict, cfg: dict):
         samples = context.get("mrq_training_pairs", [])
         if not samples:
-            self.logger.log("MRQContextTrainingError", {
-                "error": "No training samples found in context."
-            })
+            self.logger.log(
+                "MRQContextTrainingError",
+                {"error": "No training samples found in context."},
+            )
             return
 
         self.trainer.train(samples, goal="context", cfg=cfg)

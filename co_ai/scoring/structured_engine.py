@@ -28,7 +28,7 @@ class StructuredScoringEngine:
                         "error": str(e)
                     })
             if self.logger:
-                self.logger.log("DimensionEvaluated", {
+                self.logger.log("StructuredDimensionEvaluated", {
                     "dimension": dim["name"],
                     "score": score,
                     "response": response

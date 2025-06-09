@@ -5,7 +5,7 @@ from co_ai.agents.base import BaseAgent
 from co_ai.analysis.rubric_classifier import RubricClassifierMixin
 from co_ai.constants import GOAL, GOAL_TEXT, PIPELINE, PIPELINE_RUN_ID
 from co_ai.evaluator import LLMJudgeEvaluator, MRQSelfEvaluator
-from co_ai.models import HypothesisORM, ScoreORM
+from co_ai.models import HypothesisORM, EvaluationORM
 from co_ai.prompts import PromptLoader
 from co_ai.agents.mixins.scoring_mixin import ScoringMixin
 

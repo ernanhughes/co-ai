@@ -1,5 +1,5 @@
 from co_ai.models.score_dimension import ScoreDimensionORM
-from co_ai.models.score import ScoreORM
+from co_ai.models.evaluation import EvaluationORM
 from sqlalchemy.orm import Session
 import yaml
 from pathlib import Path
@@ -46,7 +46,9 @@ class ScoreEvaluator:
             {
                 "name": d["name"],
                 "file": d.get("file"),
-                "prompt_template": d.get("prompt_template", d.get("file")),  # fallback to file
+                "prompt_template": d.get(
+                    "prompt_template", d.get("file")
+                ),  # fallback to file
                 "weight": d.get("weight", 1.0),
                 "parser": cls.get_parser(d.get("extra_data", {})),
             }
@@ -72,7 +74,7 @@ class ScoreEvaluator:
             return lambda r: ScoreEvaluator.extract_score_from_last_line(r)
         if parser_type == "numeric_cor":
             return lambda r: ScoreEvaluator.parse_numeric_cor(r)
-        
+
         return lambda r: 0.0
 
     @staticmethod
@@ -93,16 +95,26 @@ class ScoreEvaluator:
         Extracts the numeric score from a <answer>All right [[X]]</answer> block.
         Example: <answer>[[3]]</answer> → 3.0
         """
-        match = re.search(r"(?:<answer>\s*)?\[\[(\d+(?:\.\d+)?)\]\](?:\s*</answer>)?", response, re.IGNORECASE)
+        match = re.search(
+            r"(?:<answer>\s*)?\[\[(\d+(?:\.\d+)?)\]\](?:\s*</answer>)?",
+            response,
+            re.IGNORECASE,
+        )
         if not match:
-            raise ValueError(f"Could not extract numeric score from CoR-style answer: {response}")
+            raise ValueError(
+                f"Could not extract numeric score from CoR-style answer: {response}"
+            )
         return float(match.group(1))
 
     def evaluate(self, hypothesis: dict, context: dict = {}, llm_fn=None):
         if self.output_format == "cor":
-            return self._evaluate_cor(hypothesis=hypothesis, context=context, llm_fn=llm_fn)
+            return self._evaluate_cor(
+                hypothesis=hypothesis, context=context, llm_fn=llm_fn
+            )
         else:
-            return self._evaluate_simple(hypothesis=hypothesis, context=context, llm_fn=llm_fn)
+            return self._evaluate_simple(
+                hypothesis=hypothesis, context=context, llm_fn=llm_fn
+            )
 
     def _evaluate_cor(self, hypothesis: dict, context: dict = {}, llm_fn=None):
         """
@@ -133,18 +145,16 @@ class ScoreEvaluator:
             try:
                 score = dim["parser"](response)
             except Exception as e:
-                self.logger.log("ScoreParseError", {
-                    "dimension": dim["name"],
-                    "response": response,
-                    "error": str(e)
-                })
+                self.logger.log(
+                    "ScoreParseError",
+                    {"dimension": dim["name"], "response": response, "error": str(e)},
+                )
                 score = 0.0
 
-            self.logger.log("DimensionEvaluated", {
-                "dimension": dim["name"],
-                "score": score,
-                "response": response
-            })
+            self.logger.log(
+                "CorDimensionEvaluated",
+                {"dimension": dim["name"], "score": score, "response": response},
+            )
 
             results[dim["name"]] = {
                 "score": score,
@@ -154,7 +164,6 @@ class ScoreEvaluator:
 
         self.save_score_to_memory(results, hypothesis, context)
         return results
-
 
     def _evaluate_simple(self, hypothesis: dict, context: dict = {}, llm_fn=None):
         if llm_fn is None:
@@ -168,7 +177,11 @@ class ScoreEvaluator:
                 prompt = self.prompt_loader.from_file(
                     file_name=dim["file"],
                     config=self.cfg,
-                    context={"hypothesis": hypothesis, **context},
+                    context={
+                        **context,
+                        "goal": context.get("goal").get("goal_text"),
+                        "hypothesis": hypothesis.get("text"),
+                    },
                 )
             else:
                 prompt = Template(dim["prompt_template"]).render(
@@ -205,9 +218,9 @@ class ScoreEvaluator:
             "final_score": round(weighted_score, 2),
         }
 
-        self.memory.scores.insert(
-            ScoreORM(
-                goal_id=goal.get("id"), 
+        self.memory.evaluations.insert(
+            EvaluationORM(
+                goal_id=goal.get("id"),
                 pipeline_run_id=pipeline_run_id,
                 hypothesis_id=hypothesis_id,
                 agent_name=self.cfg.get("name"),
@@ -220,18 +233,25 @@ class ScoreEvaluator:
             )
         )
 
-        self.logger.log("ScoreSavedToMemory", {
-            "goal_id": goal.get("id"),
-            "hypothesis_id": hypothesis_id,
-            "scores": scores_json,
-        })
+        self.logger.log(
+            "ScoreSavedToMemory",
+            {
+                "goal_id": goal.get("id"),
+                "hypothesis_id": hypothesis_id,
+                "scores": scores_json,
+            },
+        )
 
         self.display_results(results, weighted_score)
 
-
     def display_results(self, results, weighted_score):
         table_data = [
-            [dim_name, f"{dim_data['score']:.2f}", dim_data['weight'], dim_data['rationale'][:60]]
+            [
+                dim_name,
+                f"{dim_data['score']:.2f}",
+                dim_data["weight"],
+                dim_data["rationale"][:60],
+            ]
             for dim_name, dim_data in results.items()
         ]
         table_data.append(["FINAL", f"{weighted_score:.2f}", "-", "Weighted average"])

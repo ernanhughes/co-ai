@@ -5,7 +5,7 @@ from co_ai.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from co_ai.memory.symbolic_rule_store import SymbolicRuleStore
 from co_ai.rules import RuleTuner
 from co_ai.constants import GOAL, PIPELINE_RUN_ID
-from co_ai.models import PipelineRunORM, ScoreORM, RuleApplicationORM, SymbolicRuleORM
+from co_ai.models import PipelineRunORM, EvaluationORM, RuleApplicationORM, SymbolicRuleORM
 
 class RuleTunerAgent(BaseAgent):
     """
@@ -58,7 +58,7 @@ class RuleTunerAgent(BaseAgent):
         return context
 
     def _generate_rules_from_high_scores(self):
-        scores = self.memory.session.query(ScoreORM).filter(ScoreORM.score >= self.min_score_threshold).all()
+        scores = self.memory.session.query(EvaluationORM).filter(EvaluationORM.score >= self.min_score_threshold).all()
         runs = []
         for score in scores:
             rule_app = (

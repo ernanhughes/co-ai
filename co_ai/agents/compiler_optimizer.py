@@ -14,7 +14,7 @@ class CompilerOptimizerAgent(BaseAgent):
 
         # Step 1: Fetch all hypotheses and their scores for this run
         hypotheses = self.memory.hypotheses.get_by_pipeline_run(pipeline_run_id)
-        all_scores = self.memory.scores.get_by_pipeline_run(pipeline_run_id)
+        all_scores = self.memory.evaluations.get_by_pipeline_run(pipeline_run_id)
 
         # Group scores by prompt_id
         prompt_scores = defaultdict(list)

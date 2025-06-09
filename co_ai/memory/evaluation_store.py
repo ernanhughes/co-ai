@@ -6,61 +6,61 @@ from sqlalchemy.orm import Session
 
 from co_ai.models import RuleApplicationORM
 from co_ai.models.goal import GoalORM
-from co_ai.models.score import ScoreORM
-from co_ai.models.score_rule_link import ScoreRuleLinkORM
+from co_ai.models.evaluation import EvaluationORM
+from co_ai.models.evaluation_rule_link import EvaluationRuleLinkORM
 
 
-class ScoreStore:
+class EvaluationStore:
     def __init__(self, session: Session, logger=None):
         self.session = session
         self.logger = logger
-        self.name = "scores"
-        self.table_name = "scores"
+        self.name = "evaluations"
+        self.table_name = "evaluations"
 
-    def insert(self, score: ScoreORM):
+    def insert(self, evaluation: EvaluationORM):
         """
         Inserts a new score into the database.
         Accepts a dictionary (e.g., from Score dataclass).
         """
         try:
-            self.session.add(score)
+            self.session.add(evaluation)
             self.session.flush()  # To get ID immediately
 
             if self.logger:
                 self.logger.log(
                     "ScoreStored",
                     {
-                        "score_id": score.id,
-                        "goal_id": score.goal_id,
-                        "hypothesis_id": score.hypothesis_id,
-                        "agent": score.agent_name,
-                        "model": score.model_name,
-                        "scores": score.scores,
-                        "timestamp": score.created_at.isoformat(),
+                        "evaluationSign in_id": evaluation.id,
+                        "goal_id": evaluation.goal_id,
+                        "hypothesis_id": evaluation.hypothesis_id,
+                        "agent": evaluation.agent_name,
+                        "model": evaluation.model_name,
+                        "scores": evaluation.scores,
+                        "timestamp": evaluation.created_at.isoformat(),
                     },
                 )
 
             # Link score to rule application if possible
-            if score.pipeline_run_id and score.goal_id:
+            if evaluation.pipeline_run_id and evaluation.goal_id:
                 rule_apps = (
                     self.session.query(RuleApplicationORM)
-                    .filter_by(pipeline_run_id=score.pipeline_run_id, goal_id=score.goal_id)
+                    .filter_by(pipeline_run_id=evaluation.pipeline_run_id, goal_id=evaluation.goal_id)
                     .all()
                 )
                 for ra in rule_apps:
-                    link = ScoreRuleLinkORM(score_id=score.id, rule_application_id=ra.id)
+                    link = EvaluationRuleLinkORM(evaluation_id=evaluation.id, rule_application_id=ra.id)
                     self.session.add(link)
                 self.logger.log(
                     "ScoreLinkedToRuleApplications",
                     {
-                        "score_id": score.id,
+                        "score_id": evaluation.id,
                         "linked_rule_application_ids": [ra.id for ra in rule_apps],
                     },
                 )
 
-            self.session.refresh(score)
+            self.session.refresh(evaluation)
             self.session.commit()
-            return score.id
+            return evaluation.id
 
         except Exception as e:
             self.session.rollback()
@@ -70,12 +70,12 @@ class ScoreStore:
 
     def get_by_goal_id(self, goal_id: int) -> list[dict]:
         """Returns all scores associated with a specific goal."""
-        results = self.session.query(ScoreORM).join(GoalORM).filter(GoalORM.id == goal_id).all()
+        results = self.session.query(EvaluationORM).join(GoalORM).filter(GoalORM.id == goal_id).all()
         return [self._orm_to_dict(r) for r in results]
 
     def get_by_goal_type(self, goal_type: str) -> list[dict]:
         """Returns all scores associated with a specific goal."""
-        results = self.session.query(ScoreORM).join(GoalORM).filter(GoalORM.goal_type == goal_type).all()
+        results = self.session.query(EvaluationORM).join(GoalORM).filter(GoalORM.goal_type == goal_type).all()
         return [self._orm_to_dict(r) for r in results]
 
 
@@ -85,41 +85,41 @@ class ScoreStore:
         source: Optional[str] = None
     ) -> list[dict]:
         """Returns all scores associated with a specific hypothesis, optionally filtered by evaluator source."""
-        query = self.session.query(ScoreORM).filter(ScoreORM.hypothesis_id == hypothesis_id)
+        query = self.session.query(EvaluationORM).filter(EvaluationORM.hypothesis_id == hypothesis_id)
         
         if source:
-            query = query.filter(ScoreORM.evaluator_name == source)
+            query = query.filter(EvaluationORM.evaluator_name == source)
 
         results = query.all()
         return [self._orm_to_dict(r) for r in results]
 
     def get_by_run_id(self, run_id: str) -> list[dict]:
         """Returns all scores associated with a specific pipeline run."""
-        results = self.session.query(ScoreORM).filter(ScoreORM.run_id == run_id).all()
+        results = self.session.query(EvaluationORM).filter(EvaluationORM.run_id == run_id).all()
         return [self._orm_to_dict(r) for r in results]
 
     def get_by_pipeline_run_id(self, pipeline_run_id: int) -> list[dict]:
         """Returns all scores associated with a specific pipeline run."""
-        results = self.session.query(ScoreORM).filter(ScoreORM.pipeline_run_id == pipeline_run_id).all()
+        results = self.session.query(EvaluationORM).filter(EvaluationORM.pipeline_run_id == pipeline_run_id).all()
         return [self._orm_to_dict(r) for r in results]
 
 
     def get_by_evaluator(self, evaluator_name: str) -> list[dict]:
         """Returns all scores produced by a specific evaluator (LLM, MRQ, etc.)"""
-        results = self.session.query(ScoreORM).filter(ScoreORM.evaluator_name == evaluator_name).all()
+        results = self.session.query(EvaluationORM).filter(EvaluationORM.evaluator_name == evaluator_name).all()
         return [self._orm_to_dict(r) for r in results]
 
     def get_by_strategy(self, strategy: str) -> list[dict]:
         """Returns all scores generated using a specific reasoning strategy."""
-        results = self.session.query(ScoreORM).filter(ScoreORM.strategy == strategy).all()
+        results = self.session.query(EvaluationORM).filter(EvaluationORM.strategy == strategy).all()
         return [self._orm_to_dict(r) for r in results]
 
     def get_all(self, limit: int = 100) -> list[dict]:
         """Returns the most recent scores up to a limit."""
-        results = self.session.query(ScoreORM).order_by(ScoreORM.created_at.desc()).limit(limit).all()
+        results = self.session.query(EvaluationORM).order_by(EvaluationORM.created_at.desc()).limit(limit).all()
         return [self._orm_to_dict(r) for r in results]
 
-    def _orm_to_dict(self, row: ScoreORM) -> dict:
+    def _orm_to_dict(self, row: EvaluationORM) -> dict:
         """Converts an ORM object back to a dictionary format"""
         return {
             "id": row.id,
@@ -142,7 +142,7 @@ class ScoreStore:
     
     def get_rules_for_score(self, score_id: int) -> list[int]:
         links = (
-            self.session.query(ScoreRuleLinkORM.rule_application_id)
+            self.session.query(EvaluationRuleLinkORM.rule_application_id)
             .filter_by(score_id=score_id)
             .all()
         )

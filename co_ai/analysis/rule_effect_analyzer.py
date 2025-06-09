@@ -6,8 +6,8 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from tabulate import tabulate
 
-from co_ai.models import (PipelineRunORM, RuleApplicationORM, ScoreORM,
-                          ScoreRuleLinkORM)
+from co_ai.models import (PipelineRunORM, RuleApplicationORM, EvaluationORM,
+                          EvaluationRuleLinkORM)
 from tabulate import tabulate
 
 class RuleEffectAnalyzer:
@@ -46,14 +46,14 @@ class RuleEffectAnalyzer:
 
         # Join ScoreRuleLinkORM with RuleApplicationORM to filter on pipeline_run_id
         links = (
-            self.session.query(ScoreRuleLinkORM)
-            .join(RuleApplicationORM, RuleApplicationORM.id == ScoreRuleLinkORM.rule_application_id)
+            self.session.query(EvaluationRuleLinkORM)
+            .join(RuleApplicationORM, RuleApplicationORM.id == EvaluationRuleLinkORM.rule_application_id)
             .filter(RuleApplicationORM.pipeline_run_id == pipeline_run_id)
             .all()
         )
 
         for link in links:
-            score = self.session.get(ScoreORM, link.score_id)
+            score = self.session.get(EvaluationORM, link.score_id)
             rule_app = self.session.get(RuleApplicationORM, link.rule_application_id)
 
             if not score or not rule_app:
@@ -66,7 +66,7 @@ class RuleEffectAnalyzer:
                 continue
 
             rule_id = rule_app.rule_id
-            rule_scores[rule_id].append(score.scores.get("final_score", 0.0))
+            rule_scores[rule_id].append(score.evaluations.get("final_score", 0.0))
 
             # Normalize stage_details as sorted JSON
             try:
@@ -80,7 +80,7 @@ class RuleEffectAnalyzer:
                     })
 
 
-            param_scores[rule_id][param_key].append(score.scores.get("final_score", 0.0))
+            param_scores[rule_id][param_key].append(score.evaluations.get("final_score", 0.0))
 
         # Build summary output
         results = {}
@@ -133,8 +133,8 @@ class RuleEffectAnalyzer:
             raise ValueError(f"No pipeline run found with ID {pipeline_run_id}")
 
         scores = (
-            self.session.query(ScoreORM)
-            .filter(ScoreORM.pipeline_run_id == pipeline_run_id)
+            self.session.query(EvaluationORM)
+            .filter(EvaluationORM.pipeline_run_id == pipeline_run_id)
             .all()
         )
 
@@ -153,8 +153,8 @@ class RuleEffectAnalyzer:
         table_rows = []
         for score in scores:
             rule_app_link = (
-                self.session.query(ScoreRuleLinkORM)
-                .filter(ScoreRuleLinkORM.score_id == score.id)
+                self.session.query(EvaluationRuleLinkORM)
+                .filter(EvaluationRuleLinkORM.score_id == score.id)
                 .first()
             )
             rule_app = (

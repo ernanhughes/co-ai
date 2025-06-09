@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from co_ai.agents.base import BaseAgent
 from co_ai.analysis.score_analyzer import ScoreAnalyzer
 from co_ai.constants import PIPELINE_RUN_ID
-from co_ai.models import ScoreORM
+from co_ai.models import EvaluationORM
 
 
 class ScoreAnalysisAgent(BaseAgent):
@@ -17,8 +17,8 @@ class ScoreAnalysisAgent(BaseAgent):
         pipeline_run_id = context.get("pipeline_run_id")
         self.logger.log("ScoreAnalysisStarted", {"pipeline_run_id": pipeline_run_id})
 
-        # Fetch all ScoreORM entries
-        raw_scores = self.memory.scores.get_by_pipeline_run_id(pipeline_run_id)
+        # Fetch all EvaluationORM entries
+        raw_scores = self.memory.evaluations.get_by_pipeline_run_id(pipeline_run_id)
         if not raw_scores:
             self.logger.log("ScoreAnalysisEmpty", {"pipeline_run_id": pipeline_run_id})
             return context

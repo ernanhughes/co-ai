@@ -1,6 +1,6 @@
 from co_ai.agents import BaseAgent
 from co_ai.evaluator import MRQSelfEvaluator
-from co_ai.models import ScoreORM
+from co_ai.models import EvaluationORM
 
 
 class MRQScoringAgent(BaseAgent):
@@ -19,7 +19,7 @@ class MRQScoringAgent(BaseAgent):
             if not hypothesis.prompt or not hypothesis.text:
                 continue
 
-            existing_score = self.memory.scores.get_by_hypothesis_id(
+            existing_score = self.memory.evaluations.get_by_hypothesis_id(
                 hypothesis.id, source=self.score_source
             )
             if existing_score:
@@ -44,7 +44,7 @@ class MRQScoringAgent(BaseAgent):
                 f"based on hypothesis embedding alignment."
             )
 
-            score_obj = ScoreORM(
+            score_obj = EvaluationORM(
                 goal_id=hypothesis.goal_id,
                 hypothesis_id=hypothesis.id,
                 agent_name=self.name,
@@ -56,7 +56,7 @@ class MRQScoringAgent(BaseAgent):
                 dimensions=dimensions  # 🔥 store rich sub-scores
             )
 
-            self.memory.scores.insert(score_obj)
+            self.memory.evaluations.insert(score_obj)
             count_scored += 1
 
         self.logger.log(

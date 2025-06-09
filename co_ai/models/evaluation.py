@@ -8,8 +8,8 @@ from sqlalchemy.orm import relationship
 from co_ai.models.base import Base
 
 
-class ScoreORM(Base):
-    __tablename__ = "scores"
+class EvaluationORM(Base):
+    __tablename__ = "evaluations"
 
     id = Column(Integer, primary_key=True)
     goal_id = Column(Integer, ForeignKey("goals.id"))

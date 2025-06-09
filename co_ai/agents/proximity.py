@@ -5,7 +5,7 @@ import numpy as np
 
 from co_ai.agents.base import BaseAgent
 from co_ai.constants import DATABASE_MATCHES, GOAL, GOAL_TEXT, PIPELINE_RUN_ID, TEXT
-from co_ai.models import ScoreORM
+from co_ai.models import EvaluationORM
 from co_ai.scoring.proximity import ProximityScore
 
 
@@ -143,7 +143,7 @@ class ProximityAgent(BaseAgent):
 
         # Save per-hypothesis score
         for hypothesis in current_hypotheses:
-            score_obj = ScoreORM(
+            score_obj = EvaluationORM(
                 agent_name=self.name,
                 model_name=self.model_name,
                 goal_id=goal.get("goal_id"),
@@ -153,7 +153,7 @@ class ProximityAgent(BaseAgent):
                 scores=structured_scores, 
                 pipeline_run_id=context.get(PIPELINE_RUN_ID),
             )
-            self.memory.scores.insert(score_obj)
+            self.memory.evaluations.insert(score_obj)
 
         return context
 

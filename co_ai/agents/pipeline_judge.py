@@ -4,7 +4,7 @@ from co_ai.agents.base import BaseAgent
 from co_ai.analysis.rule_analytics import RuleAnalytics
 from co_ai.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from co_ai.constants import GOAL, PIPELINE, PIPELINE_RUN_ID, RUN_ID
-from co_ai.models import ScoreORM
+from co_ai.models import EvaluationORM
 from tabulate import tabulate
 
 def extract_dimensions(text: str) -> dict:
@@ -73,7 +73,7 @@ class PipelineJudgeAgent(BaseAgent):
                 })
 
             # Save score
-            score_obj = ScoreORM(
+            score_obj = EvaluationORM(
                 goal_id=self.get_goal_id(goal),
                 hypothesis_id=self.get_hypothesis_id(hypo),
                 agent_name=self.name,
@@ -83,7 +83,7 @@ class PipelineJudgeAgent(BaseAgent):
                 pipeline_run_id=context.get(PIPELINE_RUN_ID),
                 extra_data={"raw_response": judgement},
             )
-            self.memory.scores.insert(score_obj)
+            self.memory.evaluations.insert(score_obj)
             self.logger.log("ScoreSaved", {"score_id": score_obj.id, "run_id": context.get(RUN_ID)})
 
             # Update rule applications (if matched)

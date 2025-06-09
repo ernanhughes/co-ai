@@ -12,7 +12,7 @@ from .pipeline_run_store import PipelineRunStore
 from .prompt_store import PromptStore
 from .report_logger import ReportLogger
 from .rule_application_store import RuleApplicationStore
-from .score_store import ScoreStore
+from .evaluation_store import EvaluationStore
 from .search_result_store import SearchResultStore
 from .sharpening_store import SharpeningStore
 from .symbolic_rule_store import SymbolicRuleStore

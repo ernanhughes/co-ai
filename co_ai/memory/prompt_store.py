@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from co_ai.models.goal import GoalORM
 from co_ai.models.prompt import PromptORM
 from sqlalchemy.dialects.postgresql import dialect
+from difflib import SequenceMatcher
 
 class PromptStore:
     def __init__(self, session: Session, logger=None):
@@ -179,13 +180,36 @@ class PromptStore:
 
     def find_matching(self, agent_name, prompt_text, strategy=None):
         query = self.session.query(PromptORM).filter_by(
-            agent_name=agent_name,
-            prompt_text=prompt_text
+            agent_name=agent_name, prompt_text=prompt_text
         )
         if strategy:
             query = query.filter_by(strategy=strategy)
 
         return [p.to_dict() for p in query.limit(10).all()]
+
+    from difflib import SequenceMatcher
+
+    def find_similar_prompt(
+        self, agent_name, prompt_text, strategy=None, similarity_threshold=0.80
+    ):
+        # Load candidate prompts
+        query = self.session.query(PromptORM).filter_by(agent_name=agent_name)
+        if strategy:
+            query = query.filter_by(strategy=strategy)
+
+        candidates = query.limit(50).all()  # You can increase this if needed
+
+        # Compute similarity using difflib
+        matches = []
+        for p in candidates:
+            similarity = SequenceMatcher(None, prompt_text, p.prompt_text).ratio()
+            if similarity >= similarity_threshold:
+                matches.append((similarity, p))
+
+        # Sort by descending similarity
+        matches.sort(reverse=True, key=lambda x: x[0])
+
+        return [p.to_dict() for similarity, p in matches]
 
     def get_prompt_training_set(self, goal: str, limit: int = 500) -> list[dict]:
         try:

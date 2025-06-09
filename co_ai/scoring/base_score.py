@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from co_ai.models import ScoreORM
+from co_ai.models import EvaluationORM
 
 
 class BaseScore(ABC):
@@ -32,19 +32,17 @@ class BaseScore(ABC):
             # Optional dimensions dict (can be overridden in subclass)
             dimensions = getattr(self, "dimensions", None)
 
-            s = ScoreORM(
+            s = EvaluationORM(
                 goal_id=hypothesis.get("goal_id"),
                 hypothesis_id=hypothesis.get("id"),
                 agent_name=self.agent_name,
                 model_name=self.model_name,
                 evaluator_name=self.evaluator_name,
-                score_type=self.name,
-                score=score,
-                dimensions=dimensions,
+                scores=dimensions,
                 pipeline_run_id=context.get("pipeline_run_id"),
             )
             try:
-                self.memory.scores.insert(s)
+                self.memory.evaluations.insert(s)
                 self.memory.commit()  # Ensure session commit happens
             except Exception as e:
                 self.memory.refresh_session()

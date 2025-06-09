@@ -15,7 +15,7 @@ class SymbolicOptimizerAgent(BaseAgent):
         goal_type = goal.get("goal_type", "unknown")
 
         # Step 1: Retrieve score history for this goal type
-        score_history = self.memory.scores.get_by_goal_type(goal_type, score_type=self.score_target)
+        score_history = self.memory.evaluations.get_by_goal_type(goal_type, score_type=self.score_target)
 
         # Step 2: Analyze pipelines
         best_pipeline = self.find_best_pipeline(score_history)

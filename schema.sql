@@ -533,9 +533,9 @@ CREATE TABLE IF NOT EXISTS rule_applications (
     notes TEXT                                               -- Extra notes or observations
 );
 
-CREATE TABLE IF NOT EXISTS score_rule_links (
+CREATE TABLE IF NOT EXISTS evaluation_rule_links (
     id SERIAL PRIMARY KEY,
-    score_id INTEGER NOT NULL REFERENCES scores(id) ON DELETE CASCADE,
+    evaluation_id INTEGER NOT NULL REFERENCES evaluations(id) ON DELETE CASCADE,
     rule_application_id INTEGER NOT NULL REFERENCES rule_applications(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT NOW()
 );

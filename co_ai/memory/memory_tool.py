@@ -20,7 +20,7 @@ from co_ai.memory.prompt_store import PromptStore
 from co_ai.memory.reflection_delta_store import ReflectionDeltaStore
 from co_ai.memory.rule_application_store import RuleApplicationStore
 from co_ai.memory.rule_effect_store import RuleEffectStore
-from co_ai.memory.score_store import ScoreStore
+from co_ai.memory.evaluation_store import EvaluationStore
 from co_ai.memory.search_result_store import SearchResultStore
 from co_ai.memory.sharpening_store import SharpeningStore
 from co_ai.memory.symbolic_rule_store import SymbolicRuleStore
@@ -55,7 +55,7 @@ class MemoryTool:
         self.register_store(embedding_store)
         self.register_store(HypothesisStore(self.session, logger, embedding_store))
         self.register_store(PromptStore(self.session, logger))
-        self.register_store(ScoreStore(self.session, logger))
+        self.register_store(EvaluationStore(self.session, logger))
         self.register_store(PipelineRunStore(self.session, logger))
         self.register_store(LookaheadStore(self.session, logger))
         self.register_store(ContextStore(self.session, logger))

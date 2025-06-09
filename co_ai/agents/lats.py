@@ -5,7 +5,7 @@ from datetime import datetime
 
 from co_ai.agents.base import BaseAgent
 from co_ai.constants import PIPELINE, RUN_ID, PIPELINE_RUN_ID
-from co_ai.models import RuleApplicationORM, ScoreORM
+from co_ai.models import RuleApplicationORM, EvaluationORM
 
 
 class PipelineJudgeAgent(BaseAgent):
@@ -77,7 +77,7 @@ class PipelineJudgeAgent(BaseAgent):
         # Link rule application if available
         rule_application_id = context.get("symbolic_rule_application_id")
 
-        score_obj = ScoreORM(
+        score_obj = EvaluationORM(
             goal_id=self.get_goal_id(goal),
             hypothesis_id=self.get_hypothesis_id(top_hypo),
             agent_name=self.name,
@@ -92,7 +92,7 @@ class PipelineJudgeAgent(BaseAgent):
             dimensions=dimensions  # new: parsed dimensions
         )
 
-        self.memory.scores.insert(score_obj)
+        self.memory.evaluations.insert(score_obj)
         self.logger.log("ScoreSaved", {
             "score_id": score_obj.id,
             "pipeline_run_id": context.get(PIPELINE_RUN_ID),

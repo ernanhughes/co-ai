@@ -56,6 +56,9 @@ class MRQTrainer:
         best_loss = float("inf")
         epochs_no_improve = 0
 
+        first = next(iter(dataloader))
+        print("Sample batch:", first)
+
         for epoch in range(epochs):
             total_loss = 0.0
             for x_batch, y_batch in dataloader:

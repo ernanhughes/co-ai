@@ -11,8 +11,8 @@ from .pipeline_run import PipelineRunORM
 from .prompt import PromptORM
 from .reflection_delta import ReflectionDeltaORM
 from .rule_application import RuleApplicationORM
-from .score import ScoreORM
-from .score_rule_link import ScoreRuleLinkORM
+from .evaluation import EvaluationORM
+from .evaluation_rule_link import EvaluationRuleLinkORM
 from .search_result import SearchResultORM
 from .sharpening_prediction import SharpeningPredictionORM
 from .sharpening_result import SharpeningResultORM
