@@ -47,7 +47,7 @@ goal:
 symbolic:
   enabled: false  # set to false to skip symbolic rule application
   rules_file: "config/rules/rules.yaml"
-  enable_db_rules: true # load rules from the database
+  enable_db_rules: false # load rules from the database
   match_priority:
     - goal_id
     - pipeline_run_id
