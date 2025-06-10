@@ -1,3 +1,4 @@
+{% if mode == "reason" %}
 You are solving the following task:
 {{ state }}
 
@@ -34,3 +35,4 @@ Reward: {{ reward }}
 Reflect on what went wrong and suggest improvements.
 
 Reflection:
+{% endif %}

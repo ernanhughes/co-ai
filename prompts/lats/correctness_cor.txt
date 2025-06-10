@@ -1,12 +1,33 @@
+{% if mode == "reason" %}
 Rubric:
-- Does the hypothesis directly address the stated goal or question?
-- Are all logical steps valid and free from contradictions?
-- Is the final conclusion supported by the reasoning provided?
+- Does the hypothesis directly address the goal?
+- Is the reasoning logically sound?
 
 <eval>
-Evaluate the following hypothesis based on the rubric above.
-Goal: {{goal.goal_text}}
-Hypothesis: {{hypothesis.text}}
+Evaluate the following hypothesis:
+Goal: {{ goal.goal_text }}
+Hypothesis: {{ hypothesis.text }}
 </eval>
 
-<answer>[[0]]</answer>
+Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+rationale: <brief explanation>
+score: <0–100>
+
+{% elif mode == "reflect" %}
+Rubric:
+- Does the reflection explain past failures?
+- Is the new plan actionable?
+
+<eval>
+Evaluate the following reflection:
+Reflection: {{ hypothesis.text }}
+Goal: {{ goal.goal_text }}
+</eval>
+
+Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+rationale: <brief explanation>
+score: <0–100>
+
+{% endif %}

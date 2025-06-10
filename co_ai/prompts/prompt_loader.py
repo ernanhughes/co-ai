@@ -24,6 +24,7 @@ class PromptLoader:
         """
         prompt_type = config.get(PROMPT_MODE, FILE)
         prompts_dir = context.get(PROMPT_DIR, "prompts")
+        print(f"Loading prompt from: {prompts_dir} with type: {prompt_type}")
 
         if not os.path.isdir(prompts_dir):
             raise FileNotFoundError(f"Prompt directory not found: {prompts_dir}")
@@ -72,6 +73,7 @@ class PromptLoader:
         prompt_dir = config.get(PROMPT_DIR, "prompts")
         file_key = config.get(PROMPT_FILE) or config.get(STRATEGY) or DEFAULT
         file_name = f"{file_key}.txt" if not file_key.endswith(".txt") else file_key
+        print(f"Loading prompt file: {file_name} from {prompt_dir}")
         path = os.path.join(prompt_dir, config.get(NAME, "default"), file_name)
 
         if not os.path.exists(path):

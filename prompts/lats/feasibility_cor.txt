@@ -9,4 +9,7 @@ Goal: {{goal.goal_text}}
 Hypothesis: {{hypothesis.text}}
 </eval>
 
-<answer>[[0]]</answer>
+Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+rationale: <brief explanation>
+score: <0–100>
