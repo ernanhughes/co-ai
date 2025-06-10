@@ -10,111 +10,574 @@ from co_ai.agents import BaseAgent
 from co_ai.constants import GOAL, PIPELINE_RUN_ID
 from co_ai.models import HypothesisORM
 from co_ai.agents.mixins.scoring_mixin import ScoringMixin
+from co_ai.agents.proximity import ProximityAgent
 from co_ai.utils.graph_tools import build_mermaid_graph, compare_graphs, analyze_graph_impact
+import math
+from collections import defaultdict
+import json
+import re
+
+from co_ai.agents.base import BaseAgent
+from co_ai.constants import GOAL, PIPELINE_RUN_ID
+from co_ai.models import HypothesisORM, EvaluationORM
+from co_ai.agents.mixins.scoring_mixin import ScoringMixin
+from co_ai.agents.proximity import ProximityAgent
+from co_ai.utils.graph_tools import build_mermaid_graph, compare_graphs
+from co_ai.agents.unified_mrq import UnifiedMRQAgent
+from co_ai.agents.rule_tuner import RuleTunerAgent
 
 
-class TraceStep(dspy.Signature):
+from dspy import Signature, InputField, OutputField
+
+class TraceStep(Signature):
     """
-    Signature for each reasoning step in LATS.
+    A reasoning step in the LATS framework.
+    
+    Inputs:
+        - state: Current problem state (e.g., goal + history)
+        - trace: Sequence of previous thoughts/actions
+    
+    Outputs:
+        - next_step: Next thought/action to explore
     """
-    state: str = InputField()
-    trace: str = InputField()
-    next_step: str = OutputField()
+    state = InputField(desc="Current problem state")
+    trace = InputField(desc="History of thoughts/actions taken so far")
+    next_step = OutputField(desc="Next reasoning step (thought or action)")
+    
+class ReflectionPrompt(Signature):
+    """
+    Self-reflection module to analyze failed reasoning paths.
+    
+    Inputs:
+        - state: Final state after failed attempt
+        - trace: Full reasoning path
+        - goal: Original goal text
+    
+    Outputs:
+        - rationale: Explanation of failure
+        - improvement_plan: Suggested improvements
+    """
+    state = InputField(desc="Final state after failed attempt")
+    trace = InputField(desc="Full reasoning path")
+    goal = InputField(desc="Original goal text")
+    
+    rationale = OutputField(desc="Why the attempt failed")
+    improvement_plan = OutputField(desc="Concrete steps to improve")
 
+class ValueEstimator(Signature):
+    """
+    Evaluates a reasoning path using a hybrid value function.
+    
+    Inputs:
+        - state: Current problem state
+        - trace: Reasoning steps taken
+        - goal: Goal text
+    
+    Outputs:
+        - score: Normalized score (0–1)
+        - rationale: Explanation of the score
+    """
+    state = InputField(desc="Current problem state")
+    trace = InputField(desc="Sequence of thoughts/actions")
+    goal = InputField(desc="Goal text")
+    
+    score = OutputField(desc="Hybrid score (LM + self-consistency)")
+    rationale = OutputField(desc="Explanation of score")
 
-class DSPyLATSProgram(dspy.Module):
+class LATSProgram(dspy.Module):
     def __init__(self, cfg, agent):
         super().__init__()
         self.cfg = cfg
         self.agent = agent
         self.generator = Predict(TraceStep)
-        self.max_depth = cfg.get("max_depth", 3)
+        self.reflector = dspy.Predict(ReflectionPrompt)  # Add reflection module
+        self.value_estimator = dspy.Predict(ValueEstimator)  # Add value function
 
-    def forward(self, state, trace):
-        steps = []
-        for step_num in range(self.max_depth):
-            self.agent.logger.log("LATSForwardStepStart", {
-                "step_num": step_num,
-                "current_state_snippet": state[:100],
-                "current_trace": trace
-            })
-
-            prediction = self.generator(state=state, trace="\n".join(trace))
-            if not prediction or not prediction.next_step:
-                self.agent.logger.log("LATSNoNextStep", {"step_num": step_num})
-                break
-
-            next_step = prediction.next_step.strip()
-            trace.append(next_step)
-            state = self.agent._update_state(state, next_step)
-            steps.append((state, next_step))
-            self.agent.logger.log("LATSNextStepGenerated", {
-                "step_num": step_num,
-                "next_step": next_step,
-                "new_state_snippet": state[:100]
-            })
-            if self.agent.is_terminal({'state': state, 'trace': trace}):
-                self.agent.logger.log("LATSTerminalReached", {
-                    "step_num": step_num,
-                    "final_state_snippet": state[:100]
-                })
-                break
-        return trace, steps
-
+    def forward(self, state, trace, depth=0):
+        if depth >= self.cfg.get("max_depth", 3):
+            return trace, self._estimate_value(state, trace)
+            
+        prediction = self.generator(state=state, trace="\n".join(trace))
+        if not prediction.next_step:
+            return trace, 0.0
+            
+        next_step = prediction.next_step.strip()
+        new_state = self.agent._update_state(state, next_step)
+        trace.append(next_step)
+        
+        # Recursively evaluate children
+        child_trace, child_score = self.forward(new_state, trace, depth+1)
+        
+        # Self-reflection mechanism
+        if child_score < self.cfg.get("threshold", 0.7):
+            reflection = self.reflector(state=new_state, trace=child_trace)
+            self._apply_reflection(reflection)
+            
+        return child_trace, child_score
 
 class LATSAgent(ScoringMixin, BaseAgent):
     """
-    DSPy-enabled version of LATSAgent with training and comparison.
+    Enhanced LATS agent with:
+    - Tree search (MCTS + UCT)
+    - Multi-dimensional scoring
+    - Proximity-based reuse
+    - Reflection/refinement
+    - Rule tuning
+    - DSPy optimization
     """
+    
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
-
-        # Setup DSPy
+        self.max_depth = cfg.get("max_depth", 5)
+        self.branching_factor = cfg.get("branching_factor", 3)
+        self.ucb_weight = cfg.get("ucb_weight", 1.41)
+        self.num_simulations = cfg.get("num_simulations", 50)
+        self.lambda_weight = cfg.get("lambda", 0.5)
+        
+        # Node tracking
+        self.nodes = []
+        self.N = defaultdict(int)  # visit count
+        self.W = defaultdict(float)  # total reward
+        self.children = dict()  # node -> children
+        
+        # Initialize sub-agents
+        self.proximity_agent = ProximityAgent(cfg.get("proximity", {}), memory=memory, logger=logger)
+        self.rule_tuner = RuleTunerAgent(cfg.get("rule_tuner", {}), memory=memory, logger=logger)
+        self.mrq_agent = UnifiedMRQAgent(cfg.get("mrq", {}), memory=memory, logger=logger)
+        
+                # Setup DSPy
         lm = dspy.LM(
             "ollama_chat/qwen3",
             api_base="http://localhost:11434",
             api_key="",
         )
         dspy.configure(lm=lm)
-        self.program = DSPyLATSProgram(cfg, self)
+
+        # Initialize DSPy program
+        self.lats_program = LATSProgram(cfg, self)
+        
+        # Symbolic impact analyzer
+        self.impact_analyzer = SymbolicImpactAnalyzer(self._get_score)
 
     async def run(self, context: dict) -> dict:
+        """Main LATS search loop"""
         goal = context[GOAL]
         root_state = goal["goal_text"]
-        trace, steps = self.program.forward(state=root_state, trace=[])
+        
+        # 1. Initialize root node
+        root = self.create_node(
+            state=root_state,
+            trace=[],
+            parent=None
+        )
+        
+        # 2. Run MCTS simulations
+        for sim_num in range(self.num_simulations):
+            # Selection
+            node = self.select(root)
+            
+            # Expansion
+            if not self.is_terminal(node):
+                node = await self.expand(node, context)
+            
+            # Simulation & Evaluation
+            reward, trace_data = self.simulate_and_evaluate(node)
+            
+            # Backpropagation
+            self.backpropagate(node, reward, trace_data)
+            
+            # Optional: Periodic refinement
+            if sim_num % 10 == 0:
+                await self._refine_system(context)
 
+        # 3. Get best path
+        best_child = self.best_uct(node=root, ucb_weight=0)  # Greedy selection
+        best_trace = best_child['trace']
+        
+        # 4. Create final hypothesis
         hypothesis = HypothesisORM(
             goal_id=goal["id"],
             source=self.name,
-            text="\n".join(trace),
-            metadata={"trace": trace, "steps": steps},
+            text="\n".join(best_trace),
+            metadata={
+                "trace": best_trace,
+                "path": [n['id'] for n in best_trace],
+                "scores": {dim: child["dimension_scores"][dim]["score"] for dim in child["dimension_scores"]}
+            },
             pipeline_run_id=context.get(PIPELINE_RUN_ID),
         )
+        
         self.memory.hypotheses.insert(hypothesis)
         context["lats_result"] = hypothesis.to_dict()
         return context
 
-    def _update_state(self, state, action):
-        return state + "\n" + action
+    def create_node(self, state, trace, parent=None):
+        """Create a new node in the search tree"""
+        node = {
+            'id': len(self.nodes) + 1,
+            'state': state,
+            'trace': trace,
+            'parent': parent,
+            'visits': 0,
+            'reward': 0.0,
+            'children': [],
+            'is_terminal': False,
+            'dimension_scores': {},
+            'final_score': 0.0
+        }
+        self.nodes.append(node)
+        return node
+
+    def select(self, node):
+        """Select node for expansion using UCT"""
+        while self.children.get(id(node)) and self.children[id(node)]:
+            unvisited = [c for c in self.children[id(node)] if c['visits'] == 0]
+            if unvisited:
+                return unvisited[0]
+            node = self.best_uct(node)
+        return node
+
+    def best_uct(self, node, ucb_weight=None):
+        """Select best child using UCT formula"""
+        ucb_weight = ucb_weight or self.ucb_weight
+        
+        def uct(child):
+            if child['visits'] == 0:
+                return float('inf')
+            return (child['reward'] / child['visits']) + \
+                   ucb_weight * math.sqrt(math.log(node['visits']) / child['visits'])
+        
+        return max(self.children[id(node)], key=uct)
+
+    async def expand(self, node, context: dict):
+        """Generate new children nodes from current node"""
+        # Build prompt with context
+        merged = {
+            **context,
+            "state": node["state"],
+            "trace": node["trace"],
+            "mode": "reason"
+        }
+        
+        # 1. Get similar hypotheses
+        proximity_context = await self._run_proximity(context)
+        merged["similar_hypotheses"] =  proximity_context.get("most_similar", "")
+        
+        # 2. Generate completions with DSPy
+        completions, steps = self.lats_program.forward(
+            state=node["state"],
+            trace=node["trace"],
+            depth=0
+        )
+        
+        # 3. Apply proximity-based refinement
+        refined_completions = []
+        for comp in completions:
+            refined = self._apply_proximity_guidance(comp, proximity_context)
+            refined_completions.append(refined)
+        
+        # 4. Score and build children
+        children = []
+        for comp in refined_completions:
+            new_state = self._update_state(node['state'], comp)
+            new_trace = node['trace'] + [comp]
+            
+            # Score using dimensional scorers
+            hyp = {
+                "text": comp,
+                "id": f"hyp_{len(children)}",
+                "goal_id": context[GOAL]["id"]
+            }
+            
+            score_result = self.score_hypothesis(hyp, context, metrics="lats_node")
+            
+            # Create child node with metadata
+            child = self.create_node(
+                state=new_state,
+                trace=new_trace,
+                parent=node
+            )
+            child["score"] = score_result["score"]
+            child["dimension_scores"] = score_result["scores"]
+            child["action"] = comp
+            
+            children.append(child)
+
+        # Store children
+        self.children[id(node)] = children
+        return children[0] if children else node
+
+    def simulate_and_evaluate(self, node):
+        """Simulate until terminal state and return final reward"""
+        current = node
+        while not self.is_terminal(current) and len(current['trace']) < self.max_depth:
+            # Build prompt
+            merged = {
+                "state": current["state"],
+                "trace": current["trace"],
+                "mode": "simulate"
+            }
+            prompt = self.prompt_loader.load_prompt(self.cfg, merged)
+            response = self.call_llm(prompt, context=merged)
+            
+            # Parse completions
+            completions = self._parse_completions(response)
+            if not completions:
+                break
+                
+            action = completions[0]  # Take first completion
+            new_state = self._update_state(current['state'], action)
+            new_trace = current['trace'] + [action]
+            
+            # Create new node
+            current = self.create_node(
+                state=new_state,
+                trace=new_trace,
+                parent=current
+            )
+        
+        # Evaluate final node
+        reward, trace_data = self.evaluate(current)
+        return reward, trace_data
+
+    def evaluate(self, node):
+        """Evaluate node using hybrid LM + self-consistency scoring"""
+        if self.cfg.get("use_environment", False):
+            obs = self.env.step(node['state'])
+            return obs['reward'], {"trace": node["trace"], "environment": obs}
+        
+        # Fallback: dimensional scoring
+        hyp = {
+            "text": "\n".join(node['trace']),
+            "id": f"hyp_final_{id(node)}",
+            "goal_id": node['state'].get("goal_id")
+        }
+        
+        score_result = self.score_hypothesis(hyp, {}, metrics="lats_reflection")
+        return score_result["score"] / 100, score_result
+
+    def backpropagate(self, node, reward, trace_data=None):
+        """Update node statistics up the tree"""
+        while node:
+            node['visits'] += 1
+            node['reward'] += reward
+            
+            # Store trace data for analysis
+            if trace_data:
+                node.setdefault("history", []).append({
+                    "visits": node["visits"],
+                    "reward": reward,
+                    "trace_data": trace_data
+                })
+            
+            node = node['parent']
 
     def is_terminal(self, node):
-        return "success" in node['state'].lower() or len(node['trace']) >= self.cfg.get("max_depth", 3)
+        """Check if node is terminal state"""
+        return "success" in node['state'].lower() or len(node['trace']) >= self.max_depth
 
-    def train_on_examples(self, examples):
-        training_set = [
-            Example(state=e["state"], trace="\n".join(e["trace"]), next_step=e["next_step"]).with_inputs("state", "trace")
-            for e in examples
-        ]
-        tuner = BootstrapFewShot(metric=self._trace_quality_metric)
-        self.program.generator = tuner.compile(student=Predict(TraceStep), trainset=training_set)
+    def _update_state(self, state: str, action: str) -> str:
+        """Update state with action result"""
+        return f"{state}\n{action}"
 
-    def _trace_quality_metric(self, example, pred, trace=None):
-        if not pred.next_step:
+    def _parse_completions(self, response: str) -> list:
+        """Parse multiple thoughts/actions from response"""
+        thought_pattern = r"([Tt]hought\s*\d+|[Aa]ction\s*\d+|[-•])\s*(.*?)(?=\n(?:[Tt]hought\s*\d+|[Aa]ction\s*\d+|[-•])\s|\Z)"
+        matches = re.findall(thought_pattern, response.strip(), re.DOTALL)
+        
+        if not matches:
+            return [response.strip()]
+            
+        completions = [match[-1].strip() for match in matches if match[-1].strip()]
+        return completions[:self.branching_factor]
+
+    async def _run_proximity(self, context):
+        """Run proximity agent to find similar hypotheses"""
+        try:
+            return await self.proximity_agent.run(context)
+        except Exception as e:
+            self.logger.log("ProximityAgentFailed", {"error": str(e)})
+            return {}
+
+    def _apply_proximity_guidance(self, comp, proximity_data):
+        """Enhance completion using proximity feedback"""
+        if not proximity_data.get("most_similar"):
+            return comp
+            
+        # Use LLM to refine action with proximity info
+        prompt = self.prompt_loader.load_prompt("proximity_guidance", {
+            "current_action": comp,
+            "similar_hypotheses": proximity_data["most_similar"]
+        })
+        
+        response = self.call_llm(prompt, {})
+        return response.strip()
+
+    def _apply_reflection_to_prompt(self, prompt, reflection):
+        """Inject reflection into prompt for future steps"""
+        if not reflection:
+            return prompt
+            
+        reflection_prompt = self.prompt_loader.load_prompt("reflection_injection", {
+            "prompt": prompt,
+            "reflection": reflection
+        })
+        
+        return self.call_llm(reflection_prompt, {})
+
+    def _get_score(self, node, source="graph1"):
+        """Get score for symbolic impact analysis"""
+        hyp = {
+            "text": "\n".join(node["trace"]),
+            "id": f"hyp_{node['id']}"
+        }
+        
+        score_result = self.score_hypothesis(hyp, {}, metrics="lats_reflection")
+        return score_result["score"] / 100  # Normalize
+
+    async def _refine_system(self, context):
+        """Refine rules and models using collected data"""
+        # 1. Analyze graph impact
+        if len(self.nodes) > 1:
+            analysis = self.impact_analyzer.analyze(self.nodes[0], self.nodes[-1])
+            context["graph_analysis"] = analysis
+        
+        # 2. Train MR.Q on high-quality traces
+        high_scoring = [n for n in self.nodes if n['score'] > 0.8]
+        if high_scoring:
+            await self.mrq_agent.run({"traces": high_scoring})
+        
+        # 3. Tune symbolic rules based on analysis
+        if context.get("graph_analysis"):
+            await self.rule_tuner.run(context)
+        
+        return context
+
+    def _get_value(self, node):
+        """Calculate value using hybrid LM + self-consistency"""
+        lm_score = node.get("score", 0.5)
+        sc_score = self._self_consistency(node)
+        return self.lambda_weight * lm_score + (1 - self.lambda_weight) * sc_score
+
+    def _self_consistency(self, node):
+        """Calculate self-consistency score for node"""
+        if not node['trace']:
             return 0.0
-        # Optionally plug in scoring logic
-        return 1.0 if len(pred.next_step.strip()) > 0 else 0.0
+            
+        # Use LLM to evaluate consistency
+        prompt = self.prompt_loader.load_prompt("self_consistency", {
+            "trace": node['trace'],
+            "state": node['state']
+        })
+        response = self.call_llm(prompt, {})
+        
+        # Parse numerical score
+        score_match = re.search(r'(\d+)', response)
+        return int(score_match.group(1)) / 100 if score_match else 0.5
 
+    def _get_dimension_score(self, trace):
+        """Get dimensional scores for trace"""
+        # Build hypothesis
+        hyp = {
+            "text": "\n".join(trace),
+            "id": f"hyp_{len(self.nodes)}"
+        }
+        
+        # Score across dimensions
+        score_result = self.score_hypothesis(hyp, {}, metrics="lats_reflection")
+        return score_result["score"] / 100  # Normalize
 
+    def _train_on_traces(self, traces):
+        """Train DSPy module on high-quality traces"""
+        # Convert traces to examples
+        examples = [
+            Example(state=trace["state"], trace=trace["trace"], next_step=trace["last_action"])
+            for trace in traces
+        ]
+        
+        # Use dimensional scores as weights
+        weighted_examples = [
+            example.with_score(self._get_dimension_score(example.trace))
+            for example in examples
+        ]
+        
+        # Compile with BootstrapFewShot
+        tuner = BootstrapFewShot(metric=self._dimension_aware_metric)
+        self.lats_program.generator = tuner.compile(
+            student=Predict(TraceStep),
+            trainset=weighted_examples
+        )
+
+    def _dimension_aware_metric(self, example, pred):
+        """Use dimensional scores for training metric"""
+        scores = self._get_dimension_scores(pred.trace)
+        return sum(s["score"] * s.get("weight", 1.0) for s in scores.values())
+
+    def _get_dimension_scores(self, trace):
+        """Get scores across all dimensions"""
+        hyp = {
+            "text": "\n".join(trace),
+            "id": f"hyp_{len(self.nodes)}"
+        }
+        return self.score_hypothesis(hyp, {}, metrics="lats_node")
+
+    def _generate_reflection(self, node):
+        """Generate reflection for failed trajectory"""
+        prompt = self.prompt_loader.load_prompt("reflection", {
+            "trace": node['trace'],
+            "state": node['state'],
+            "goal": node['state']  # Use state as goal proxy
+        })
+        response = self.call_llm(prompt, {})
+        return response.strip()
+
+    def _build_prompt(self, node):
+        """Build prompt for node evaluation"""
+        merged = {
+            "state": node['state'],
+            "trace": node['trace'],
+            "mode": "evaluate"
+        }
+        return self.prompt_loader.load_prompt(self.cfg, merged)
+
+    def _choose_action(self, response):
+        """Choose best action from response"""
+        completions = self._parse_completions(response)
+        return completions[0] if completions else ""
+
+    def _self_consistency_check(self, node):
+        """Validate consistency of reasoning path"""
+        prompt = self.prompt_loader.load_prompt("self_consistency", {
+            "trace": node["trace"],
+            "state": node["state"]
+        })
+        response = self.call_llm(prompt, {})
+        
+        # Parse consistency score
+        score_match = re.search(r'(\d+)', response)
+        return int(score_match.group(1)) / 100 if score_match else 0.5
+
+    def _should_prune(self, node):
+        """Determine if node should be pruned"""
+        return node.get("score", 0) < self.cfg.get("prune_threshold", 0.4)
+
+    def _get_node_path(self, node):
+        """Get full path from root to node"""
+        path = []
+        while node:
+            path.append(node)
+            node = node['parent']
+        return path[::-1]  # Reverse to get root-first
+
+    def _log_simulation(self, sim_num, node, reward):
+        """Log simulation results for analysis"""
+        self.logger.log("LATSIteration", {
+            "simulation": sim_num,
+            "node_id": node["id"],
+            "reward": reward,
+            "trace": node["trace"][-3:] if node["trace"] else [],
+            "depth": len(node["trace"])
+        })
 class SymbolicImpactAnalyzer:
     """
     Analyzes structural overlap and divergence between two graph representations (e.g., symbolic vs. LATS)
@@ -142,22 +605,3 @@ class SymbolicImpactAnalyzer:
             results.append({"node": node, "type": "diverged_graph2", "score": score})
 
         return results
-
-    def create_node(self, state, trace):
-        return {
-            "state": state,
-            "trace": trace,
-            "visits": 0,
-            "reward": 0.0,
-            "children": [],
-            "parent": None,
-        }
-
-    def best_uct(self, node):
-        def uct(child):
-            if child["visits"] == 0:
-                return float("inf")
-            return child["reward"] / child["visits"] + self.ucb_weight * math.sqrt(
-                math.log(node["visits"]) / child["visits"]
-            )
-        return max(self.children[id(node)], key=uct)

@@ -18,7 +18,7 @@ class RuleTunerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.score_target = cfg.get("score_target", "correctness")  # could be 'overall', 'clarity', etc.
-        self.rule_store = SymbolicRuleStore(memory=self.memory, logger=self.logger)
+        self.rule_store = SymbolicRuleStore(session=self.memory.session, logger=self.logger)
         self.rule_tuner = RuleTuner(memory=self.memory, logger=self.logger)
         self.min_score_threshold = cfg.get("min_score_threshold", 7.5)
         self.min_repeat_count = cfg.get("min_repeat_count", 2)
