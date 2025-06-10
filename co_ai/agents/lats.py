@@ -35,7 +35,7 @@ class LATSAgent(ScoringMixin, BaseAgent):
             node = self.select(root)
             if not self.is_terminal(node):
                 node = self.expand(node, context)
-            reward = self.simulate(node)
+            reward = self.simulate(node, context)
             self.backpropagate(node, reward)
 
         best_child = self.best_uct(node=root, ucb_weight=0)  # greedy
@@ -69,34 +69,45 @@ class LATSAgent(ScoringMixin, BaseAgent):
                 ucb_weight * math.sqrt(math.log(node['visits']) / child['visits'])
         return max(self.children[id(node)], key=uct)
 
-    def expand(self, node, context:dict):
-        # Build prompt using current node's state and trace
+    def expand(self, node, context: dict):
         merged = {
             **context,
             "state": node["state"],
-            "trace": node["trace"]
+            "trace": node["trace"],
         }
-        prompt = self.prompt_loader.load_prompt(self.cfg, merged)  # ← Load prompt template
-
-        # Call LLM to generate n completions
-        response = self.call_llm(prompt, context=merged)  # ← Call LLM here
-
-        # Parse responses into multiple thoughts/actions
+        prompt = self.prompt_loader.load_prompt(self.cfg, merged)
+        print(f"formatted_prompt: {prompt}")
+        # Call LLM to get completions
+        response = self.call_llm(prompt, context=merged)
+        print(f"LLM Response: {response}")
         completions = self._parse_completions(response)
 
-        # Create children nodes
         children = []
         for comp in completions:
             new_state = self._update_state(node['state'], comp)
             new_trace = node['trace'] + [comp]
+
+            # Create hypothesis-like object
+            hyp = {
+                "text": comp,
+                "id": f"hyp_{len(self.children)}",
+                "goal_id": context[GOAL]["id"]
+            }
+
+            # Score using custom dimension set
+            score_result = self.score_hypothesis(hyp, context, metrics="lats_node")
+
+            # Build child node with score metadata
             child = self.create_node(new_state, new_trace, parent=node)
+            child["score"] = score_result["score"]
+            child["dimension_scores"] = score_result["scores"]
+
             children.append(child)
 
         self.children[id(node)] = children
-        return children[0]  # Return one of the children
-
-    def simulate(self, node):
-        # Simulate until terminal or max depth
+        return children[0]
+    
+    def simulate(self, node, context):
         current = node
         while not self.is_terminal(current) and len(current['trace']) < self.max_depth:
             prompt = self._build_prompt(current)
@@ -105,8 +116,15 @@ class LATSAgent(ScoringMixin, BaseAgent):
             new_state = self._update_state(current['state'], action)
             current = self.create_node(new_state, current['trace'] + [action], parent=current)
 
-        # Get external feedback or reward
-        reward = self.evaluate(current)
+        # Evaluate final node using reflection scorer
+        hyp = {
+            "text": "\n".join(current['trace']),
+            "id": f"hyp_final_{id(current)}",
+            "goal_id": current['state'].get("goal_id")
+        }
+
+        score_result = self.score_hypothesis(hyp, context, metrics="lats_reflection")
+        reward = score_result["score"] / 100  # Normalize to 0–1 range
         return reward
 
     def evaluate(self, node):
@@ -167,3 +185,12 @@ class LATSAgent(ScoringMixin, BaseAgent):
         completions = [match[-1].strip() for match in matches if match[-1].strip()]
 
         return completions[:self.branching_factor]
+
+    def _update_state(self, state: dict, action: str) -> dict:
+        observation = self.env.step(action)  # Get feedback from environment
+        new_state = state.copy()
+        new_state["history"].append({
+            "action": action,
+            "observation": observation
+        })
+        return new_state

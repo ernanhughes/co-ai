@@ -93,10 +93,6 @@ pipeline:
   name: default_pipeline
   description: "Default hypothesis generation and refinement pipeline"
   stages:
-     - name: generation
-       cls: co_ai.agents.generation.GenerationAgent
-       enabled: false
-       iterations: 1
      - name: lats
        cls: co_ai.agents.lats.LATSAgent
        enabled: true

@@ -1,4 +1,3 @@
-{% if mode == "reason" %}
 You are solving the following task:
 {{ state }}
 
@@ -15,6 +14,8 @@ Evaluate the correctness of the following reasoning:
 Trace:
 {% for step in trace %}
 - {{ step }}
+{% else %}
+- (no reasoning steps yet)
 {% endfor %}
 
 Give a confidence score between 0 and 1 indicating how likely this path leads to success.
@@ -33,4 +34,3 @@ Reward: {{ reward }}
 Reflect on what went wrong and suggest improvements.
 
 Reflection:
-{% endif %}

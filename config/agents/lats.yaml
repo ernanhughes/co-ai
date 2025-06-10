@@ -10,7 +10,8 @@ lats:
   branching_factor: 3
   ucb_weight: 1.41
   num_simulations: 50
-  
+  use_memory_for_fast_prompts: false
+
   model:
     name: ollama/qwen3
     api_base: http://localhost:11434
@@ -19,4 +20,3 @@ lats:
   output_key: lats  # change
   prompt_mode: file
   prompt_file: lats.txt
-  extraction_regex: "search query:<([^>]+)>\n(.*)"
