@@ -282,7 +282,8 @@ class LATSAgent(ScoringMixin, BaseAgent):
         )
 
         self.memory.hypotheses.insert(hypothesis)
-        context["lats_result"] = hypothesis.to_dict()
+        context.setdefault("lats_result", []).append(hypothesis.to_dict())
+        context.setdefault("hypotheses", []).append(hypothesis.to_dict())
         return context
 
     def create_node(self, state, trace, parent=None):
@@ -549,33 +550,69 @@ class LATSAgent(ScoringMixin, BaseAgent):
         return self.call_llm(reflection_prompt, {})
 
     def _get_score(self, node, source="graph1"):
-        """Get score for symbolic impact analysis"""
-        trace = node.get("trace", [])
+        """Get score for node in impact analysis"""
+        resolved = self.resolve_node(node)
+
+        # Safely extract trace (always a list)
+        trace = resolved.get("trace", [])
         if isinstance(trace, str):
-            # Convert string trace to list
-            trace = trace.split("\n")
+            trace = trace.split("\n")  # Fallback if trace is string
+        elif not isinstance(trace, list):
+            trace = []
+
+        # Safely extract state (ensure dict)
+        state = resolved.get("state", {})  # ✅ Fallback to empty dict
+        goal_text = state.get("goal", "Unknown goal")
+
+        # Build hypothesis for scoring
         hyp = {
             "text": "\n".join(trace),
         }
-        score_result = self.score_hypothesis(hyp, {}, metrics="lats_reflection")
+
+        # Score using dimensional scorers
+        score_result = self.score_hypothesis(
+            hyp,
+            {"goal": {"goal_text": goal_text}},  # Always a dict
+            metrics="lats_reflection"
+        )
+
         return score_result["score"] / 100  # Normalize
 
-    async def _refine_system(self, context):
-        """Refine rules and models using collected data"""
-        # 1. Analyze graph impact
-        if len(self.nodes) > 1:
-            analysis = self.impact_analyzer.analyze(self.nodes[0], self.nodes[-1])
-            context["graph_analysis"] = analysis
+    def resolve_node(self, node):
+        """Converts node ID or string to full node dict"""
+        if isinstance(node, dict):
+            return node
+        
+        # Try match by ID
+        matches = [n for n in self.nodes if str(n["id"]) == str(node)]
+        if matches:
+            return matches[0]
+        
+        # Last resort: node is a trace string
+        if isinstance(node, str):
+            return {"trace": node.split("\n")}
+        
+        # Default
+        return {"trace": []}
 
-        # 2. Train MR.Q on high-quality traces
+    async def _refine_system(self, context):
+        if len(self.nodes) > 1:
+            # Pass full node dicts to analyzer
+            analysis = self.impact_analyzer.analyze(
+                self.nodes[:len(self.nodes)//2],  # First half of nodes
+                self.nodes[len(self.nodes)//2:]  # Second half
+            )
+            context["graph_analysis"] = analysis
+        
+        # Train MR.Q on high-quality traces
         high_scoring = [n for n in self.nodes if n.get("score", 0) > 0.8]
         if high_scoring:
             await self.mrq_agent.run({"traces": high_scoring})
-
-        # 3. Tune symbolic rules based on analysis
+        
+        # Tune rules based on analysis
         if context.get("graph_analysis"):
             await self.rule_tuner.run(context)
-
+        
         return context
 
     def _get_value(self, node):
@@ -771,15 +808,15 @@ class LATSAgent(ScoringMixin, BaseAgent):
             f"D:{node_info['depth']} "
             f"P→{node_info['parent_id']} "
             f"Childs:{node_info['child_count']} "
-            f"State:'{node_info['state_preview'][:30]}...'" 
+            f"State:'{node_info['state_preview'][:30]}...'"
             f"Dimensions:{self._format_dimension_scores(node_info['dimension_scores'])}"
         )
 
     def _format_dimension_scores(self, dimension_scores):
         return " ".join(
-            f"{dim}={data['score']}"
-            for dim, data in dimension_scores.items()
+            f"{dim}={data['score']}" for dim, data in dimension_scores.items()
         )
+
 
 class SymbolicImpactAnalyzer:
     """
@@ -797,19 +834,20 @@ class SymbolicImpactAnalyzer:
         results = []
 
         for node in matches:
-            score_1 = self.score_lookup_fn(node, source="graph1")
-            score_2 = self.score_lookup_fn(node, source="graph2")
-            delta = score_2 - score_1
-            results.append({"node": node, "type": "converged", "delta": delta})
+            score_1 = self._get_score(node, source="graph1")
+            score_2 = self._get_score(node, source="graph2")
+            results.append({
+                "node": node,
+                "type": "converged",
+                "delta": score_2 - score_1
+            })
 
-        for node in only_1:
-            score = self.score_lookup_fn(node, source="graph1")
-            results.append({"node": node, "type": "diverged_graph1", "score": score})
-
-        for node in only_2:
-            score = self.score_lookup_fn(node, source="graph2")
-            results.append({"node": node, "type": "diverged_graph2", "score": score})
+        for node in only_1 + only_2:
+            score = self._get_score(node, source="graph1")
+            results.append({
+                "node": node,
+                "type": "diverged",
+                "score": score
+            })
 
         return results
-
-

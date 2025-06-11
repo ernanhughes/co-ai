@@ -14,20 +14,24 @@ def build_mermaid_graph(trace, title="Reasoning Graph"):
 
 def compare_graphs(graph1, graph2):
     """
-    Compares two lists of nodes (or strings) and returns:
-    - matched nodes
-    - only in graph1
-    - only in graph2
+    Returns:
+        matches: list of nodes present in both
+        only_1: list of nodes only in graph1
+        only_2: list of nodes only in graph2
     """
-    set1 = set(graph1)
-    set2 = set(graph2)
-
-    matches = list(set1 & set2)
-    only_1 = list(set1 - set2)
-    only_2 = list(set2 - set1)
-
+    # Ensure graphs are lists of node dicts
+    if not all(isinstance(n, dict) for n in graph1 + graph2):
+        raise ValueError("compare_graphs() requires full node dicts")
+    
+    # Build sets by node ID
+    set1 = {n["id"]: n for n in graph1}
+    set2 = {n["id"]: n for n in graph2}
+    
+    matches = [set1[k] for k in set1 if k in set2]
+    only_1 = [n for n in graph1 if n["id"] not in set2]
+    only_2 = [n for n in graph2 if n["id"] not in set1]
+    
     return matches, only_1, only_2
-
 
 def analyze_graph_impact(graph1, graph2, score_lookup_fn):
     """
