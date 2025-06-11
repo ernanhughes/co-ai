@@ -191,3 +191,9 @@ class SymbolicRuleStore:
             if self.logger:
                 self.logger.log("SymbolicRuleGetByIdError", {"rule_id": rule_id, "error": str(e)})
             return None
+    
+    def exists_by_signature(self, signature: str) -> bool:
+        """
+        Checks if a symbolic rule exists by its signature hash.
+        """
+        return self.session.query(self.model).filter_by(context_hash=signature).first() is not None
