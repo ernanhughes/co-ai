@@ -73,8 +73,13 @@ class PromptLoader:
         prompt_dir = config.get(PROMPT_DIR, "prompts")
         file_key = config.get(PROMPT_FILE) or config.get(STRATEGY) or DEFAULT
         file_name = f"{file_key}.txt" if not file_key.endswith(".txt") else file_key
-        print(f"Loading prompt file: {file_name} from {prompt_dir}")
         path = os.path.join(prompt_dir, config.get(NAME, "default"), file_name)
+
+        self.logger.log("PromptFileLoading", {
+            "file_key": file_key,
+            "resolved_file": file_name,
+            "path": path
+        })
 
         if not os.path.exists(path):
             if self.logger:
@@ -83,7 +88,12 @@ class PromptLoader:
 
         try:
             prompt_text = get_text_from_file(path)
-            return Template(prompt_text).render(**self._merge_context(config, {}))
+            rendered =  Template(prompt_text).render(**self._merge_context(config, {}))
+            self.logger.log("PromptFileLoaded", {
+                "path": path,
+                "rendered_preview": rendered[:100]
+            })
+            return rendered
         except KeyError as ke:
             if self.logger:
                 self.logger.log("PromptFormattingError", {

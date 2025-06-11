@@ -2,10 +2,7 @@
 
 lats:
   name: lats
-  enabled: true
-  save_prompt: true
-  save_context: false
-  skip_if_completed: false
+
   max_depth: 5
   branching_factor: 3
   ucb_weight: 1.41
@@ -16,6 +13,7 @@ lats:
     name: ollama/qwen3
     api_base: http://localhost:11434
     api_key: null
+
   input_keys: ["goal"]   # add nodes
   output_key: lats  # change
   prompt_mode: file
@@ -65,7 +63,7 @@ lats:
     # Key that it store the results of those reflections
     output_key: "tuning"
 
-  unified_mrq:
+  mrq:
     similarity_threshold: 0.85
     top_k_similar: 20
     min_score_difference: 10
