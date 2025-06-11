@@ -26,7 +26,7 @@ from co_ai.constants import GOAL, PIPELINE_RUN_ID
 from co_ai.models import HypothesisORM, EvaluationORM
 from co_ai.agents.mixins.scoring_mixin import ScoringMixin
 from co_ai.agents.proximity import ProximityAgent
-from co_ai.utils.graph_tools import build_mermaid_graph, compare_graphs
+from co_ai.utils.graph_tools import build_mermaid_graph, compare_graphs, save_mermaid_to_file
 from co_ai.agents.unified_mrq import UnifiedMRQAgent
 from co_ai.agents.rule_tuner import RuleTunerAgent
 
@@ -242,6 +242,12 @@ class LATSAgent(ScoringMixin, BaseAgent):
             # Backpropagation
             self.backpropagate(node, reward, trace_data)
 
+            # ✅ Log Mermaid graph after each simulation
+            if sim_num % 5 == 0:  # Every 5 simulations
+                mermaid_lines = build_mermaid_graph(root, max_depth=3)
+                mermaid_diagram = "\n".join(mermaid_lines)
+                self.logger.log("SearchTree", {"diagram": mermaid_diagram})
+    
             # Optional: Periodic refinement
             if sim_num % 10 == 0:
                 await self._refine_system(context)
@@ -249,6 +255,12 @@ class LATSAgent(ScoringMixin, BaseAgent):
         # 3. Get best path
         best_child = self.best_uct(node=root, ucb_weight=0)  # Greedy selection
         best_trace = best_child["trace"]
+
+        # ✅ Final Mermaid visualization
+        mermaid_lines = build_mermaid_graph(best_child, max_depth=5)
+        mermaid_diagram = "\n".join(mermaid_lines)
+        self.logger.log("FinalSearchTree", {"diagram": mermaid_diagram})
+        save_mermaid_to_file(mermaid_diagram, "final_search_tree.mmd")
 
         # Reconstruct merged context for prompt
         merged_for_prompt = {
@@ -552,6 +564,8 @@ class LATSAgent(ScoringMixin, BaseAgent):
     def _get_score(self, node, source="graph1"):
         """Get score for node in impact analysis"""
         resolved = self.resolve_node(node)
+        if not resolved:
+            return 0.0
 
         # Safely extract trace (always a list)
         trace = resolved.get("trace", [])

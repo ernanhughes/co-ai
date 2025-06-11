@@ -4,6 +4,7 @@ from co_ai.models.score import ScoreORM
 from co_ai.models.evaluation import EvaluationORM
 from co_ai.models.pipeline_run import PipelineRunORM
 from co_ai.models.rule_application import RuleApplicationORM
+import json
 
 def get_high_scoring_runs(session, dimension: str, threshold: float, min_repeat_count: int = 2):
     """
@@ -37,7 +38,7 @@ def get_high_scoring_runs(session, dimension: str, threshold: float, min_repeat_
     # Step 3: Group by config signature
     grouped = defaultdict(list)
     for evaluation, run in valid_runs:
-        sig = make_signature(run.config)
+        sig = make_signature(run.run_config or {})
         grouped[sig].append((evaluation, run))
 
     # Step 4: Filter by minimum repetition
@@ -48,8 +49,15 @@ def get_high_scoring_runs(session, dimension: str, threshold: float, min_repeat_
     }
 
 
-def make_signature(config: dict) -> str:
-    model = config.get("model", {}).get("name")
-    agent = config.get("agent")
-    goal_type = config.get("goal", {}).get("goal_type")
+def make_signature(config):
+    if isinstance(config, str):
+        try:
+            config = json.loads(config)
+        except json.JSONDecodeError:
+            config = {}
+
+    model = config.get("model", {}).get("name", "unknown")
+    agent = config.get("agent", "unknown")
+    goal_type = config.get("goal", {}).get("goal_type", "unknown")
+
     return f"{model}::{agent}::{goal_type}"

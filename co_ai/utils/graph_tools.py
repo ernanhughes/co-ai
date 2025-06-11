@@ -1,16 +1,74 @@
 # co_ai/utils/graph_tools.py
 
-def build_mermaid_graph(trace, title="Reasoning Graph"):
+def build_mermaid_graph(node, depth=0, max_depth=5, visited=None):
     """
-    Given a list of steps (or a dict-based graph), return a Mermaid flowchart.
+    Recursively builds a Mermaid graph from a reasoning tree node.
+    Returns a list of Mermaid-compatible graph lines.
     """
-    lines = ["graph TD"]
-    for i in range(len(trace) - 1):
-        from_node = f"Step{i}[{trace[i]}]"
-        to_node = f"Step{i+1}[{trace[i+1]}]"
-        lines.append(f"{from_node} --> {to_node}")
-    return "\n".join(lines)
+    if visited is None:
+        visited = set()
+    
+    if depth > max_depth or id(node) in visited:
+        return []
 
+    visited.add(id(node))
+    mermaid = []
+
+    # Node ID
+    node_id = f"N{node.get('id', id(node))}"
+
+    # Extract score (fallback to reward or 0.0)
+    score = node.get("score", node.get("reward", 0.0))
+
+    # Extract last trace item (handle various types)
+    trace = node.get("trace", [])
+    if isinstance(trace, str):
+        trace = trace.split("\n")
+    elif not isinstance(trace, list):
+        trace = []
+
+    if trace:
+        last_action = trace[-1][:30]
+    else:
+        state = node.get("state", {})
+        goal_text = state.get("goal", "Root") if isinstance(state, dict) else "Root"
+        last_action = goal_text[:30]
+
+    # Label assembly
+    label = f"{last_action[:20]}..."
+    label += f" | Score: {score:.2f}"
+    if node.get("is_terminal", False):
+        label += " | TERMINAL"
+
+    # Define the node visually
+    mermaid.append(f'{node_id}["{label}"]')
+
+    # Style node based on score
+    if node.get("is_terminal", False):
+        mermaid.append(f"style {node_id} fill:#e6ccff,stroke:#333")
+    elif score > 0.8:
+        mermaid.append(f"style {node_id} fill:#a8edc9,stroke:#333")
+    elif score > 0.5:
+        mermaid.append(f"style {node_id} fill:#f4f4f4,stroke:#333")
+    else:
+        mermaid.append(f"style {node_id} fill:#fddddd,stroke:#333")
+
+    # Recursively add children
+    children = node.get("children", [])
+    for child in children[:3]:  # Limit to 3 branches
+        child_lines = build_mermaid_graph(child, depth + 1, max_depth, visited)
+        if child_lines:
+            mermaid.extend(child_lines)
+            child_id = f"N{child.get('id', id(child))}"
+            mermaid.append(f"{node_id} --> {child_id}")
+
+    return mermaid
+
+def save_mermaid_to_file(diagram, filename="search_tree.mmd"):
+    with open(filename, "w") as f:
+        f.write("```mermaid\ngraph TD\n")
+        f.write(diagram + "\n")
+        f.write("```\n")
 
 def compare_graphs(graph1, graph2):
     """
