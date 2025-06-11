@@ -24,7 +24,6 @@ class PromptLoader:
         """
         prompt_type = config.get(PROMPT_MODE, FILE)
         prompts_dir = context.get(PROMPT_DIR, "prompts")
-        print(f"Loading prompt from: {prompts_dir} with type: {prompt_type}")
 
         if not os.path.isdir(prompts_dir):
             raise FileNotFoundError(f"Prompt directory not found: {prompts_dir}")
@@ -59,7 +58,14 @@ class PromptLoader:
         path = self.get_file_path(file_name, config, context)
         prompt_text = get_text_from_file(path)
         merged = self._merge_context(config, context)
-        return Template(prompt_text).render(**merged)
+        try:
+            return Template(prompt_text).render(**merged)
+        except KeyError as ke:
+            if self.logger:
+                self.logger.log("PromptFormattingError", {
+                    "exception": ke,
+                    "prompt_text": prompt_text,
+                })
 
     @staticmethod
     def get_file_path(file_name: str, cfg: dict, context: dict) -> str:

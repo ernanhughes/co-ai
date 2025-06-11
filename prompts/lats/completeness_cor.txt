@@ -1,16 +1,37 @@
+{% if mode == "reflect" %}
 Rubric:
-- Does the hypothesis consider all relevant aspects of the problem?
-- Are edge cases or alternative scenarios addressed?
-- Is the explanation self-contained and detailed enough for clarity?
+- Does the reflection recognize gaps or missing components in the prior hypothesis?
+- Is the proposed change more thorough or holistic?
 
 <eval>
-Evaluate the completeness of the following hypothesis.
-Goal: {{goal.goal_text}}
-Hypothesis: {{hypothesis.text}}
+Evaluate the following reflection for completeness:
+Goal: {{ goal.goal_text }}
+Reflection: {{ hypothesis.text }}
 </eval>
 
 Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
 
 rationale: <brief explanation>
-score: <0–100>
 
+<answer>[[<0–100>]]</answer>
+
+{% else %}
+{# reason is the default mode for the template #}
+Rubric:
+- Does the hypothesis fully address the goal?
+- Are all major aspects, constraints, or subproblems considered?
+- Is anything important left unmentioned or underexplored?
+
+<eval>
+Evaluate the following hypothesis for completeness:
+Goal: {{ goal.goal_text }}
+Hypothesis: {{ hypothesis.text }}
+</eval>
+
+Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+rationale: <brief explanation>
+
+<answer>[[<0–100>]]</answer>
+
+{% endif %}

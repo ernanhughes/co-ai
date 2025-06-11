@@ -217,7 +217,12 @@ class LATSAgent(ScoringMixin, BaseAgent):
     async def run(self, context: dict) -> dict:
         """Main LATS search loop"""
         goal = context[GOAL]
-        root_state = goal["goal_text"]
+        root_state = root_state = {
+            "goal": goal["goal_text"],
+            "goal_id": goal["id"],
+            "current": goal["goal_text"],
+            "trace": []
+        }
 
         # 1. Initialize root node
         root = self.create_node(state=root_state, trace=[], parent=None)
@@ -245,18 +250,33 @@ class LATSAgent(ScoringMixin, BaseAgent):
         best_child = self.best_uct(node=root, ucb_weight=0)  # Greedy selection
         best_trace = best_child["trace"]
 
+        # Reconstruct merged context for prompt
+        merged_for_prompt = {
+            "state": best_child["state"]["current"]
+            if isinstance(best_child["state"], dict)
+            else best_child["state"],
+            "trace": best_trace,
+            "mode": "reason",  # Or use context.get("mode", "reason")
+        }
+        prompt_text = self.prompt_loader.load_prompt(self.cfg, merged_for_prompt)
+        prompt_id = self.memory.prompt.get_id_from_response(prompt_text)
+
+        # Safely extract scores
+        dimension_scores = best_child.get("dimension_scores", {})
+
         # 4. Create final hypothesis
         hypothesis = HypothesisORM(
             goal_id=goal["id"],
+            prompt_id=prompt_id,
             source=self.name,
             text="\n".join(best_trace),
             metadata={
                 "trace": best_trace,
                 "path": [n["id"] for n in best_trace],
                 "scores": {
-                    dim: best_child["dimension_scores"][dim]["score"]
-                    for dim in best_child["dimension_scores"]
+                    dim: data["score"] for dim, data in dimension_scores.items()
                 },
+                "score": best_child.get("score", 0.0),
             },
             pipeline_run_id=context.get(PIPELINE_RUN_ID),
         )
@@ -267,6 +287,15 @@ class LATSAgent(ScoringMixin, BaseAgent):
 
     def create_node(self, state, trace, parent=None):
         """Create a new node in the search tree"""
+
+        # Ensure trace is always a list
+        if isinstance(trace, str):
+            print("Trace is not right")
+            trace = trace.split("\n")  # Convert string to list
+        elif not isinstance(trace, list):
+            print("Trace is not right")
+            trace = [str(trace)]  # Fallback
+
         node = {
             "id": len(self.nodes) + 1,
             "state": state,
@@ -283,6 +312,7 @@ class LATSAgent(ScoringMixin, BaseAgent):
         return node
 
     def select(self, node):
+        self._log_node(node, level="debug")
         """Select node for expansion using UCT"""
         while self.children.get(id(node)) and self.children[id(node)]:
             unvisited = [c for c in self.children[id(node)] if c["visits"] == 0]
@@ -306,16 +336,22 @@ class LATSAgent(ScoringMixin, BaseAgent):
 
     async def expand(self, node, context: dict):
         """Generate new children nodes from current node"""
+        self._log_node(node, level="debug")
+
         # Build prompt with context
         merged = {
             **context,
-            "state": node["state"],
+            "state": node["state"]["current"],  # Only pass the current reasoning state
             "trace": node["trace"],
             "mode": "reason",
         }
 
         # 1. Get similar hypotheses
         proximity_context = await self._run_proximity(context)
+        self.logger.log("ProximityContext", {
+            "most_similar": proximity_context.get("most_similar"),
+            "all": proximity_context
+        })
         merged["similar_hypotheses"] = proximity_context.get("most_similar", "")
 
         # 2. Generate completions with DSPy
@@ -335,10 +371,18 @@ class LATSAgent(ScoringMixin, BaseAgent):
             new_state = self._update_state(node["state"], comp)
             new_trace = node["trace"] + [comp]
 
+            # Ensure scoring context includes mode
+            scoring_context = {
+                **context,
+                "mode": "reason",  # Required for CoR templates
+            }
+
             # Score using dimensional scorers
             hyp = {"text": comp, "goal_id": context[GOAL]["id"]}
 
-            score_result = self.score_hypothesis(hyp, context, metrics="lats_node")
+            score_result = self.score_hypothesis(
+                hyp, scoring_context, metrics="lats_node"
+            )
 
             # Create child node with metadata
             child = self.create_node(state=new_state, trace=new_trace, parent=node)
@@ -347,9 +391,15 @@ class LATSAgent(ScoringMixin, BaseAgent):
             child["action"] = comp
 
             children.append(child)
+            self._log_node(child, level="debug")
 
         # Store children
         self.children[id(node)] = children
+
+        # Log all children at once
+        for child in children:
+            self._log_node(child, level="info")  # ← Add here
+
         return children[0] if children else node
 
     def simulate_and_evaluate(self, node, context):
@@ -379,10 +429,10 @@ class LATSAgent(ScoringMixin, BaseAgent):
             current = self.create_node(state=new_state, trace=new_trace, parent=current)
 
         # Evaluate final node
-        reward, trace_data = self.evaluate(current)
+        reward, trace_data = self.evaluate(current, context)
         return reward, trace_data
 
-    def evaluate(self, node):
+    def evaluate(self, node, context):
         """Evaluate node using hybrid LM + self-consistency scoring"""
         if self.cfg.get("use_environment", False):
             obs = self.env.step(node["state"])
@@ -395,12 +445,13 @@ class LATSAgent(ScoringMixin, BaseAgent):
             "goal_id": node["state"].get("goal_id"),
         }
 
-        score_result = self.score_hypothesis(hyp, {}, metrics="lats_reflection")
+        score_result = self.score_hypothesis(hyp, context, metrics="lats_reflection")
         return score_result["score"] / 100, score_result
 
     def backpropagate(self, node, reward, trace_data=None):
         """Update node statistics up the tree"""
         while node:
+            self._log_node(node, level="debug")
             node["visits"] += 1
             node["reward"] += reward
 
@@ -417,14 +468,38 @@ class LATSAgent(ScoringMixin, BaseAgent):
             node = node["parent"]
 
     def is_terminal(self, node):
-        """Check if node is terminal state"""
-        return (
-            "success" in node["state"].lower() or len(node["trace"]) >= self.max_depth
-        )
+        """
+        Check if node is terminal state
+        Works with both string and dict state formats
+        """
+        state = node["state"]
 
-    def _update_state(self, state: str, action: str) -> str:
-        """Update state with action result"""
-        return f"{state}\n{action}"
+        # Handle structured state dict
+        if isinstance(state, dict):
+            current_text = state.get("current", "")
+            return (
+                "success" in current_text.lower()
+                or len(node["trace"]) >= self.max_depth
+            )
+
+        # Fallback for string-based state
+        return "success" in state.lower() or len(node["trace"]) >= self.max_depth
+
+    def _update_state(self, state_dict, action):
+        """
+        Updates structured state dictionary with new action
+        """
+        if isinstance(state_dict, dict):
+            new_state = state_dict.copy()
+            new_state["current"] = f"{state_dict['current']}\n{action}"
+            # Ensure trace stays as list
+            new_state["trace"] = state_dict.get("trace", []) + [action]
+            return new_state
+        # Fallback for string state
+        return {
+            "current": f"{state_dict}\n{action}",
+            "trace": [action]  # Start with action as list
+        }
 
     def _parse_completions(self, response: str) -> list:
         """Parse multiple thoughts/actions from response"""
@@ -475,8 +550,13 @@ class LATSAgent(ScoringMixin, BaseAgent):
 
     def _get_score(self, node, source="graph1"):
         """Get score for symbolic impact analysis"""
-        hyp = {"text": "\n".join(node["trace"]), "id": f"hyp_{node['id']}"}
-
+        trace = node.get("trace", [])
+        if isinstance(trace, str):
+            # Convert string trace to list
+            trace = trace.split("\n")
+        hyp = {
+            "text": "\n".join(trace),
+        }
         score_result = self.score_hypothesis(hyp, {}, metrics="lats_reflection")
         return score_result["score"] / 100  # Normalize
 
@@ -488,7 +568,7 @@ class LATSAgent(ScoringMixin, BaseAgent):
             context["graph_analysis"] = analysis
 
         # 2. Train MR.Q on high-quality traces
-        high_scoring = [n for n in self.nodes if n["score"] > 0.8]
+        high_scoring = [n for n in self.nodes if n.get("score", 0) > 0.8]
         if high_scoring:
             await self.mrq_agent.run({"traces": high_scoring})
 
@@ -621,6 +701,85 @@ class LATSAgent(ScoringMixin, BaseAgent):
             },
         )
 
+    def _log_node(self, node, level="debug"):
+        """
+        Logs a structured representation of a node for debugging
+        """
+        # Safely extract parent ID
+        parent_info = node.get("parent")
+        parent_id = "none"
+        if parent_info is not None:
+            parent_id = (
+                getattr(parent_info, "id", parent_info.get("id", "none"))
+                if isinstance(parent_info, (dict, object))
+                else "none"
+            )
+
+        # Safely extract state string
+        state_data = node.get("state", {})
+        if isinstance(state_data, dict):
+            state_str = state_data.get("current", "")
+        else:
+            state_str = str(state_data)
+
+        # Safely extract trace
+        trace = node.get("trace", [])
+
+        # Build node info for logging
+        node_info = {
+            "id": node.get("id", "unknown"),
+            "visits": node.get("visits", 0),
+            "reward": round(float(node.get("reward", 0.0)), 2),
+            "depth": len(trace),
+            "is_terminal": node.get("is_terminal", False),
+            "trace_preview": trace[-3:] if trace else [],
+            "state_preview": state_str[:200],  # Now safe for both string and dict
+            "parent_id": parent_id,
+            "child_count": len(node.get("children", [])),
+            "score": round(float(node.get("score", 0.0)), 2),
+            "dimension_scores": {
+                dim: {
+                    "score": round(float(score.get("score", 0)), 2),
+                    "rationale": score.get("rationale", "")[:100],
+                }
+                for dim, score in node.get("dimension_scores", {}).items()
+            }
+            if "dimension_scores" in node
+            else {},
+        }
+
+        # Log based on level
+        if level == "debug":
+            self.logger.log("NodeDebug", {
+                "node_id": node.get("id"),
+                "node_info": node_info
+            })
+        elif level == "info":
+            self.logger.log("NodeSummary", {
+                "node_id": node.get("id"),
+                "summary": self._format_node_summary(node_info)
+            })
+        return node_info
+
+    def _format_node_summary(self, node_info):
+        """Formats node info into a single-line summary"""
+        return (
+            f"ID:{node_info['id']} "
+            f"V:{node_info['visits']} "
+            f"R:{node_info['reward']} "
+            f"S:{node_info['score']} "
+            f"D:{node_info['depth']} "
+            f"P→{node_info['parent_id']} "
+            f"Childs:{node_info['child_count']} "
+            f"State:'{node_info['state_preview'][:30]}...'" 
+            f"Dimensions:{self._format_dimension_scores(node_info['dimension_scores'])}"
+        )
+
+    def _format_dimension_scores(self, dimension_scores):
+        return " ".join(
+            f"{dim}={data['score']}"
+            for dim, data in dimension_scores.items()
+        )
 
 class SymbolicImpactAnalyzer:
     """
@@ -652,3 +811,5 @@ class SymbolicImpactAnalyzer:
             results.append({"node": node, "type": "diverged_graph2", "score": score})
 
         return results
+
+

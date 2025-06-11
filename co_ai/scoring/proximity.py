@@ -62,3 +62,9 @@ class ProximityHeuristicEvaluator(BaseEvaluator):
                 "proximity_directions": {"score": 0, "weight": 0.4, "rationale": message},
             }
         }
+
+    def _heuristic_score(self, themes, grafts, directions) -> float:
+        """
+        Simple scoring heuristic based on the number of insights generated.
+        """
+        return min(100.0, 10 * len(themes) + 10 * len(grafts) + 20 * len(directions))

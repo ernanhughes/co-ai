@@ -16,8 +16,13 @@ EVENT_ICONS = {
     "ContextAfterStage": "🗃️",
     "ContextYAMLDumpSaved": "📄",
     "debug": "🐞",
+    "NoHypothesesInContext": "🤷‍♂️",
+    "SimilarHypothesesFound": "♻️💭",
     "StageContext": "🎯",
     "AgentInit": "🤖",
+    "NodeDebug": "🌲🔍",
+    "NodeSummary": "🪵📋",
+    "CorDimensionEvaluated": "📐✅",
     "EvaluatorInit": "🧪",
     "RuleApplicationUpdated": "🧩",      # Suggests a symbolic piece being modified
     "MRQScoringComplete": "📈",          # Indicates successful scoring/completion

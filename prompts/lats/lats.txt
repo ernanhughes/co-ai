@@ -1,29 +1,4 @@
-{% if mode == "reason" %}
-You are solving the following task:
-{{ state }}
-
-So far, your reasoning steps have been:
-{% for step in trace %}
-- {{ step }}
-{% endfor %}
-
-Generate {{ branching_factor }} possible next reasoning steps (numbered):
-
-{% elif mode == "value" %}
-Evaluate the correctness of the following reasoning:
-{{ state }}
-Trace:
-{% for step in trace %}
-- {{ step }}
-{% else %}
-- (no reasoning steps yet)
-{% endfor %}
-
-Give a confidence score between 0 and 1 indicating how likely this path leads to success.
-
-Score:
-
-{% elif mode == "reflect" %}
+{% if mode == "reflect" %}
 The following attempt failed:
 {{ state }}
 Trace:
@@ -35,4 +10,17 @@ Reward: {{ reward }}
 Reflect on what went wrong and suggest improvements.
 
 Reflection:
+
+{% else %}
+{# reason is the default mode for the template #}
+You are solving the following task:
+{{ state }}
+
+So far, your reasoning steps have been:
+{% for step in trace %}
+- {{ step }}
+{% endfor %}
+
+Generate {{ branching_factor }} possible next reasoning steps (numbered):
+
 {% endif %}
