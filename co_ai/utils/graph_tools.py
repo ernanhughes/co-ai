@@ -19,18 +19,17 @@ def compare_graphs(graph1, graph2):
         only_1: list of nodes only in graph1
         only_2: list of nodes only in graph2
     """
-    # Ensure graphs are lists of node dicts
-    if not all(isinstance(n, dict) for n in graph1 + graph2):
+    # Ensure graphs contain full node dicts
+    if not isinstance(graph1[0], dict) or not isinstance(graph2[0], dict):
         raise ValueError("compare_graphs() requires full node dicts")
-    
-    # Build sets by node ID
+
     set1 = {n["id"]: n for n in graph1}
     set2 = {n["id"]: n for n in graph2}
-    
+
     matches = [set1[k] for k in set1 if k in set2]
     only_1 = [n for n in graph1 if n["id"] not in set2]
     only_2 = [n for n in graph2 if n["id"] not in set1]
-    
+
     return matches, only_1, only_2
 
 def analyze_graph_impact(graph1, graph2, score_lookup_fn):

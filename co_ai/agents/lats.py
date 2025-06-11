@@ -834,8 +834,8 @@ class SymbolicImpactAnalyzer:
         results = []
 
         for node in matches:
-            score_1 = self._get_score(node, source="graph1")
-            score_2 = self._get_score(node, source="graph2")
+            score_1 = self.score_lookup_fn(node, source="graph1")
+            score_2 = self.score_lookup_fn(node, source="graph2")
             results.append({
                 "node": node,
                 "type": "converged",
@@ -843,7 +843,7 @@ class SymbolicImpactAnalyzer:
             })
 
         for node in only_1 + only_2:
-            score = self._get_score(node, source="graph1")
+            score = self.score_lookup_fn(node, source="graph1")
             results.append({
                 "node": node,
                 "type": "diverged",
