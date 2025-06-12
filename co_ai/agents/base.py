@@ -3,6 +3,7 @@ import random
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
+from collections import defaultdict
 
 import litellm
 
@@ -241,3 +242,47 @@ class BaseAgent(ABC):
         hypothesis = self.memory.hypotheses.get_from_text(text)
         self._hypothesis_id_cache[text] = (hypothesis.id, hypothesis)
         return hypothesis.id
+
+
+    def _log_timing_diagram(self):
+        """Log timing breakdown as Mermaid diagram"""
+        timing_data = self.logger.get_logs_by_type("FunctionTiming")
+        function_times = defaultdict(float)
+        
+        for log in timing_data:
+            key = f"{log['class']}.{log['function']}"
+            function_times[key] += log["duration_ms"]
+
+        mermaid = ["```mermaid\ngraph TD"]
+        total = sum(function_times.values())
+        
+        for func, duration in function_times.items():
+            percent = (duration / total) * 100
+            mermaid.append(f"A{func.replace('.', '_')}[{func} | {percent:.1f}%]")
+        
+        mermaid.append("```")
+        self.logger.log("TimingBreakdown", {"diagram": "\n".join(mermaid)})
+
+
+    def _analyze_performance(self):
+        """Print performance summary"""
+        from tabulate import tabulate
+        
+        timing_logs = self.logger.get_logs_by_type("FunctionTiming")
+        function_times = defaultdict(list)
+        for log in timing_logs:
+            data = log["data"]
+            key = f"{data['class']}.{data['function']}"
+            function_times[key].append(data["duration_ms"])
+        
+        table = []
+        for key, durations in function_times.items():
+            table.append([
+                key,
+                f"{sum(durations)/len(durations):.2f}ms",
+                len(durations),
+                f"{max(durations):.2f}ms"
+            ])
+        
+        print("\n⏱️ Performance Breakdown")
+        print(tabulate(table, headers=["Function", "Avg Time", "Calls", "Max Time"]))

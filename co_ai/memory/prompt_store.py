@@ -203,7 +203,13 @@ class PromptStore:
         # Compute similarity using difflib
         matches = []
         for p in candidates:
-            similarity = SequenceMatcher(None, prompt_text, p.prompt_text).ratio()
+            text_a = str(prompt_text or "")
+            if not text_a:
+                print(f"invalid prompt{text_a}")
+            text_b = str(p.prompt_text or "")
+            if not text_b:
+                print(f"invalid prompt{text_b}")
+            similarity = SequenceMatcher(None, text_a, text_b).ratio()
             if similarity >= similarity_threshold:
                 matches.append((similarity, p))
 

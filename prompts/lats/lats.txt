@@ -1,26 +1,60 @@
 {% if mode == "reflect" %}
-The following attempt failed:
+You attempted to solve the task below, but the result was suboptimal.
+
+Goal:
+{{ goal.goal_text }}
+
+Final State:
 {{ state }}
-Trace:
+
+Your reasoning trace:
 {% for step in trace %}
 - {{ step }}
 {% endfor %}
+
 Reward: {{ reward }}
 
-Reflect on what went wrong and suggest improvements.
+{% if scores %}
+Scores:
+{% for dim, data in scores.items() %}
+- {{ dim|capitalize }}: {{ data.score }} – {{ data.rationale }}
+{% endfor %}
+{% endif %}
+
+Reflect on what went wrong in this reasoning path. Be specific. Then suggest concrete changes that could improve it.
 
 Reflection:
 
 {% else %}
-{# reason is the default mode for the template #}
+
 You are solving the following task:
+{{ goal.goal_text }}
+
+Additional goal info:
+- Type: {{ goal.goal_type }}
+- Rubric: {{ goal.rubric }}
+
+Current state:
 {{ state }}
 
-So far, your reasoning steps have been:
+Your reasoning steps so far:
 {% for step in trace %}
 - {{ step }}
 {% endfor %}
 
-Generate {{ branching_factor }} possible next reasoning steps (numbered):
+Relevant prior hypotheses:
+{% for h in similar_hypotheses %}
+- {{ h }}
+{% endfor %}
 
+{% if scores %}
+Guidance from scoring:
+{% for dim, data in scores.items() %}
+- {{ dim|capitalize }}: {{ data.rationale }}
+{% endfor %}
+{% endif %}
+
+Now, generate {{ branching_factor }} thoughtful next reasoning steps. Each step should meaningfully advance toward the goal.
+
+Steps:
 {% endif %}

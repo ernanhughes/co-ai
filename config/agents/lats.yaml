@@ -7,7 +7,7 @@ lats:
   branching_factor: 3
   ucb_weight: 1.41
   num_simulations: 50
-  use_memory_for_fast_prompts: false
+  use_memory_for_fast_prompts: true
 
   model:
     name: ollama/qwen3

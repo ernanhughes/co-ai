@@ -6,7 +6,6 @@ from co_ai.logs.icons import get_event_icon
 
 
 class JSONLogger:
-
     def __init__(self, log_path="logs/pipeline_log.jsonl"):
         self.log_path = Path(log_path)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -30,3 +29,57 @@ class JSONLogger:
             print(f"🛠️  Event Type: {event_type}")
             print(f"🪵  Error: {e}")
             print(f"🧱  Data: {repr(data)[:200]}")
+
+    def get_logs_by_type(self, event_type: str) -> list:
+        """
+        Retrieve all logs of a specific type from the log file
+        
+        Args:
+            event_type: The type of event to filter by
+            
+        Returns:
+            List of matching log entries
+        """
+        if not self.log_path.exists():
+            return []
+            
+        logs = []
+        try:
+            with self.log_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line.strip())
+                        if entry["event_type"] == event_type:
+                            logs.append(entry)
+                    except json.JSONDecodeError:
+                        continue  # Skip invalid lines
+        except Exception as e:
+            print(f"❌ [Logger] Failed to read logs: {str(e)}")
+            return []
+            
+        return logs
+
+    def get_all_logs(self) -> list:
+        """
+        Retrieve all logs from the file
+        
+        Returns:
+            List of all log entries
+        """
+        if not self.log_path.exists():
+            return []
+            
+        logs = []
+        try:
+            with self.log_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line.strip())
+                        logs.append(entry)
+                    except json.JSONDecodeError:
+                        continue
+        except Exception as e:
+            print(f"❌ [Logger] Failed to read logs: {str(e)}")
+            return []
+            
+        return logs
