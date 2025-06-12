@@ -41,6 +41,7 @@ class ScoringMixin:
         Score a hypothesis for a given evaluation stage.
 
         Args:
+            hypothesis:
             hyp (dict): Hypothesis object with a "text" key.
             context (dict): Pipeline context, must include 'goal'.
             metrics (str): Evaluation metrics (e.g., "review", "reasoning", "reflection").

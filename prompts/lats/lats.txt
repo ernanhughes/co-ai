@@ -1,33 +1,41 @@
 {% if mode == "reflect" %}
 You attempted to solve the task below, but the result was suboptimal.
 
-Goal:
+### Goal
 {{ goal.goal_text }}
 
-Final State:
+### Final State
 {{ state }}
 
-Your reasoning trace:
+### Your reasoning trace
 {% for step in trace %}
 - {{ step }}
 {% endfor %}
 
-Reward: {{ reward }}
+### Reward
+{{ reward }}
 
 {% if scores %}
-Scores:
+### Scores
 {% for dim, data in scores.items() %}
 - {{ dim|capitalize }}: {{ data.score }} – {{ data.rationale }}
 {% endfor %}
 {% endif %}
 
 Reflect on what went wrong in this reasoning path. Be specific. Then suggest concrete changes that could improve it.
+Each step must follow this format:
 
-Reflection:
+## Reflection
+
+### Rationale
+[Why this path failed]
+
+###Improvement Plan
+[What to change]
 
 {% else %}
 
-You are solving the following task:
+You are solving:
 {{ goal.goal_text }}
 
 Additional goal info:
@@ -54,7 +62,17 @@ Guidance from scoring:
 {% endfor %}
 {% endif %}
 
-Now, generate {{ branching_factor }} thoughtful next reasoning steps. Each step should meaningfully advance toward the goal.
+Now, generate {{ branching_factor }} thoughtful next reasoning steps. Each step must follow this format:
 
-Steps:
+### Thought 1
+**Rationale**: [Why this step is valuable]
+**Action**: [Environment action or final answer]
+
+### Thought 2
+**Rationale**: [Why this step is valuable]
+**Action**: [Alternative action or hypothesis]
+
+### Thought 3
+**Rationale**: [Why this step is valuable]
+**Action**: [Alternative action or hypothesis]
 {% endif %}
