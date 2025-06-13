@@ -34,7 +34,7 @@ def time_function(logger=None):
             if logger:
                 logger.log("FunctionTiming", log_data)
             else:
-                print(f"[{log_data['timestamp']}] {class_name}.{func.__name__}: {log_data['duration_ms']}ms")
+                print(f"🕒 {class_name}.{func.__name__}: {log_data['duration_ms']}ms [{log_data['timestamp']}]")
             
             return result
         return wrapper
