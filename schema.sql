@@ -38,6 +38,9 @@ CREATE TABLE pipeline_runs (
     goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
     run_id TEXT UNIQUE NOT NULL, -- UUID or generated string
     pipeline TEXT NOT NULL, -- list of agent names
+    name TEXT,
+    tag TEXT,
+    description TEXT,
     strategy TEXT,
     model_name TEXT,
     run_config JSONB,
