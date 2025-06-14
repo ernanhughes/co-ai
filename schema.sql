@@ -593,3 +593,17 @@ CREATE TABLE IF NOT EXISTS scores (
     weight FLOAT,
     rationale TEXT
 );
+
+CREATE TABLE IF NOT EXISTS comparison_preferences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    goal_id INTEGER NOT NULL,
+    preferred_tag TEXT NOT NULL,
+    rejected_tag TEXT NOT NULL,
+    preferred_run_id UUID NOT NULL,
+    rejected_run_id UUID NOT NULL,
+    preferred_score FLOAT,
+    rejected_score FLOAT,
+    dimension_scores JSONB,
+    reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

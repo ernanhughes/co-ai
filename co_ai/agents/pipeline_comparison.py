@@ -8,7 +8,7 @@ import csv
 import os
 from datetime import datetime
 from sqlalchemy import func
-
+from co_ai.models.comparison_preference import ComparisonPreferenceORM
 
 class PipelineComparisonAgent(ScoringMixin, BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -34,9 +34,12 @@ class PipelineComparisonAgent(ScoringMixin, BaseAgent):
         self.logger.log("PipelineComparisonAgentEnd", {"output_key": self.output_key})
         return context
     
+
     def compare_runs(self, tags: list[str], goal_id: int = None):
+        from co_ai.models.comparison_preference import ComparisonPreferenceORM
         """
         Compare multiple sets of pipeline runs by tag across the same goals.
+        Store MR.Q-style preferences when there's a clear winner.
         """
         print(f"\n🔍 Comparing Pipelines: {tags}\n")
 
@@ -44,6 +47,7 @@ class PipelineComparisonAgent(ScoringMixin, BaseAgent):
         runs_by_tag = {tag: self.memory.pipeline_runs.find({"tag": tag}) for tag in tags}
 
         # Index runs by goal_id
+        from collections import defaultdict
         runs_by_goal = defaultdict(dict)
         for tag, runs in runs_by_tag.items():
             for run in runs:
@@ -65,6 +69,21 @@ class PipelineComparisonAgent(ScoringMixin, BaseAgent):
             is_tie = list(avg_scores.values()).count(avg_scores[best_tag]) > 1
             winner = "Tie" if is_tie else best_tag
 
+            if winner != "Tie":
+                loser = [tag for tag in tags if tag != winner][0]
+                preference = ComparisonPreferenceORM(
+                    goal_id=goal,
+                    preferred_tag=winner,
+                    rejected_tag=loser,
+                    preferred_run_id=tag_run_map[winner].run_id,
+                    rejected_run_id=tag_run_map[loser].run_id,
+                    preferred_score=avg_scores[winner],
+                    rejected_score=avg_scores[loser],
+                    dimension_scores=score_map,
+                    reason=f"{winner} outperformed {loser} on score {avg_scores[winner]:.2f} > {avg_scores[loser]:.2f}",
+                )
+                self.memory.session.add(preference)
+
             results.append({
                 "goal_id": goal,
                 "avg_scores": avg_scores,
@@ -73,6 +92,7 @@ class PipelineComparisonAgent(ScoringMixin, BaseAgent):
                 "dimensions": score_map
             })
 
+        self.memory.session.commit()  # commit all preferences
         self._print_summary(results, tags)
         self.export_to_csv(results, tags)
         return results
