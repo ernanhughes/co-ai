@@ -1,7 +1,7 @@
 # --- co_ai/registry/agent_registry.py ---
 
 from co_ai.agents.automind import AutoMindAgent
-from co_ai.agents.self_aware_planner_agent import SelfAwarePlannerAgent
+from co_ai.agents.self_aware_planner import SelfAwarePlannerAgent
 
 
 class AgentRegistry:

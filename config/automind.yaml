@@ -3,42 +3,15 @@ defaults:
   - _self_
   - db: postgres
   - agents/automind
-  - agents/generation
-  - agents/pipeline_judge
-  - agents/lats
-  - agents/symbolic_optimizer
-  - agents/rule_tuner
-  - agents/cot_dspy_generator
-  - agents/cot_generator
-  - agents/debate
-  - agents/dots_planner
-  - agents/evolution
-  - agents/general_reasoner
-  - agents/generation
-  - agents/generic
-  - agents/judge
-  - agents/literature
-  - agents/literature_ranking
-  - agents/lookahead
-  - agents/meta_review
-  - agents/mrq_strategy
-  - agents/pipeline_judge
-  - agents/prompt_tuning
-  - agents/proximity
-  - agents/ranking
-  - agents/refiner
-  - agents/reflection
-  - agents/reflection_delta
-  - agents/review
-  - agents/sharpening
-  - agents/symbolic_optimizer
-  - agents/auto_tuner
+  - agents/survey
+  - agents/search_orchestrator
   - logging/json_logger
 
 goal:
   goal_text: "How could an autonomous AI lab iteratively improve its own hypotheses using symbolic rules and evaluation feedback?"
-  goal_type: "strategic"
+  goal_type: "automind"
   goal_category: "ai_research"
+  focus_area: "ai"
   strategy: "reasoning"
   difficulty: "hard"
   expected_formats:
@@ -94,7 +67,11 @@ pipeline:
   name: default_pipeline
   description: "Default hypothesis generation and refinement pipeline"
   stages:
-     - name: lats
-       cls: co_ai.agents.lats.LATSAgent
+     - name: survey
+       cls: co_ai.agents.survey.SurveyAgent
+       enabled: true
+       iterations: 1
+     - name: search_orchestrator
+       cls: co_ai.agents.search_orchestrator.SearchOrchestratorAgent
        enabled: true
        iterations: 1

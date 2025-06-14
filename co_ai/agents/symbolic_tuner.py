@@ -3,9 +3,7 @@
 import json
 from collections import defaultdict
 
-from sqlalchemy.orm import sessionmaker
-
-from co_ai.models import NodeORM, ScoreORM
+from co_ai.models import NodeORM
 
 
 class SymbolicTunerAgent:
