@@ -605,5 +605,16 @@ CREATE TABLE IF NOT EXISTS comparison_preferences (
     rejected_score FLOAT,
     dimension_scores JSONB,
     reason TEXT,
+    source TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS documents (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    source TEXT NOT NULL,
+    external_id TEXT,
+    url TEXT,
+    content TEXT,
+    date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

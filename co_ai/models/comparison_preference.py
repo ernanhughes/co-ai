@@ -20,4 +20,5 @@ class ComparisonPreferenceORM(Base):
     rejected_score = Column(Float)
     dimension_scores = Column(JSON)
     reason = Column(Text)
+    source = Column(String, default="pipeline_comparison")
     created_at = Column(DateTime, default=datetime.utcnow)

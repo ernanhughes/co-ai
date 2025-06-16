@@ -83,6 +83,7 @@ class PipelineComparisonAgent(ScoringMixin, BaseAgent):
                     reason=f"{winner} outperformed {loser} on score {avg_scores[winner]:.2f} > {avg_scores[loser]:.2f}",
                 )
                 self.memory.session.add(preference)
+                self._save_comparison_preference(goal, winner, loser, tag_run_map, avg_scores, score_map)
 
             results.append({
                 "goal_id": goal,
@@ -94,6 +95,34 @@ class PipelineComparisonAgent(ScoringMixin, BaseAgent):
 
         self.memory.session.commit()  # commit all preferences
         self._print_summary(results, tags)
+        from co_ai.models.mrq_memory_entry import MRQMemoryEntryORM  # adjust as needed
+        from co_ai.utils.time import now_timestamp  # or use datetime.now() directly
+
+        for r in results:
+            if r["winner"] == "Tie":
+                continue  # skip ties
+            goal_id = r["goal_id"]
+            preferred_tag = r["winner"]
+            rejected_tag = [t for t in tags if t != preferred_tag][0]
+
+            preferred_run_id = r["run_ids"][preferred_tag]
+            rejected_run_id = r["run_ids"][rejected_tag]
+            preferred_score = r["avg_scores"][preferred_tag]
+            rejected_score = r["avg_scores"][rejected_tag]
+            dimension_scores = r["dimensions"]
+
+            self.memory.mrq.insert_or_update_mrq_sample(
+                goal_id=goal_id,
+                preferred_run_id=preferred_run_id,
+                rejected_run_id=rejected_run_id,
+                preferred_score=preferred_score,
+                rejected_score=rejected_score,
+                dimension_scores=dimension_scores,
+                source="pipeline_comparison",
+            )
+
+
+
         self.export_to_csv(results, tags)
         return results
     
@@ -188,3 +217,40 @@ class PipelineComparisonAgent(ScoringMixin, BaseAgent):
             averaged["overall"] = sum(averaged.values()) / len(averaged)
 
         return averaged
+
+    def _save_comparison_preference(self, goal_id, preferred_tag, rejected_tag, tag_run_map, avg_scores, score_map):
+        from co_ai.models.comparison_preference import ComparisonPreferenceORM
+
+        preferred_run_id = tag_run_map[preferred_tag].run_id
+        rejected_run_id = tag_run_map[rejected_tag].run_id
+
+        existing = (
+            self.memory.session.query(ComparisonPreferenceORM)
+            .filter_by(
+                goal_id=goal_id,
+                preferred_run_id=preferred_run_id,
+                rejected_run_id=rejected_run_id,
+                source="pipeline_comparison"
+            )
+            .first()
+        )
+
+        data = {
+            "goal_id": goal_id,
+            "preferred_tag": preferred_tag,
+            "rejected_tag": rejected_tag,
+            "preferred_run_id": preferred_run_id,
+            "rejected_run_id": rejected_run_id,
+            "preferred_score": avg_scores[preferred_tag],
+            "rejected_score": avg_scores[rejected_tag],
+            "dimension_scores": score_map,
+            "reason": f"{preferred_tag} outperformed {rejected_tag} ({avg_scores[preferred_tag]:.2f} > {avg_scores[rejected_tag]:.2f})",
+            "source": "pipeline_comparison"
+        }
+
+        if existing:
+            for key, value in data.items():
+                setattr(existing, key, value)
+        else:
+            preference = ComparisonPreferenceORM(**data)
+            self.memory.session.add(preference)
