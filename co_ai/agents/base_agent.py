@@ -319,7 +319,7 @@ class BaseAgent(ABC):
         hypothesis_dict["source"] = self.name
         hypothesis_dict["strategy"] = self.strategy
 
-        hypothesis = HypothesisORM(hypothesis_dict)
+        hypothesis = HypothesisORM(**hypothesis_dict)
         self.memory.session.add(hypothesis)
         self.memory.session.flush()  # ensures ID is available
 
