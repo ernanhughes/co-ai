@@ -3,10 +3,10 @@
 rule_mutation:
   name: rule_mutation
   
-
   target_agent: self_edit_generator
   options_file: config/rules/self_edit_generator_rule_options.yaml
   template_path: prompts/rule_mutation
+  rule_mutation_prompt: rule_mutation_prompt.txt
 
   model:
     name: ollama_chat/qwen3

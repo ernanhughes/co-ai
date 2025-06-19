@@ -56,7 +56,7 @@ class ScoringMixin:
             }
         """
         if evaluator:
-            result = evaluator.evaluate(hypothesis, context)
+            result = evaluator.evaluate(hypothesis.get("text"), context.get("goal", {}).get("goal_text", ""))
             final_score = result["score"]
             dimension_scores = result.get("dimensions", {
                 metrics: {

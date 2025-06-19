@@ -13,11 +13,11 @@ class RuleMutationAgent(BaseAgent):
 
     def __init__(self, cfg, memory, logger):
         super().__init__(cfg, memory, logger)
+        self.target_agent = cfg["target_agent"]
+        self.rule_mutation_prompt = cfg["rule_mutation_prompt"]
+        self.template_path = cfg["template_path"]
         self.options_config = RuleOptionsConfig.from_yaml(cfg["options_file"])
         self.rule_tuner = RuleTuner(memory, logger)
-        self.target_agent = cfg["target_agent"]
-        self.template_path = cfg["template_path"]
-        self.llm_config = cfg.get("llm", {"model": "gpt-4", "temperature": 0.3})
 
     async def run(self, context: dict) -> dict:
         # Load relevant symbolic rules based on goal and agent
@@ -45,15 +45,15 @@ class RuleMutationAgent(BaseAgent):
 
             recent_perf = self.memory.rule_effects.get_recent_performance(rule.id)
 
-            prompt = RuleTuner.build_rule_mutation_prompt(
-                self.template_path,
-                target=target,
-                current_attributes=current_attributes,
-                available_options=available_options,
-                recent_performance=recent_perf,
-            )
+            merged = {
+                "current_attributes":current_attributes,
+                "available_options":available_options,
+                "recent_performance":recent_perf,
+                **context,
+            }
 
-            response = self.call_llm(prompt, **self.llm_config)
+            mutation_prompt = self.prompt_loader.from_file(self.rule_mutation_prompt, self.cfg, merged)
+            response = self.call_llm(mutation_prompt, context)
             parsed = RuleTuner.parse_mutation_response(response)
 
             if not parsed["attribute"] or not parsed["new_value"]:
@@ -94,13 +94,13 @@ class RuleMutationAgent(BaseAgent):
             mutated_attrs[attr] = new_val
 
             new_rule = SymbolicRuleORM(
+                target="agent",
                 agent_name=rule.agent_name,
                 goal_type=rule.goal_type,
                 goal_category=rule.goal_category,
                 difficulty=rule.difficulty,
                 attributes=mutated_attrs,
                 source="mutation",
-                rationale=parsed["rationale"],
             )
             self.memory.symbolic_rules.insert(new_rule)
             self.logger.log(

@@ -3,6 +3,8 @@ defaults:
   - _self_
   - db: postgres
   - agents/survey
+  - agents/pipeline_judge
+  - agents/rule_mutation
   - agents/search_orchestrator
   - agents/knowledge_loader
   - agents/document_loader

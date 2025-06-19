@@ -23,9 +23,27 @@ class RuleOptionsConfig:
     def get_all_attribute_choices(self, target: str) -> dict:
         """Return dict of {attribute: [choices]} for a given target."""
         return {
-            k: v.get("choices", [])
-            for k, v in self.raw_config.get(target, {}).items()
+            k: v.get("choices", []) for k, v in self.raw_config.get(target, {}).items()
         }
+
+    def is_valid_change(self, target: str, attribute_path: str, value) -> bool:
+        """
+        Validates whether a given change is allowed according to the rule config.
+
+        Supports nested keys using dot notation (e.g., 'model.name').
+
+        Args:
+            target (str): The rule target (e.g., 'self_edit_generator').
+            attribute_path (str): The attribute path to validate (e.g., 'model.name').
+            value: The value to validate.
+
+        Returns:
+            bool: True if the value is allowed, False otherwise.
+        """
+        valid_choices = (
+            self.raw_config.get(target, {}).get(attribute_path, {}).get("choices", [])
+        )
+        return value in valid_choices
 
     @classmethod
     def from_yaml(cls, yaml_path: str):

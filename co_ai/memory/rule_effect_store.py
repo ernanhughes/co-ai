@@ -65,7 +65,7 @@ class RuleEffectStore:
         """Get the most recent rule applications."""
         return (
             self.db.query(RuleApplicationORM)
-            .order_by(RuleApplicationORM.created_at.desc())
+            .order_by(RuleApplicationORM.applied_at.desc())
             .limit(limit)
             .all()
         )
@@ -146,7 +146,7 @@ class RuleEffectStore:
             entries = (
                 self.db.query(RuleApplicationORM)
                 .filter(RuleApplicationORM.rule_id == rule_id)
-                .order_by(RuleApplicationORM.created_at.desc())
+                .order_by(RuleApplicationORM.applied_at.desc())
                 .limit(limit)
                 .all()
             )
@@ -154,7 +154,7 @@ class RuleEffectStore:
             return [
                 {
                     "score": e.post_score,
-                    "created_at": e.created_at.isoformat() if e.created_at else None,
+                    "applied_at": e.applied_at.isoformat() if e.applied_at else None,
                     "agent": e.agent_name,
                     "change_type": e.change_type,
                     "context_hash": e.context_hash,
