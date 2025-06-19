@@ -33,16 +33,26 @@ class MRQEvaluator(BaseEvaluator):
         ).unsqueeze(0)
         zsa = self.encoder(prompt_emb, output_emb)
         value = self.value_predictor(zsa).item()
+        value = self.normalize_score(value)
         return {
-            "score": self.normalize_score(value),
+            "score": value,
             "weight": 1.0,
             "latent_vector": zsa.squeeze(0).tolist(),
             "rationale": "Evaluated using MR.Q single-output scoring",
+            "dimensions": {
+                "mrq": {
+                    "score": value,
+                    "weight": 1.0,
+                    "rationale": "Evaluated using MR.Q single-output scoring",
+                }
+            },
         }
 
     def normalize_score(self, raw):
         # Ensure no divide by zero
-        range_ = self.max_score - self.min_score if self.max_score != self.min_score else 1.0
+        range_ = (
+            self.max_score - self.min_score if self.max_score != self.min_score else 1.0
+        )
         return round(100 * (raw - self.min_score) / range_, 2)
 
     def judge(self, goal, prompt, output_a, output_b):
@@ -85,7 +95,7 @@ class MRQEvaluator(BaseEvaluator):
         return preferred_output, scores
 
     def train_from_database(self, goal: str, cfg: dict):
-        samples = self.memory.mrq.get Nice that's all work I've got_training_pairs(
+        samples = self.memory.mrq.get_training_pairs(
             goal=goal, limit=cfg.get("limit", 1000)
         )
         if not samples:
@@ -129,8 +139,11 @@ class MRQEvaluator(BaseEvaluator):
         if values:
             self.min_score = min(values)
             self.max_score = max(values)
-            self.logger.log("MRQScoreBoundsUpdated", {
-                "min_score": self.min_score,
-                "max_score": self.max_score,
-                "count": len(values)
-            })
+            self.logger.log(
+                "MRQScoreBoundsUpdated",
+                {
+                    "min_score": self.min_score,
+                    "max_score": self.max_score,
+                    "count": len(values),
+                },
+            )

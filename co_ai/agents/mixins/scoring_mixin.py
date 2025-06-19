@@ -57,15 +57,23 @@ class ScoringMixin:
         """
         if evaluator:
             result = evaluator.evaluate(hypothesis.get("text"), context.get("goal", {}).get("goal_text", ""))
-            final_score = result["score"]
-            dimension_scores = result.get("dimensions", {
-                metrics: {
-                    "score": final_score,
-                    "weight": 1.0,
-                    "rationale": result.get("rationale", "")
+            self.logger.log("HypothesisScored", {
+                "hypothesis_id": hypothesis.get("id"),
+                "metrics": metrics,
+                "score": result.get("score"),
+                "rationale": result.get("rationale", ""),
+            }) 
+            if "dimensions" in result:
+                dimension_scores = result["dimensions"]
+            else:
+                dimension_scores = {
+                    metrics: {
+                        "score": result["score"],
+                        "weight": result.get("weight", 1.0),
+                        "rationale": result.get("rationale", "")
+                    }
                 }
-            })
-        else:
+        else: 
             scorer = self.get_scorer(metrics)
             dimension_scores = scorer.evaluate(
                 hypothesis=hypothesis,
