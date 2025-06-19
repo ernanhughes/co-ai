@@ -30,10 +30,10 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
 
     async def run(self, context: dict) -> dict:
         all_edits = []
-        # goal = context.get("goal")
-        # if isinstance(self.evaluator, MRQEvaluator):
-        #     self.logger.log("MRQTraining", {"type": "MRQ"})
-        #     self.evaluator.train_from_database(goal=goal.get("goal_text"), cfg=self.cfg)
+        goal = context.get("goal")
+        if isinstance(self.evaluator, MRQEvaluator):
+            self.logger.log("MRQTraining", {"type": "MRQ"})
+            self.evaluator.train_from_database(goal=goal.get("goal_text"), cfg=self.cfg)
 
 
         for prompt_file in self.prompt_files:
@@ -64,7 +64,7 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
             )
             hypothesis_dict = hypothesis.to_dict()
             context["prompt"]= prompt_text # we use thie to score in the evaluator
-            score = self.score_hypothesis(hypothesis_dict, context, metrics="seal")
+            score = self.score_hypothesis(hypothesis_dict, context, metrics="seal", evaluator=self.evaluator)
             all_edits.append({
                 "edit": response,
                 "strategy": strategy,

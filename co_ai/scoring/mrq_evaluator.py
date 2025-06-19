@@ -2,60 +2,80 @@ import torch
 from co_ai.evaluator.mrq_trainer import MRQTrainer
 from co_ai.scoring.base_evaluator import BaseEvaluator
 from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
-from co_ai.evaluator.mrq_trainer import MRQTrainer
 from co_ai.evaluator.text_encoder import TextEncoder
 from co_ai.models.sharpening_prediction import SharpeningPredictionORM
 
 
 class MRQEvaluator(BaseEvaluator):
-    def __init__(self, memory, logger, device="cpu"):
+    def __init__(self, memory, logger, device="cpu", dimensions=None):
         self.device = device
-        self.memory = memory  # memory provides get_embedding
+        self.memory = memory
         self.logger = logger
-        self.encoder = TextEncoder().to(self.device)
+
+        self.dimensions = dimensions or ["mrq"]
+        self.models = {}  # dimension -> (encoder, predictor)
+        self.trainers = {}  # dimension -> MRQTrainer
+        self.min_score_by_dim = {}
+        self.max_score_by_dim = {}
         self.value_predictor = HypothesisValuePredictor(512, 1024).to(self.device)
-        self.trainer = MRQTrainer(
-            memory=self.memory,
-            logger=self.logger,
-            value_predictor=self.value_predictor,
-            encoder=self.encoder,
-            device=self.device,
-        )
-        self.min_score = 0.0
-        self.max_score = 1.0
+        self.encoder = TextEncoder().to(self.device)
+
+        for dim in self.dimensions:
+            trainer = MRQTrainer(
+                memory=self.memory,
+                logger=self.logger,
+                value_predictor=self.value_predictor,
+                encoder=self.encoder,
+                device=self.device
+            )
+            self.models[dim] = (self.encoder, self.value_predictor)
+            self.trainers[dim] = trainer
+            self.min_score_by_dim[dim] = 0.0
+            self.max_score_by_dim[dim] = 1.0
 
     def evaluate(self, prompt: str, response: str) -> dict:
-        prompt_emb = torch.tensor(
-            self.memory.embedding.get_or_create(prompt), device=self.device
-        ).unsqueeze(0)
-        output_emb = torch.tensor(
-            self.memory.embedding.get_or_create(response), device=self.device
-        ).unsqueeze(0)
-        zsa = self.encoder(prompt_emb, output_emb)
-        value = self.value_predictor(zsa).item()
-        value = self.normalize_score(value)
+        dimensions = {}
+
+        for dim, (encoder, predictor) in self.models.items():
+            prompt_emb = torch.tensor(
+                self.memory.embedding.get_or_create(prompt), device=self.device
+            ).unsqueeze(0)
+            output_emb = torch.tensor(
+                self.memory.embedding.get_or_create(response), device=self.device
+            ).unsqueeze(0)
+
+            zsa = encoder(prompt_emb, output_emb)
+            value = predictor(zsa).item()
+            norm_score = self.normalize_score(value, dim)
+
+            dimensions[dim] = {
+                "score": norm_score,
+                "weight": 1.0,
+                "rationale": f"MR.Q model trained for {dim}"
+            }
+
+        final_score = round(
+            sum(d["score"] for d in dimensions.values()) / len(dimensions), 2
+        )
+
         return {
-            "score": value,
+            "score": final_score,
             "weight": 1.0,
-            "latent_vector": zsa.squeeze(0).tolist(),
-            "rationale": "Evaluated using MR.Q single-output scoring",
-            "dimensions": {
-                "mrq": {
-                    "score": value,
-                    "weight": 1.0,
-                    "rationale": "Evaluated using MR.Q single-output scoring",
-                }
-            },
+            "dimensions": dimensions,
+            "rationale": "Aggregated MR.Q dimensional scores"
         }
 
-    def normalize_score(self, raw):
-        # Ensure no divide by zero
-        range_ = (
-            self.max_score - self.min_score if self.max_score != self.min_score else 1.0
-        )
-        return round(100 * (raw - self.min_score) / range_, 2)
+    def normalize_score(self, raw, dim):
+        min_ = self.min_score_by_dim.get(dim, 0.0)
+        max_ = self.max_score_by_dim.get(dim, 1.0)
+        range_ = (max_ - min_) or 1.0
+        return round(100 * (raw - min_) / range_, 2)
 
     def judge(self, goal, prompt, output_a, output_b):
+        # Optional: Per-dimension judging could be added later
+        dim = self.dimensions[0]
+        encoder, predictor = self.models[dim]
+
         prompt_emb = torch.tensor(
             self.memory.embedding.get_or_create(prompt), device=self.device
         ).unsqueeze(0)
@@ -66,14 +86,13 @@ class MRQEvaluator(BaseEvaluator):
             self.memory.embedding.get_or_create(output_b), device=self.device
         ).unsqueeze(0)
 
-        zsa_a = self.encoder(prompt_emb, output_a_emb)
-        zsa_b = self.encoder(prompt_emb, output_b_emb)
+        zsa_a = encoder(prompt_emb, output_a_emb)
+        zsa_b = encoder(prompt_emb, output_b_emb)
 
-        value_a = self.value_predictor(zsa_a).item()
-        value_b = self.value_predictor(zsa_b).item()
+        value_a = predictor(zsa_a).item()
+        value_b = predictor(zsa_b).item()
 
         preferred_output = output_a if value_a >= value_b else output_b
-        scores = {"value_a": value_a, "value_b": value_b}
 
         if self.memory.mrq.log_evaluations():
             prediction = SharpeningPredictionORM(
@@ -87,48 +106,46 @@ class MRQEvaluator(BaseEvaluator):
                 value_a=value_a,
                 value_b=value_b,
             )
-
             self.memory.sharpening.insert_sharpening_prediction(
                 prediction.to_dict(), goal
             )
 
-        return preferred_output, scores
+        return preferred_output, {"value_a": value_a, "value_b": value_b}
 
     def train_from_database(self, goal: str, cfg: dict):
-        samples = self.memory.mrq.get_training_pairs(
-            goal=goal, limit=cfg.get("limit", 1000)
-        )
-        if not samples:
-            self.logger.log(
-                "MRQTrainingError",
-                {
-                    "error": "No training samples found for the given goal.",
-                    "goal": goal,
-                },
-            )
-            return
+        all_samples = self.memory.mrq.get_training_pairs_by_dimension()
 
-        self.update_score_bounds_from_data(samples)
-        dataloader = self.trainer.prepare_training_data(samples)
-        self.trainer.train(dataloader, cfg)
+        for dim, samples in all_samples.items():
+            if not samples:
+                continue
+
+            # Dynamically create trainer for unseen dimension
+            if dim not in self.trainers:
+                self.trainers[dim] = MRQTrainer(
+                    memory=self.memory,
+                    logger=self.logger,
+                    value_predictor=self.value_predictor,
+                    encoder=self.encoder,
+                    device=self.device,
+                )
+
+            self.update_score_bounds_from_data(samples, dim)
+            trainer = self.trainers[dim]
+            dataloader = trainer.prepare_training_data(samples)
+            trainer.train(dataloader, cfg)
 
     def train_from_context(self, context: dict, cfg: dict):
-        samples = context.get("mrq_training_pairs", [])
-        if not samples:
-            self.logger.log(
-                "MRQContextTrainingError",
-                {"error": "No training samples found in context."},
-            )
-            return
+        dim_samples = context.get("mrq_training_pairs_by_dimension", {})
 
-        self.update_score_bounds_from_data(samples)
-        dataloader = self.trainer.prepare_training_data(samples)
-        self.trainer.train(dataloader, cfg)
+        for dim, samples in dim_samples.items():
+            if not samples:
+                continue
+            self.update_score_bounds_from_data(samples, dim)
+            trainer = self.trainers[dim]
+            dataloader = trainer.prepare_training_data(samples)
+            trainer.train(dataloader, cfg)
 
-    def update_score_bounds_from_data(self, samples: list):
-        """
-        Scans training samples to update self.min_score and self.max_score based on value_a and value_b.
-        """
+    def update_score_bounds_from_data(self, samples: list, dim: str):
         values = []
         for sample in samples:
             if "value_a" in sample and "value_b" in sample:
@@ -137,13 +154,14 @@ class MRQEvaluator(BaseEvaluator):
                 values.append(sample["value"])
 
         if values:
-            self.min_score = min(values)
-            self.max_score = max(values)
+            self.min_score_by_dim[dim] = min(values)
+            self.max_score_by_dim[dim] = max(values)
             self.logger.log(
                 "MRQScoreBoundsUpdated",
                 {
-                    "min_score": self.min_score,
-                    "max_score": self.max_score,
+                    "dimension": dim,
+                    "min_score": self.min_score_by_dim[dim],
+                    "max_score": self.max_score_by_dim[dim],
                     "count": len(values),
                 },
             )

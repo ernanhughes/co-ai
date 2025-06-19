@@ -26,11 +26,12 @@ class MRQTrainer:
 
     def prepare_training_data(self, samples):
         inputs, labels = [], []
-        for item in samples:
+        total = len(samples)
+        for idx, item in enumerate(samples):
             prompt_emb = self.memory.embedding.get_or_create(item["prompt"])
             output_a_emb = self.memory.embedding.get_or_create(item["output_a"])
             output_b_emb = self.memory.embedding.get_or_create(item["output_b"])
-            preferred = item["preferred"]
+            preferred="a" if item["value_a"] >= item["value_b"] else "b"
 
             zsa_a = self.encoder(
                 torch.tensor(prompt_emb).unsqueeze(0).to(self.device),
@@ -44,6 +45,14 @@ class MRQTrainer:
             diff = zsa_a - zsa_b if preferred == "a" else zsa_b - zsa_a
             inputs.append(diff.squeeze(0).detach())
             labels.append(torch.tensor([1.0], device=self.device))
+
+            # Log progress every 100 samples
+            if (idx + 1) % 100 == 0 or (idx + 1) == total:
+                percent = round((idx + 1) / total * 100, 2)
+                print(
+                    f"Preparing training data: {idx + 1}/{total} samples ({percent}%)"
+                )
+
 
         dataset = TensorDataset(torch.stack(inputs), torch.stack(labels))
         return DataLoader(dataset, batch_size=16, shuffle=True)
