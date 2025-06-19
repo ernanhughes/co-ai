@@ -44,7 +44,8 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
                 },
                 context=context
             )
-            score = self.score_hypothesis(hypothesis, context, metrics="seal")
+            hypothesis_dict =hypothesis.to_dict()
+            score = self.score_hypothesis(hypothesis_dict, context, metrics="seal")
             context.setdefault("self_edits", []).append({
                 "edit": response,
                 "strategy": strategy,
