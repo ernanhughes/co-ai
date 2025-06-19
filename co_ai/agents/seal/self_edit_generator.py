@@ -45,7 +45,13 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
                 context=context
             )
             score = self.score_hypothesis(hypothesis, context, metrics="seal")
-            all_edits.append({"edit": response, "strategy": strategy, "score": score})
+            context.setdefault("self_edits", []).append({
+                "edit": response,
+                "strategy": strategy,
+                "score": score
+            })
+
+
             self.logger.log("EditGenerated", {"edit": response[:100], "strategy": strategy, "score": score})
 
         context.setdefault("self_edits", []).append({"edit", response})
