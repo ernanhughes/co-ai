@@ -4,7 +4,7 @@ defaults:
   - db: postgres
   - agents/survey
   - agents/search_orchestrator
-  - agents/knowledge_loader
+  - agents/rule_mutation
   - agents/document_loader
   - agents/paper_score
   - agents/literature
@@ -19,6 +19,7 @@ goal:
   goal_text: Improve an AI system’s ability to diagnose its own reasoning failures in complex decision-making tasks. The system should be able to identify faulty assumptions, reflect on its process, and revise future behavior accordingly.
   goal_type: "capability"
   goal_category: "self_reflection"
+  focus_area: "ai_research"
   strategy: "introspective_diagnostics"
   difficulty: "medium"
   expected_formats:
@@ -37,9 +38,10 @@ symbolic:
   metadata_match_mode: partial   # options: exact, partial, off
   allow_fallback: true           # if no ID matches, allow metadata fallback
 
+
 post_judgment:
   name: pipeline_judge
-  enabled: true
+  enabled: false
   cls: co_ai.agents.pipeline_judge.PipelineJudgeAgent
 
 paths:
@@ -64,8 +66,8 @@ pipeline:
   tag: "huggingface_related_papers import"
   description: "Import papers score and save them"
   stages:
-       - name: self_edit_generator
-         cls: co_ai.agents.seal.self_edit_generator.SelfEditGeneratorAgent
+       - name: rule_mutation
+         cls: co_ai.agents.seal.rule_mutation.RuleMutationAgent
          enabled: true
          iterations: 1
     #  - name: survey

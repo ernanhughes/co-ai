@@ -1,4 +1,4 @@
-# config/agents/self_edit_generator.yaml
+# config/agents/self_edit_generator_rules.yaml
 
 self_edit_generator:
   name: self_edit_generator

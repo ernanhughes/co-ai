@@ -27,3 +27,7 @@ class RuleOptionsConfig:
             for k, v in self.raw_config.get(target, {}).items()
         }
 
+    @classmethod
+    def from_yaml(cls, yaml_path: str):
+        """Alternative constructor that loads config from YAML file."""
+        return cls(yaml_path)

@@ -1,4 +1,4 @@
-# co_ai/agents/seal/self_edit_generator_agent.py
+# co_ai/agents/seal/self_edit_generator.py
 
 from co_ai.agents.base_agent import BaseAgent
 from co_ai.agents.mixins.scoring_mixin import ScoringMixin
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass
 class SelfEditGeneratorConfig:
-    prompt_file: str = "implication.j2"
+    prompt_file: str = "implication.txt"
     num_edits: int = 5
     model: str = "default"
     temperature: float = 0.7
@@ -30,13 +30,24 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
         all_edits = []
 
         for prompt_file in self.prompt_files:
-            prompt = self.prompt_loader.from_file(
+            prompt_text = self.prompt_loader.from_file(
                 prompt_file, config=self.cfg, context=context
             )
             self.logger.log("PromptFileLoaded", {"file": prompt_file})
-            response = self.call_llm(prompt, context)
-            print(f"Generated response: {response}...")
+            response = self.call_llm(prompt_text, context)
             strategy = prompt_file.replace(".txt", "")
+            self.memory.prompt_programs.insert(
+                {
+                    "pipeline_run_id": context.get("pipeline_run_id"),
+                    "goal": context.get("goal", {}).get("goal_text", ""),
+                    "strategy": strategy,
+                    "prompt_text": prompt_text,
+                    "hypothesis": response,
+                    "template": prompt_file,
+                    "mutation_type": strategy,
+                }
+            )
+            print(f"Generated response: {response}...")
             hypothesis = self.save_hypothesis(
                 {
                     "text": response,
@@ -44,16 +55,14 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
                 },
                 context=context
             )
-            hypothesis_dict =hypothesis.to_dict()
+            hypothesis_dict = hypothesis.to_dict()
             score = self.score_hypothesis(hypothesis_dict, context, metrics="seal")
-            context.setdefault("self_edits", []).append({
+            all_edits.append({
                 "edit": response,
                 "strategy": strategy,
                 "score": score
             })
-
-
             self.logger.log("EditGenerated", {"edit": response[:100], "strategy": strategy, "score": score})
 
-        context.setdefault("self_edits", []).append({"edit", response})
+        context["self_edits"] = all_edits
         return context

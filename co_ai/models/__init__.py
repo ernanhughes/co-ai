@@ -26,3 +26,4 @@ from .symbolic_rule import SymbolicRuleORM
 from .unified_mrq import UnifiedMRQModelORM
 from .document_section import DocumentSectionORM
 from .document_section_domain import DocumentSectionDomainORM
+from .prompt import PromptProgramORM

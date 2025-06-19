@@ -1,6 +1,5 @@
-# rule_options.yaml
-
-agent:
+# self_edit_generator_rule_options.yaml
+self_edit_generator:
   model.name:
     choices:
       - ollama_chat/qwen3
@@ -15,18 +14,3 @@ agent:
   mode:
     choices: ["draft", "enhance", "extend"]
     description: "Agent's operation mode when editing blog sections"
-
-prompt:
-  temperature:
-    choices: [0.2, 0.5, 0.8]
-    description: "Sampling temperature for prompt-based generation"
-
-  format:
-    choices: ["instruction", "cot", "rubric"]
-    description: "Prompting format for reasoning or generation"
-
-pipeline:
-  scoring_strategy:
-    choices: ["mrq", "llm", "svm"]
-    description: "Scoring strategy used to evaluate pipeline outputs"
-

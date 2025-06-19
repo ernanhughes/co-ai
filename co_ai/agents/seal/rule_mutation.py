@@ -1,67 +1,118 @@
-import statistics
-from dataclasses import dataclass
-
 from co_ai.agents.base_agent import BaseAgent
-from co_ai.agents.mixins.scoring_mixin import ScoringMixin
-from co_ai.constants import PIPELINE_RUN_ID
-from co_ai.models.rule_application import RuleApplicationORM
-from co_ai.models.symbolic_rule import SymbolicRuleORM
+from co_ai.rules.rule_tuner import RuleTuner
+from co_ai.rules.rule_options_config import RuleOptionsConfig
+from co_ai.rules.symbolic_rule_applier import SymbolicRuleApplier
+from co_ai.models import SymbolicRuleORM
 
 
-@dataclass
-class RuleMutationAgentConfig:
-    prompt_file: str = "rule_mutation.j2"
-    min_applications: int = 3
-    min_score_threshold: float = 6.5
-    model: str = "default"
-    temperature: float = 0.7
-    max_tokens: int = 512
+class RuleMutationAgent(BaseAgent):
+    """
+    Suggests and applies rule mutations using LLM guidance and a configurable set of allowable rule changes.
+    Ensures all mutations are valid, novel, and tracked.
+    """
 
-
-class RuleMutationAgent(ScoringMixin, BaseAgent):
-    def __init__(self, cfg, memory=None, logger=None, config: RuleMutationAgentConfig = RuleMutationAgentConfig()):
+    def __init__(self, cfg, memory, logger):
         super().__init__(cfg, memory, logger)
-        self.config = config
+        self.options_config = RuleOptionsConfig.from_yaml(cfg["options_file"])
+        self.rule_tuner = RuleTuner(memory, logger)
+        self.target_agent = cfg["target_agent"]
+        self.template_path = cfg["template_path"]
+        self.llm_config = cfg.get("llm", {"model": "gpt-4", "temperature": 0.3})
 
     async def run(self, context: dict) -> dict:
-        self.logger.log("RuleMutationStart", {"run_id": context.get(PIPELINE_RUN_ID)})
+        # Load relevant symbolic rules based on goal and agent
+        applicable_rules = [
+            r
+            for r in self.rule_applier.rules
+            if r.agent_name == self.target_agent
+        ]
 
-        rule_apps = self.memory.session.query(RuleApplicationORM).all()
-        grouped = self._group_by_rule(rule_apps)
+        if not applicable_rules:
+            self.logger.log("NoRulesToMutate", {"agent": context.get("agent_name")})
+            context["status"] = "no_rules_found"
+            return context
 
-        for rule_id, applications in grouped.items():
-            if len(applications) < self.config.min_applications:
+        mutated_rules = []
+
+        for rule in applicable_rules:
+            target = rule.agent_name
+            current_attributes = rule.attributes or {}
+
+            available_options = self.options_config.get_options_for(target)
+            if not available_options:
+                self.logger.log("NoAvailableMutations", {"target": target})
                 continue
 
-            scores = [app.result_score for app in applications if app.result_score is not None]
-            if not scores or statistics.mean(scores) >= self.config.min_score_threshold:
-                continue  # Skip well-performing rules
+            recent_perf = self.memory.rule_effects.get_recent_performance(rule.id)
 
-            rule = self.memory.session.query(SymbolicRuleORM).get(rule_id)
-            feedback = "\n".join([app.explanation or "" for app in applications[:3]])
-
-            prompt = self.prompt_loader.from_file(
-                self.config.prompt_file,
-                config=self.cfg,
-                context={
-                    "rule": rule.to_dict(),
-                    "feedback": feedback,
-                    "scores": scores[:5]
-                },
+            prompt = RuleTuner.build_rule_mutation_prompt(
+                self.template_path,
+                target=target,
+                current_attributes=current_attributes,
+                available_options=available_options,
+                recent_performance=recent_perf,
             )
 
-            self.logger.log("MutationPromptBuilt", {"rule_id": rule_id})
-            response = self.call_llm(prompt, context)
-            self.logger.log("RuleMutated", {"rule_id": rule_id, "mutation": response[:150]})
+            response = self.call_llm(prompt, **self.llm_config)
+            parsed = RuleTuner.parse_mutation_response(response)
 
-            # You could optionally save the mutation as a new rule
-            # self._save_mutated_rule(rule, response.strip())
+            if not parsed["attribute"] or not parsed["new_value"]:
+                self.logger.log(
+                    "MutationParseError", {"rule_id": rule.id, "response": response}
+                )
+                continue
 
-        self.logger.log("RuleMutationEnd", {"run_id": context.get(PIPELINE_RUN_ID)})
+            attr = parsed["attribute"]
+            new_val = parsed["new_value"]
+
+            # Validate the mutation is legal
+            if not self.options_config.is_valid_change(target, attr, new_val):
+                self.logger.log(
+                    "InvalidRuleMutation",
+                    {
+                        "rule_id": rule.id,
+                        "attribute": attr,
+                        "value": new_val,
+                    },
+                )
+                continue
+
+            # Deduplicate
+            if self.memory.symbolic_rules.exists_similar(rule, attr, new_val):
+                self.logger.log(
+                    "RuleMutationDuplicateSkipped",
+                    {
+                        "rule_id": rule.id,
+                        "attribute": attr,
+                        "value": new_val,
+                    },
+                )
+                continue
+
+            # Construct and save new rule
+            mutated_attrs = dict(current_attributes)
+            mutated_attrs[attr] = new_val
+
+            new_rule = SymbolicRuleORM(
+                agent_name=rule.agent_name,
+                goal_type=rule.goal_type,
+                goal_category=rule.goal_category,
+                difficulty=rule.difficulty,
+                attributes=mutated_attrs,
+                source="mutation",
+                rationale=parsed["rationale"],
+            )
+            self.memory.symbolic_rules.insert(new_rule)
+            self.logger.log(
+                "RuleMutationApplied",
+                {
+                    "original_rule_id": rule.id,
+                    "new_rule": new_rule.to_dict(),
+                },
+            )
+            mutated_rules.append(new_rule)
+
+        context["mutated_rules"] = [r.to_dict() for r in mutated_rules]
+        context["total"] = len(mutated_rules)
+
         return context
-
-    def _group_by_rule(self, rule_apps):
-        grouped = {}
-        for app in rule_apps:
-            grouped.setdefault(app.rule_id, []).append(app)
-        return grouped

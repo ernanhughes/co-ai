@@ -2,10 +2,28 @@
 
 rule_mutation:
   name: rule_mutation
+  
+
+  target_agent: self_edit_generator
+  options_file: config/rules/self_edit_generator_rule_options.yaml
+  template_path: prompts/rule_mutation
+
   model:
     name: ollama_chat/qwen3
     api_base: http://localhost:11434
     api_key: null
+
+  symbolic:
+    enabled: true
+    rules_file: "config/rules/self_edit_generator_rules.yaml"
+    enable_db_rules: false # load rules from the database
+    match_priority:
+      - goal_id
+      - pipeline_run_id
+      - metadata
+    metadata_match_mode: partial   # options: exact, partial, off
+    allow_fallback: true           # if no ID matches, allow metadata fallback
+
 
   # Required keys for the agent ot effectively process the context
   required_keys: ["goal", "hypotheses"]   # add nodes
