@@ -12,8 +12,8 @@ Key Functions:
 - apply clipping to keep scores within [0, 1] before scaling
 - compute a weighted average as the final score
 - used by ScoringManager to align MR.Q scores with other evaluators
-
-Intended for use in the Co AI scoring pipeline to support adaptive tuning and fair comparisons.
+All right let's stay away for a bit mine
+Intended for use in the scoring pipeline to support adaptive tuning and fair comparisons.
 """
 
 

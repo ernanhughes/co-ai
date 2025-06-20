@@ -56,7 +56,7 @@ class ScoringMixin:
             }
         """
         if evaluator:
-            result = evaluator.evaluate(hypothesis.get("text"), context.get("goal", {}).get("goal_text", ""))
+            result = evaluator.evaluate(hypothesis, context.get("goal", {}).get("goal_text", ""))
             self.logger.log("HypothesisScored", {
                 "hypothesis_id": hypothesis.get("id"),
                 "metrics": metrics,
