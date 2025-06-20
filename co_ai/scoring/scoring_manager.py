@@ -2,12 +2,12 @@ import re
 from pathlib import Path
 
 import yaml
-from jinja2 import Template
 from sqlalchemy.orm import Session
 
 from co_ai.models.evaluation import EvaluationORM
 from co_ai.models.score import ScoreORM
 from co_ai.models.score_dimension import ScoreDimensionORM
+from co_ai.prompts.prompt_renderer import PromptRenderer
 from co_ai.scoring.calculations.weighted_average import \
     WeightedAverageCalculator
 from co_ai.scoring.score_display import ScoreDisplay
@@ -20,7 +20,8 @@ class ScoringManager:
         self.cfg = cfg
         self.logger = logger
         self.memory = memory
-        self.output_format = cfg.get("output_format", "simple")  # default 
+        self.output_format = cfg.get("output_format", "simple")  # default
+        self.prompt_renderer = PromptRenderer(prompt_loader, cfg)
         self.calculator = calculator or WeightedAverageCalculator()
 
     @classmethod
@@ -134,19 +135,9 @@ class ScoringManager:
         results = {}
         for dim in self.dimensions:
             # Load prompt using prompt_loader and dimension-specific CoR template
-            if self.prompt_loader and dim.get("file"):
-                prompt = self.prompt_loader.from_file(
-                    file_name=dim["file"],
-                    config=self.cfg,
-                    context={"hypothesis": hypothesis, **context},
-                )
-            elif dim.get("prompt_template"):
-                prompt = Template(dim["prompt_template"]).render(
-                    hypothesis=hypothesis, **context
-                )
-            else:
-                raise ValueError(f"No prompt found for dimension {dim['name']}")
-
+            prompt = self.prompt_renderer.render(
+                dim, {"hypothesis": hypothesis, **context}
+            )
             response = llm_fn(prompt, context=context)
             try:
                 score = dim["parser"](response)
@@ -179,20 +170,9 @@ class ScoringManager:
 
         results = {}
         for dim in self.dimensions:
-            if self.prompt_loader and dim.get("file"):
-                prompt = self.prompt_loader.from_file(
-                    file_name=dim["file"],
-                    config=self.cfg,
-                    context={
-                        **context,
-                        "goal": context.get("goal"),
-                        "hypothesis": hypothesis,
-                    },
-                )
-            else:
-                prompt = Template(dim["prompt_template"]).render(
-                    hypothesis=hypothesis, **context
-                )
+            prompt = self.prompt_renderer.render(
+                dim, {"hypothesis": hypothesis, **context}
+            )
 
             response = llm_fn(prompt, context=context)
             score = dim["parser"](response)
@@ -214,7 +194,7 @@ class ScoringManager:
         pipeline_run_id = context.get("pipeline_run_id")
         hypothesis_id = hypothesis.get("id")
 
-        weighted_score = self.calculator.compute(results)
+        weighted_score = self.calculator.calculate(results)
 
         scores_json = {
             "stage": self.cfg.get("stage", "review"),
@@ -261,4 +241,3 @@ class ScoringManager:
         )
 
         ScoreDisplay.show(results, weighted_score)
-
