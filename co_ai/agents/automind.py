@@ -1,11 +1,11 @@
 from co_ai.agents.ats.solution_node import SolutionNode
 from co_ai.agents.base_agent import BaseAgent
 from co_ai.agents.judge import JudgeAgent
-from co_ai.scoring.scoring_manager import ScoringManager
 from co_ai.components.coding_strategy import SelfAdaptiveCoder
 from co_ai.components.search_policy import TreeSearchPolicy
 from co_ai.components.solution_tree import SolutionTree
 from co_ai.memory.embedding_store import EmbeddingStore
+from co_ai.scoring.scoring_manager import ScoringManager
 
 
 class AutoMindAgent(BaseAgent):

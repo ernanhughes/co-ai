@@ -1,8 +1,9 @@
 # co_ai/agents/seal/self_edit_generator.py
 
+from dataclasses import dataclass
+
 from co_ai.agents.base_agent import BaseAgent
 from co_ai.agents.mixins.scoring_mixin import ScoringMixin
-from dataclasses import dataclass
 from co_ai.scoring.mrq_scorer import MRQScorer
 
 

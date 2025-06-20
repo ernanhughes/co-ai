@@ -9,8 +9,9 @@ import litellm
 
 from co_ai.constants import (AGENT, API_BASE, API_KEY, BATCH_SIZE, CONTEXT,
                              GOAL, HYPOTHESES, INPUT_KEY, MODEL, NAME,
-                             OUTPUT_KEY, PROMPT_MATCH_RE, PROMPT_PATH,
-                             SAVE_CONTEXT, SAVE_PROMPT, SOURCE, STRATEGY, PIPELINE, PIPELINE_RUN_ID)
+                             OUTPUT_KEY, PIPELINE, PIPELINE_RUN_ID,
+                             PROMPT_MATCH_RE, PROMPT_PATH, SAVE_CONTEXT,
+                             SAVE_PROMPT, SOURCE, STRATEGY)
 from co_ai.logs import JSONLogger
 from co_ai.models import PromptORM
 from co_ai.prompts import PromptLoader
@@ -308,8 +309,8 @@ class BaseAgent(ABC):
         Central method to save hypotheses and track document section links.
         """
         from co_ai.models.hypothesis import HypothesisORM
-        from co_ai.models.hypothesis_document_section import HypothesisDocumentSectionORM
-
+        from co_ai.models.hypothesis_document_section import \
+            HypothesisDocumentSectionORM
 
         # Ensure metadata is set if not already in the dict
         goal = context.get(GOAL, {})

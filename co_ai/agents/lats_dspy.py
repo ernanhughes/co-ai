@@ -5,14 +5,15 @@ from collections import defaultdict
 import dspy
 from dspy import (BootstrapFewShot, Example, InputField, OutputField, Predict,
                   Signature)
+
 from co_ai.agents.base_agent import BaseAgent
 from co_ai.agents.mixins.scoring_mixin import ScoringMixin
 from co_ai.agents.proximity import ProximityAgent
 from co_ai.agents.rule_tuner import RuleTunerAgent
 from co_ai.agents.unified_mrq import UnifiedMRQAgent
 from co_ai.constants import GOAL
-from co_ai.utils.graph_tools import (build_mermaid_graph,
-                                     compare_graphs, save_mermaid_to_file)
+from co_ai.utils.graph_tools import (build_mermaid_graph, compare_graphs,
+                                     save_mermaid_to_file)
 
 
 class TraceStep(Signature):

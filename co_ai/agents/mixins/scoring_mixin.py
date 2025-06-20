@@ -1,5 +1,5 @@
-from co_ai.scoring.scoring_manager import ScoringManager
 from co_ai.scoring.base_evaluator import BaseEvaluator
+from co_ai.scoring.scoring_manager import ScoringManager
 
 
 class ScoringMixin:

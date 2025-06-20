@@ -2,6 +2,7 @@
 
 import re
 from string import Template
+
 from co_ai.scoring.base_scorer import BaseScorer
 
 

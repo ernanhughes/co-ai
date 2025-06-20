@@ -1,8 +1,8 @@
 from co_ai.agents.base_agent import BaseAgent
-from co_ai.rules.rule_tuner import RuleTuner
-from co_ai.rules.rule_options_config import RuleOptionsConfig
-from co_ai.rules.symbolic_rule_applier import SymbolicRuleApplier
 from co_ai.models import SymbolicRuleORM
+from co_ai.rules.rule_options_config import RuleOptionsConfig
+from co_ai.rules.rule_tuner import RuleTuner
+from co_ai.rules.symbolic_rule_applier import SymbolicRuleApplier
 
 
 class RuleMutationAgent(BaseAgent):

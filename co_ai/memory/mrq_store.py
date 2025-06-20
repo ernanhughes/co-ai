@@ -1,5 +1,6 @@
 # stores/mrq_store.py
 import json
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from sqlalchemy import text
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from co_ai.models import (MRQMemoryEntryORM, MRQPreferencePairORM,
                           ReflectionDeltaORM)
-from collections import defaultdict
+
 
 class MRQStore:
     def __init__(self, cfg: dict, session: Session, logger=None):

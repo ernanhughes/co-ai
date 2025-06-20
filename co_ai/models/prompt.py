@@ -1,12 +1,13 @@
 # models/prompt.py
+import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import (JSON, Boolean, Float, Column, DateTime, ForeignKey, Integer,
-                        String, Text)
+from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
+                        Integer, String, Text)
 from sqlalchemy.orm import relationship
 
 from co_ai.models.base import Base
-import uuid
+
 
 class PromptORM(Base):
     __tablename__ = "prompts"

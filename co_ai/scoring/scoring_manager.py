@@ -4,13 +4,14 @@ from pathlib import Path
 import yaml
 from jinja2 import Template
 from sqlalchemy.orm import Session
-from tabulate import tabulate
 
 from co_ai.models.evaluation import EvaluationORM
 from co_ai.models.score import ScoreORM
 from co_ai.models.score_dimension import ScoreDimensionORM
+from co_ai.scoring.calculations.weighted_average import \
+    WeightedAverageCalculator
 from co_ai.scoring.score_display import ScoreDisplay
-from co_ai.scoring.calculations.base_calculator import WeightedAverageCalculator
+
 
 class ScoringManager:
     def __init__(self, dimensions, prompt_loader, cfg, logger, memory, calculator=None):

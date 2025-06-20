@@ -1,6 +1,7 @@
 # co_ai/scoring/score_display.py
 from tabulate import tabulate
 
+
 class ScoreDisplay:
     @staticmethod
     def show(results, weighted_score):

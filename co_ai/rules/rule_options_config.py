@@ -1,5 +1,6 @@
 import yaml
 
+
 class RuleOptionsConfig:
     def __init__(self, yaml_path: str):
         with open(yaml_path, "r") as f:

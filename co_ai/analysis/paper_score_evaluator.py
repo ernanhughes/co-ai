@@ -1,8 +1,8 @@
 # co_ai/scoring/paper_score_evaluator.py
 from textwrap import wrap
 
-from co_ai.scoring.scoring_manager import ScoringManager
 from co_ai.models import EvaluationORM, ScoreORM
+from co_ai.scoring.scoring_manager import ScoringManager
 
 
 class PaperScoreEvaluator(ScoringManager):

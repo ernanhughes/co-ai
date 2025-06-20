@@ -1,9 +1,11 @@
 import torch
-from co_ai.evaluator.mrq_trainer import MRQTrainer
+
 from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from co_ai.evaluator.mrq_trainer import MRQTrainer
 from co_ai.evaluator.text_encoder import TextEncoder
 from co_ai.models.sharpening_prediction import SharpeningPredictionORM
 from co_ai.scoring.base_scorer import BaseScorer
+
 
 class MRQScorer(BaseScorer):
     def __init__(self, memory, logger, device="cpu", dimensions=None):

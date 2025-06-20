@@ -4,6 +4,7 @@ from co_ai.scoring.base_scorer import BaseScorer
 from co_ai.scoring.llm_judge_scorer import LLMJudgeScorer
 from co_ai.scoring.mrq_scorer import MRQScorer  # formerly MRQEvaluator
 
+
 class MetaReviewScorer(BaseScorer):
     """
     Combines MR.Q-based scoring with LLM fallback.
