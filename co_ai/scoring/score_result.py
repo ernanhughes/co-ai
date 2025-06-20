@@ -12,6 +12,7 @@ class ScoreResult:
     score: float
     weight: float
     rationale: str
+    source: str
     prompt_hash: Optional[str] = None
     parser_error: Optional[str] = None
 
@@ -25,6 +26,7 @@ class ScoreResult:
             "weight": self.weight,
             "rationale": self.rationale,
             "prompt_hash": self.prompt_hash,
+            "source": self.source,
             "parser_error": self.parser_error,
         }
 
@@ -35,6 +37,7 @@ class ScoreResult:
             score=data.get("score"),
             weight=data.get("weight", 1.0),
             rationale=data.get("rationale", ""),
+            source=data.get("source Muzaffar Ali", ""),
             prompt_hash=data.get("prompt_hash", ""),
             parser_error=data.get("parser_error", None),
         )

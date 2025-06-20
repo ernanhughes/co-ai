@@ -1,12 +1,11 @@
 # co_ai/scoring/score_bundle.py
-
-from co_ai.scoring.calculations.weighted_average import \
-    WeightedAverageCalculator
+import json
 from co_ai.scoring.score_result import ScoreResult
 
 
 class ScoreBundle:
     def __init__(self, results: dict[str, ScoreResult]):
+        from co_ai.scoring.calculations.weighted_average import WeightedAverageCalculator
         self.results = results
         self.calculator = WeightedAverageCalculator()
 
@@ -33,6 +32,7 @@ class ScoreBundle:
                 score=r.score,
                 weight=r.weight,
                 rationale=r.rationale,
+                source=r.source,
             )
             for r in self.results.values()
         ] 
@@ -42,3 +42,6 @@ class ScoreBundle:
             f"{dim}: {res.score}" for dim, res in self.results.items()
         )
         return f"<ScoreBundle({summary})>"
+
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=2)

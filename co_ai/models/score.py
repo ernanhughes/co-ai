@@ -16,8 +16,7 @@ class ScoreORM(Base):
     weight = Column(Float)
     rationale = Column(Text)
     prompt_hash = Column(Text)
-    source = Column(Text)
-    
+    source = Column(Text, default="llm")    
 
     evaluation = relationship("EvaluationORM", back_populates="dimension_scores")
 

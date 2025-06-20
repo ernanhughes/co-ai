@@ -36,8 +36,7 @@ class PipelineJudgeAgent(ScoringMixin, BaseAgent):
                 "HypothesisJudged",
                 {
                     "hypothesis_id": hypo.get("id"),
-                    "score": score_result.get("score"),
-                    "details": score_result.get("details", {})
+                    "score": score_result.to_dict()
                 }
             )
         self.report_rule_analytics(context)

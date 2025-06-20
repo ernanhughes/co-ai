@@ -27,14 +27,14 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
         super().__init__(cfg, memory, logger)
         self.config = config
         self.prompt_files = self.cfg.get("prompt_files", [])
-        self.evaluator = MRQScorer(memory=self.memory, logger=self.logger, device=self.cfg.get("device", "cpu"))
 
     async def run(self, context: dict) -> dict:
         all_edits = []
-        if isinstance(self.evaluator, MRQScorer):
-            self.logger.log("MRQTraining", {"type": "MRQ"})
-            self.evaluator.train_from_database(cfg=self.cfg)
 
+        # scorer = self.get_scorer(stage="seal")
+        # dimensions = scorer.get_dimensions()
+        # evaluator = MRQScorer(self.cfg, memory=self.memory, logger=self.logger, dimensions=dimensions)
+        # evaluator.train_from_database(cfg=self.cfg)
 
         for prompt_file in self.prompt_files:
             prompt_text = self.prompt_loader.from_file(
@@ -65,11 +65,11 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
             hypothesis_dict = hypothesis.to_dict()
             context.setdefault("hypotheses", []).append(hypothesis_dict)
             context["prompt"]= prompt_text # we use thie to score in the evaluator
-            score = self.score_hypothesis(hypothesis_dict, context, metrics="seal", evaluator=self.evaluator)
+            score = self.score_hypothesis(hypothesis_dict, context, metrics="seal")
             all_edits.append({
                 "edit": response,
                 "strategy": strategy,
-                "score": score
+                "score": score.to_dict()
             })
             self.logger.log("EditGenerated", {"edit": response[:100], "strategy": strategy, "score": score})
 

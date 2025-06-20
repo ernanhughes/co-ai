@@ -5,13 +5,17 @@ from co_ai.evaluator.mrq_trainer import MRQTrainer
 from co_ai.evaluator.text_encoder import TextEncoder
 from co_ai.models.sharpening_prediction import SharpeningPredictionORM
 from co_ai.scoring.base_scorer import BaseScorer
+from co_ai.scoring.score_result import ScoreResult
+from co_ai.scoring.score_bundle import ScoreBundle
+from co_ai.scoring.scoring_manager import ScoringManager
 
 
 class MRQScorer(BaseScorer):
-    def __init__(self, memory, logger, device="cpu", dimensions=None):
-        self.device = device
+    def __init__(self, cfg: dict, memory, logger, dimensions=None):
+        self.cfg = cfg
         self.memory = memory
         self.logger = logger
+        self.device = cfg.get("device", "cpu")
 
         self.dimensions = dimensions or ["mrq"]
         self.models = {}  # dimension -> (encoder, predictor)
@@ -27,47 +31,78 @@ class MRQScorer(BaseScorer):
                 logger=self.logger,
                 value_predictor=self.value_predictor,
                 encoder=self.encoder,
-                device=self.device
+                device=self.device,
             )
             self.models[dim] = (self.encoder, self.value_predictor)
             self.trainers[dim] = trainer
             self.min_score_by_dim[dim] = 0.0
             self.max_score_by_dim[dim] = 1.0
 
-
-    def score(self, goal: dict, hypothesis: dict, dimensions: list[str]) -> dict:
+    def score(self, goal: dict, hypothesis: dict, dimensions: list[str]) -> ScoreBundle:
         """
         Scores a hypothesis using MR.Q on the specified dimensions.
-        Returns a dictionary mapping dimension names to score/rationale/weight.
+        Returns a dictionary mapping dimension names to ScoreResult instances.
         """
-        results = {}
+        results = []
         for dim in dimensions:
-            # Dummy logic — replace with real scoring logic
             score = self._estimate_score(goal, hypothesis, dim)
             rationale = f"MRQ estimated score for {dim}."
 
-            self.logger.log("MRQDimensionEvaluated", {
-                "dimension": dim,
-                "score": score,
-                "rationale": rationale
-            })
+            self.logger.log(
+                "MRQDimensionEvaluated",
+                {"dimension": dim, "score": score, "rationale": rationale},
+            )
 
-            results[dim] = {
-                "score": score,
-                "rationale": rationale,
-                "weight": 1.0
-            }
+            results.append(ScoreResult(
+                dimension=dim,
+                score=score,
+                rationale=rationale,
+                weight=1.0,
+                source="mrq",
+            ))
 
-        return results
+        final_score = round(sum(d.score for d in results) / len(results), 2)
 
-    def _estimate_score(self, goal, hypothesis, dimension):
-        # Placeholder logic — real MR.Q logic would access training data or regressors
-        return 3.0  # Mock value for now
+        bundle = ScoreBundle(results={r.dimension: r for r in results})
+        ScoringManager.save_score_to_memory(
+            bundle,
+            hypothesis,
+            cfg=self.cfg,
+            memory=self.memory,
+            logger=self.logger,
+            source="mrq",
+        )
+        return bundle
 
+    def _estimate_score(self, goal: dict, hypothesis: dict, dimension: str) -> float:
+        print(f"Estimating score for dimension: {dimension}")
+        if dimension not in self.models:
+            raise ValueError(f"Dimension '{dimension}' not found in MRQ models.")
+        encoder, predictor = self.models[dimension]
 
-    def evaluate(self, prompt: str, response: str) -> dict:
-        dimensions = {}
+        prompt_text = goal.get("prompt") or goal.get("text") or ""
+        response_text = hypothesis.get("response") or hypothesis.get("text") or ""
 
+        # Get embeddings
+        prompt_emb = torch.tensor(
+            self.memory.embedding.get_or_create(prompt_text), device=self.device
+        ).unsqueeze(0)
+
+        response_emb = torch.tensor(
+            self.memory.embedding.get_or_create(response_text), device=self.device
+        ).unsqueeze(0)
+
+        # Encode and predict value
+        zsa = encoder(prompt_emb, response_emb)
+        raw_score = predictor(zsa).item()
+
+        # Normalize to 0–100 scale
+        norm_score = self.normalize_score(raw_score, dimension)
+        return norm_score
+
+    def evaluate(self, prompt: str, response: str) -> ScoreBundle:
+        # Evaluate each dimension using the trained models
+        results = []
         for dim, (encoder, predictor) in self.models.items():
             prompt_emb = torch.tensor(
                 self.memory.embedding.get_or_create(prompt), device=self.device
@@ -80,22 +115,28 @@ class MRQScorer(BaseScorer):
             value = predictor(zsa).item()
             norm_score = self.normalize_score(value, dim)
 
-            dimensions[dim] = {
-                "score": norm_score,
-                "weight": 1.0,
-                "rationale": f"MR.Q model trained for {dim}"
-            }
+            results.append(
+                ScoreResult(
+                    dimension=dim,
+                    score=norm_score,
+                    weight=1.0,
+                    rationale=f"MR.Q model trained for {dim}",
+                    source="mrq",
+                )
+            )
 
-        final_score = round(
-            sum(d["score"] for d in dimensions.values()) / len(dimensions), 2
+        final_score = round(sum(d.score for d in results) / len(results), 2)
+
+        bundle = ScoreBundle(results={r.dimension: r for r in results})
+        ScoringManager.save_score_to_memory(
+            bundle,
+            response,
+            cfg=self.cfg,
+            memory=self.memory,
+            logger=self.logger,
+            source="mrq",
         )
-
-        return {
-            "score": final_score,
-            "weight": 1.0,
-            "dimensions": dimensions,
-            "rationale": "Aggregated MR.Q dimensional scores"
-        }
+        return bundle
 
     def normalize_score(self, raw, dim):
         min_ = self.min_score_by_dim.get(dim, 0.0)

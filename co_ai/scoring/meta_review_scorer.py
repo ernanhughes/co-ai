@@ -18,7 +18,7 @@ class MetaReviewScorer(BaseScorer):
         self.cfg = cfg or {}
         self.use_llm_fallback = fallback_to_llm
 
-        self.mrq_scorer = MRQScorer(memory, logger, cfg)
+        self.mrq_scorer = MRQScorer(cfg, memory, logger)
         self.llm_scorer = LLMJudgeScorer(memory, logger, cfg)
 
     def score(self, goal, hypothesis, dimensions):

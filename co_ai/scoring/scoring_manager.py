@@ -14,7 +14,6 @@ from co_ai.scoring.calculations.weighted_average import \
 from co_ai.scoring.score_bundle import ScoreBundle
 from co_ai.scoring.score_display import ScoreDisplay
 from co_ai.scoring.score_result import ScoreResult
-import hashlib
 
 class ScoringManager:
     def __init__(self, dimensions, prompt_loader, cfg, logger, memory, calculator=None, dimension_filter_fn=None):
@@ -51,7 +50,7 @@ class ScoringManager:
 
     @classmethod
     def from_db(
-        cls, session: Session, stage: str, prompt_loader=None, agent_config=None
+        cls, session: Session, stage: str, prompt_loader=None, cfg=None, logger=None, memory=None
     ):
         rows = session.query(ScoreDimensionORM).filter_by(stage=stage).all()
         dimensions = [
@@ -65,7 +64,11 @@ class ScoringManager:
             }
             for row in rows
         ]
-        return cls(dimensions, prompt_loader=prompt_loader, agent_config=agent_config)
+        return cls(dimensions, prompt_loader=prompt_loader, cfg=cfg, logger=logger, memory=memory)
+
+    def get_dimensions(self):
+        return [d["name"] for d in self.dimensions]
+
 
     @classmethod
     def from_file(cls, filepath: str, prompt_loader, cfg, logger, memory):
@@ -186,6 +189,7 @@ class ScoringManager:
                 weight=dim["weight"],
                 rationale=response,
                 prompt_hash=prompt_hash,
+                source="llm",
             )
             results.append(result)
 
@@ -198,22 +202,24 @@ class ScoringManager:
             )
 
         bundle = ScoreBundle(results={r.dimension: r for r in results})
-        self.save_score_to_memory(bundle, hypothesis, context)
-        return bundle.to_dict()
+        self.save_score_to_memory(bundle, hypothesis, context, self.cfg, self.memory, self.logger)
+        return bundle
 
     def handle_score_error(self, dim, response, error):
         if self.cfg.get("fail_silently", True):
             return 0.0
         raise ValueError(f"Failed to parse score {response} for {dim['name']}: {error}")
 
-    def save_score_to_memory(self, bundle: ScoreBundle, hypothesis, context):
+    @staticmethod
+    def save_score_to_memory(bundle, hypothesis, context, cfg, memory, logger, source="ScoreEvaluator"):
+        
         goal = context.get("goal")
         pipeline_run_id = context.get("pipeline_run_id")
         hypothesis_id = hypothesis.get("id")
-        weighted_score = self.calculator.calculate(bundle.to_dict())
+        weighted_score = bundle.calculator.calculate(bundle)
 
         scores_json = {
-            "stage": self.cfg.get("stage", "review"),
+            "stage": cfg.get("stage", "review"),
             "dimensions": bundle.to_dict(),
             "final_score": round(weighted_score, 2),
         }
@@ -222,31 +228,32 @@ class ScoringManager:
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
             hypothesis_id=hypothesis_id,
-            agent_name=self.cfg.get("name"),
-            model_name=self.cfg.get("model", {}).get("name"),
-            evaluator_name=self.cfg.get("evaluator", "ScoreEvaluator"),
-            strategy=self.cfg.get("strategy"),
-            reasoning_strategy=self.cfg.get("reasoning_strategy"),
+            agent_name=cfg.get("name"),
+            model_name=cfg.get("model", {}).get("name"),
+            evaluator_name=cfg.get("evaluator", "ScoreEvaluator"),
+            strategy=cfg.get("strategy"),
+            reasoning_strategy=cfg.get("reasoning_strategy"),
             scores=scores_json,
-            extra_data={"source": "ScoreEvaluator"},
+            extra_data={"source": source},
         )
-        self.memory.session.add(eval_orm)
-        self.memory.session.flush()
+        memory.session.add(eval_orm)
+        memory.session.flush()
 
-        for result in bundle.results.values():
+        for result in bundle.results:
+            score_result = bundle.results[result]
             score = ScoreORM(
                 evaluation_id=eval_orm.id,
-                dimension=result.dimension,
-                score=result.score,
-                weight=result.weight,
-                rationale=result.rationale,
-                prompt_hash=result.prompt_hash,
+                dimension=score_result.dimension,
+                score=score_result.score,
+                weight=score_result.weight,
+                rationale=score_result.rationale,
+                prompt_hash=score_result.prompt_hash,
             )
-            self.memory.session.add(score)
+            memory.session.add(score)
 
-        self.memory.session.commit()
+        memory.session.commit()
 
-        self.logger.log(
+        logger.log(
             "ScoreSavedToMemory",
             {
                 "goal_id": goal.get("id"),
@@ -254,7 +261,7 @@ class ScoringManager:
                 "scores": scores_json,
             },
         )
-        ScoreDeltaCalculator(self.cfg, self.memory, self.logger).log_score_delta(
+        ScoreDeltaCalculator(cfg, memory, logger).log_score_delta(
             hypothesis_id, weighted_score, goal.get("id")
         )
         ScoreDisplay.show(bundle.to_dict(), weighted_score)

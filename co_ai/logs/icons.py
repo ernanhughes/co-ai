@@ -15,6 +15,14 @@ EVENT_ICONS = {
     "ContextSaved": "💾",
     "ContextAfterStage": "🗃️",
     "ContextYAMLDumpSaved": "📄",
+    "MRQTrainerTrainingComplete": "🏁",
+    "MRQTrainerStart": "🚀" ,
+    "MRQScoreBoundsUpdated": "📈", 
+    "HypothesisScored": "🏆",  # Hypothesis scored
+    "EditGenerated": "✍️",  # Edit generated for hypothesis
+    "TrainingDataProgress": "📊",
+    "SymbolicAgentNewKey" : "🔑", 
+    "ScoreDelta": "📈",  # Score delta calculated
     "debug": "🐞",
     "DocumentProfileFailed": "📉",         # Indicates profiling failed or dropped
     "DomainClassifierInit": "🧠",          # Classifier startup — cognitive/init

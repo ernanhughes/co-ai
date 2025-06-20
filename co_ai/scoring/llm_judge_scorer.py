@@ -12,10 +12,10 @@ class LLMJudgeScorer(BaseScorer):
     Uses structured templates and flexible response parsers.
     """
 
-    def __init__(self, memory, logger, cfg=None, prompt_loader=None):
+    def __init__(self, cfg, memory, logger, prompt_loader=None):
+        self.cfg = cfg
         self.memory = memory
         self.logger = logger
-        self.cfg = cfg or {}
         self.prompt_loader = prompt_loader
 
     def score(self, goal, hypothesis, dimensions):
