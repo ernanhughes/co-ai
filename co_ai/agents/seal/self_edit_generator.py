@@ -63,6 +63,7 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
                 context=context
             )
             hypothesis_dict = hypothesis.to_dict()
+            context.setdefault("hypotheses", []).append(hypothesis_dict)
             context["prompt"]= prompt_text # we use thie to score in the evaluator
             score = self.score_hypothesis(hypothesis_dict, context, metrics="seal", evaluator=self.evaluator)
             all_edits.append({

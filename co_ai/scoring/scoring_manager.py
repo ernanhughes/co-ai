@@ -8,13 +8,16 @@ from co_ai.models.evaluation import EvaluationORM
 from co_ai.models.score import ScoreORM
 from co_ai.models.score_dimension import ScoreDimensionORM
 from co_ai.prompts.prompt_renderer import PromptRenderer
+from co_ai.scoring.calculations.score_delta import ScoreDeltaCalculator
 from co_ai.scoring.calculations.weighted_average import \
     WeightedAverageCalculator
+from co_ai.scoring.score_bundle import ScoreBundle
 from co_ai.scoring.score_display import ScoreDisplay
-
+from co_ai.scoring.score_result import ScoreResult
+import hashlib
 
 class ScoringManager:
-    def __init__(self, dimensions, prompt_loader, cfg, logger, memory, calculator=None):
+    def __init__(self, dimensions, prompt_loader, cfg, logger, memory, calculator=None, dimension_filter_fn=None):
         self.dimensions = dimensions
         self.prompt_loader = prompt_loader
         self.cfg = cfg
@@ -23,6 +26,28 @@ class ScoringManager:
         self.output_format = cfg.get("output_format", "simple")  # default
         self.prompt_renderer = PromptRenderer(prompt_loader, cfg)
         self.calculator = calculator or WeightedAverageCalculator()
+        self.dimension_filter_fn = dimension_filter_fn  # Optional hook
+
+    def filter_dimensions(self, hypothesis, context):
+        """
+        Returns the list of dimensions to use for this evaluation.
+        Override or provide a hook function to filter dynamically.
+        """
+        if self.dimension_filter_fn:
+            return self.dimension_filter_fn(self.dimensions, hypothesis, context)
+        return self.dimensions
+
+    @staticmethod
+    def get_postprocessor(extra_data):
+        """Returns a postprocessor function based on the 'postprocess' key."""
+        ptype = extra_data.get("postprocess")
+        if ptype == "clip_0_5":
+            return lambda s: max(0, min(s, 5))
+        if ptype == "normalize_10":
+            return lambda s: min(s / 10.0, 1.0)
+        if ptype == "exp_boost":
+            return lambda s: round((1.2 ** s) - 1, 2)
+        return lambda s: s  # Default is identity
 
     @classmethod
     def from_db(
@@ -36,6 +61,7 @@ class ScoringManager:
                 "weight": row.weight,
                 "parser": cls.get_parser(row.extra_data or {}),
                 "file": row.extra_data.get("file") if row.extra_data else None,
+                "postprocess": cls.get_postprocessor(row.extra_data or {}), 
             }
             for row in rows
         ]
@@ -58,6 +84,7 @@ class ScoringManager:
                 ),  # fallback to file
                 "weight": d.get("weight", 1.0),
                 "parser": cls.get_parser(d.get("extra_data", {})),
+                "postprocess": cls.get_postprocessor(d.get("extra_data", {})), 
             }
             for d in data["dimensions"]
         ]
@@ -115,94 +142,82 @@ class ScoringManager:
 
     def evaluate(self, hypothesis: dict, context: dict = {}, llm_fn=None):
         if self.output_format == "cor":
-            return self._evaluate_cor(
-                hypothesis=hypothesis, context=context, llm_fn=llm_fn
-            )
+            return self._evaluate(hypothesis, context, llm_fn, format="cor")
         else:
-            return self._evaluate_simple(
-                hypothesis=hypothesis, context=context, llm_fn=llm_fn
-            )
+            return self._evaluate(hypothesis, context, llm_fn, format="simple")
 
-    def _evaluate_cor(self, hypothesis: dict, context: dict = {}, llm_fn=None):
-        """
-        Evaluate using Chain-of-Rubrics (CoR) format with rubric, eval, and <answer>[[score]]</answer>.
-        """
+    def _evaluate(self, hypothesis: dict, context: dict, llm_fn, format="simple"):
         if llm_fn is None:
-            raise ValueError(
-                "You must pass a call_llm function (e.g., agent.call_llm) to ScoreEvaluator.evaluate"
-            )
+            raise ValueError("You must pass a call_llm function to evaluate")
 
-        results = {}
-        for dim in self.dimensions:
-            # Load prompt using prompt_loader and dimension-specific CoR template
+        results = []
+    
+         # Use filter_dimensions if available
+        dimensions_to_use = self.filter_dimensions(hypothesis, context)
+
+        for dim in dimensions_to_use:
             prompt = self.prompt_renderer.render(
                 dim, {"hypothesis": hypothesis, **context}
             )
+            prompt_hash = str(hash(prompt + str(hypothesis.get("id", ""))))
+            # 2. Check cache or memory for existing score
+            cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
+            if cached_result:
+                self.logger.log("ScoreCacheHit", {"dimension": dim["name"]})
+                result = ScoreResult.from_dict(cached_result)
+                results.append(result)
+                continue
+
             response = llm_fn(prompt, context=context)
             try:
                 score = dim["parser"](response)
+                score = dim.get("postprocess", lambda s: s)(score) 
             except Exception as e:
                 self.logger.log(
                     "ScoreParseError",
                     {"dimension": dim["name"], "response": response, "error": str(e)},
                 )
+                self.handle_score_error(dim, response, e)
                 score = 0.0
 
+            result = ScoreResult(
+                dimension=dim["name"],
+                score=score,
+                weight=dim["weight"],
+                rationale=response,
+                prompt_hash=prompt_hash,
+            )
+            results.append(result)
+
+            log_key = (
+                "CorDimensionEvaluated" if format == "cor" else "DimensionEvaluated"
+            )
             self.logger.log(
-                "CorDimensionEvaluated",
+                log_key,
                 {"dimension": dim["name"], "score": score, "response": response},
             )
 
-            results[dim["name"]] = {
-                "score": score,
-                "rationale": response,
-                "weight": dim["weight"],
-            }
+        bundle = ScoreBundle(results={r.dimension: r for r in results})
+        self.save_score_to_memory(bundle, hypothesis, context)
+        return bundle.to_dict()
 
-        self.save_score_to_memory(results, hypothesis, context)
-        return results
+    def handle_score_error(self, dim, response, error):
+        if self.cfg.get("fail_silently", True):
+            return 0.0
+        raise ValueError(f"Failed to parse score {response} for {dim['name']}: {error}")
 
-    def _evaluate_simple(self, hypothesis: dict, context: dict = {}, llm_fn=None):
-        if llm_fn is None:
-            raise ValueError(
-                "You must pass a call_llm function (e.g., agent.call_llm) to ScoreEvaluator.evaluate"
-            )
-
-        results = {}
-        for dim in self.dimensions:
-            prompt = self.prompt_renderer.render(
-                dim, {"hypothesis": hypothesis, **context}
-            )
-
-            response = llm_fn(prompt, context=context)
-            score = dim["parser"](response)
-            self.logger.log(
-                "DimensionEvaluated",
-                {"dimension": dim["name"], "score": score, "response": response},
-            )
-            results[dim["name"]] = {
-                "score": score,
-                "rationale": response,
-                "weight": dim["weight"],
-            }
-        self.save_score_to_memory(results, hypothesis, context)
-        return results
-
-    def save_score_to_memory(self, results, hypothesis, context):
-        """Save all dimension scores and associated ScoreORM entries."""
+    def save_score_to_memory(self, bundle: ScoreBundle, hypothesis, context):
         goal = context.get("goal")
         pipeline_run_id = context.get("pipeline_run_id")
         hypothesis_id = hypothesis.get("id")
-
-        weighted_score = self.calculator.calculate(results)
+        weighted_score = self.calculator.calculate(bundle.to_dict())
 
         scores_json = {
             "stage": self.cfg.get("stage", "review"),
-            "dimensions": results,
+            "dimensions": bundle.to_dict(),
             "final_score": round(weighted_score, 2),
         }
 
-        # Step 1: Insert EvaluationORM
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
@@ -216,16 +231,16 @@ class ScoringManager:
             extra_data={"source": "ScoreEvaluator"},
         )
         self.memory.session.add(eval_orm)
-        self.memory.session.flush()  # Get eval_orm.id before committing
+        self.memory.session.flush()
 
-        # Step 2: Insert ScoreORM entries
-        for dimension_name, result in results.items():
+        for result in bundle.results.values():
             score = ScoreORM(
                 evaluation_id=eval_orm.id,
-                dimension=dimension_name,
-                score=result["score"],
-                weight=result["weight"],
-                rationale=result["rationale"],
+                dimension=result.dimension,
+                score=result.score,
+                weight=result.weight,
+                rationale=result.rationale,
+                prompt_hash=result.prompt_hash,
             )
             self.memory.session.add(score)
 
@@ -239,5 +254,7 @@ class ScoringManager:
                 "scores": scores_json,
             },
         )
-
-        ScoreDisplay.show(results, weighted_score)
+        ScoreDeltaCalculator(self.cfg, self.memory, self.logger).log_score_delta(
+            hypothesis_id, weighted_score, goal.get("id")
+        )
+        ScoreDisplay.show(bundle.to_dict(), weighted_score)

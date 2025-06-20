@@ -19,6 +19,7 @@ Intended for use in the scoring pipeline to support adaptive tuning and fair com
 
 from co_ai.scoring.calculations.base_calculator import BaseCalculator
 
+
 class MRQNormalizerCalculator(BaseCalculator):
     def __init__(self, expected_min=0.0, expected_max=1.0, clip=True, scale=100.0):
         self.expected_min = expected_min

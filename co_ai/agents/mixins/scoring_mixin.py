@@ -56,7 +56,7 @@ class ScoringMixin:
             }
         """
         if evaluator:
-            result = evaluator.evaluate(hypothesis, context.get("goal", {}).get("goal_text", ""))
+            result = evaluator.evaluate(hypothesis.get("text"), context.get("goal", {}).get("goal_text", ""))
             self.logger.log("HypothesisScored", {
                 "hypothesis_id": hypothesis.get("id"),
                 "metrics": metrics,
@@ -81,12 +81,7 @@ class ScoringMixin:
                 llm_fn=self.call_llm
             )
 
-        weighted_total = sum(
-            s["score"] * s.get("weight", 1.0)
-            for s in dimension_scores.values()
-        )
-        weight_sum = sum(s.get("weight", 1.0) for s in dimension_scores.values())
-        final_score = round(weighted_total / weight_sum, 2) if weight_sum > 0 else 0.0
+        final_score = self.get_scorer(metrics).calculator.calculate(dimension_scores)
 
         self.logger.log("HypothesisScoreComputed", {
             "score": final_score,

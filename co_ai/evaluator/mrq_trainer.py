@@ -91,9 +91,9 @@ class MRQTrainer:
                 total_loss += loss.item()
 
             avg_loss = total_loss / len(dataloader)
-            self.logger.log(
-                "MRQTrainerEpoch", {"epoch": epoch + 1, "avg_loss": round(avg_loss, 5)}
-            )
+            # self.logger.log(
+            #     "MRQTrainerEpoch", {"epoch": epoch + 1, "avg_loss": round(avg_loss, 5)}
+            # )
 
             if best_loss - avg_loss > min_delta:
                 best_loss = avg_loss
