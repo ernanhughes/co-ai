@@ -9,16 +9,18 @@ from tabulate import tabulate
 from co_ai.models.evaluation import EvaluationORM
 from co_ai.models.score import ScoreORM
 from co_ai.models.score_dimension import ScoreDimensionORM
+from co_ai.scoring.score_display import ScoreDisplay
+from co_ai.scoring.calculations.base_calculator import WeightedAverageCalculator
 
-
-class ScoreEvaluator:
-    def __init__(self, dimensions, prompt_loader, cfg, logger, memory):
+class ScoringManager:
+    def __init__(self, dimensions, prompt_loader, cfg, logger, memory, calculator=None):
         self.dimensions = dimensions
         self.prompt_loader = prompt_loader
         self.cfg = cfg
         self.logger = logger
         self.memory = memory
-        self.output_format = cfg.get("output_format", "simple")  # default fallback
+        self.output_format = cfg.get("output_format", "simple")  # default 
+        self.calculator = calculator or WeightedAverageCalculator()
 
     @classmethod
     def from_db(
@@ -74,9 +76,9 @@ class ScoreEvaluator:
     def get_parser(extra_data):
         parser_type = extra_data.get("parser", "numeric")
         if parser_type == "numeric":
-            return lambda r: ScoreEvaluator.extract_score_from_last_line(r)
+            return lambda r: ScoringManager.extract_score_from_last_line(r)
         if parser_type == "numeric_cor":
-            return lambda r: ScoreEvaluator.parse_numeric_cor(r)
+            return lambda r: ScoringManager.parse_numeric_cor(r)
 
         return lambda r: 0.0
 
@@ -211,9 +213,7 @@ class ScoreEvaluator:
         pipeline_run_id = context.get("pipeline_run_id")
         hypothesis_id = hypothesis.get("id")
 
-        weighted_score = sum(
-            s["score"] * s.get("weight", 1.0) for s in results.values()
-        ) / max(sum(s.get("weight", 1.0) for s in results.values()), 1.0)
+        weighted_score = self.calculator.compute(results)
 
         scores_json = {
             "stage": self.cfg.get("stage", "review"),
@@ -259,23 +259,5 @@ class ScoreEvaluator:
             },
         )
 
-        self.display_results(results, weighted_score)
+        ScoreDisplay.show(results, weighted_score)
 
-    def display_results(self, results, weighted_score):
-        table_data = [
-            [
-                dim_name,
-                f"{dim_data['score']:.2f}",
-                dim_data["weight"],
-                dim_data["rationale"][:60],
-            ]
-            for dim_name, dim_data in results.items()
-        ]
-        table_data.append(["FINAL", f"{weighted_score:.2f}", "-", "Weighted average"])
-
-        print("\n📊 Dimension Scores Summary")
-        print(tabulate(
-            table_data,
-            headers=["Dimension", "Score", "Weight", "Rationale (preview)"],
-            tablefmt="fancy_grid"
-        ))

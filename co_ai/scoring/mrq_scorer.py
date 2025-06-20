@@ -1,12 +1,11 @@
 import torch
 from co_ai.evaluator.mrq_trainer import MRQTrainer
-from co_ai.scoring.base_evaluator import BaseEvaluator
 from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
 from co_ai.evaluator.text_encoder import TextEncoder
 from co_ai.models.sharpening_prediction import SharpeningPredictionORM
+from co_ai.scoring.base_scorer import BaseScorer
 
-
-class MRQEvaluator(BaseEvaluator):
+class MRQScorer(BaseScorer):
     def __init__(self, memory, logger, device="cpu", dimensions=None):
         self.device = device
         self.memory = memory
@@ -32,6 +31,37 @@ class MRQEvaluator(BaseEvaluator):
             self.trainers[dim] = trainer
             self.min_score_by_dim[dim] = 0.0
             self.max_score_by_dim[dim] = 1.0
+
+
+    def score(self, goal: dict, hypothesis: dict, dimensions: list[str]) -> dict:
+        """
+        Scores a hypothesis using MR.Q on the specified dimensions.
+        Returns a dictionary mapping dimension names to score/rationale/weight.
+        """
+        results = {}
+        for dim in dimensions:
+            # Dummy logic — replace with real scoring logic
+            score = self._estimate_score(goal, hypothesis, dim)
+            rationale = f"MRQ estimated score for {dim}."
+
+            self.logger.log("MRQDimensionEvaluated", {
+                "dimension": dim,
+                "score": score,
+                "rationale": rationale
+            })
+
+            results[dim] = {
+                "score": score,
+                "rationale": rationale,
+                "weight": 1.0
+            }
+
+        return results
+
+    def _estimate_score(self, goal, hypothesis, dimension):
+        # Placeholder logic — real MR.Q logic would access training data or regressors
+        return 3.0  # Mock value for now
+
 
     def evaluate(self, prompt: str, response: str) -> dict:
         dimensions = {}
@@ -112,7 +142,7 @@ class MRQEvaluator(BaseEvaluator):
 
         return preferred_output, {"value_a": value_a, "value_b": value_b}
 
-    def train_from_database(self, goal: str, cfg: dict):
+    def train_from_database(self, cfg: dict):
         all_samples = self.memory.mrq.get_training_pairs_by_dimension()
 
         for dim, samples in all_samples.items():

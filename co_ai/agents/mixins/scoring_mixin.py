@@ -1,4 +1,4 @@
-from co_ai.analysis.score_evaluator import ScoreEvaluator
+from co_ai.scoring.scoring_manager import ScoringManager
 from co_ai.scoring.base_evaluator import BaseEvaluator
 
 
@@ -13,7 +13,7 @@ class ScoringMixin:
         super().__init__(*args, **kwargs)
         self._scorers = {}  # Caches ScoreEvaluator instances per stage
 
-    def get_scorer(self, stage: str) -> ScoreEvaluator:
+    def get_scorer(self, stage: str) -> ScoringManager:
         """
         Lazily loads and returns a ScoreEvaluator for the given stage.
         Config path is read from e.g., cfg['review_score_config'].
@@ -21,7 +21,7 @@ class ScoringMixin:
         if stage not in self._scorers:
             config_key = f"{stage}_score_config"
             config_path = self.cfg.get(config_key, f"config/scoring/{stage}.yaml")
-            self._scorers[stage] = ScoreEvaluator.from_file(
+            self._scorers[stage] = ScoringManager.from_file(
                 filepath=config_path,
                 prompt_loader=self.prompt_loader,
                 cfg=self.cfg,

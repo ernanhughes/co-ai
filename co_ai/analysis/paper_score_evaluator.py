@@ -1,11 +1,11 @@
 # co_ai/scoring/paper_score_evaluator.py
 from textwrap import wrap
 
-from co_ai.analysis.score_evaluator import ScoreEvaluator
+from co_ai.scoring.scoring_manager import ScoringManager
 from co_ai.models import EvaluationORM, ScoreORM
 
 
-class PaperScoreEvaluator(ScoreEvaluator):
+class PaperScoreEvaluator(ScoringManager):
     def evaluate(self, document: dict, context: dict = {}, llm_fn=None):
         text = document.get("content", "")
         chunks = self.chunk_text(text, max_tokens=1000)  # Adjust token limit as needed

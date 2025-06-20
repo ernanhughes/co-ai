@@ -3,7 +3,7 @@
 from co_ai.agents.base_agent import BaseAgent
 from co_ai.agents.mixins.scoring_mixin import ScoringMixin
 from dataclasses import dataclass
-from co_ai.scoring.mrq_evaluator import MRQEvaluator
+from co_ai.scoring.mrq_scorer import MRQScorer
 
 
 @dataclass
@@ -26,14 +26,13 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
         super().__init__(cfg, memory, logger)
         self.config = config
         self.prompt_files = self.cfg.get("prompt_files", [])
-        self.evaluator = MRQEvaluator(memory=self.memory, logger=self.logger, device=self.cfg.get("device", "cpu"))
+        self.evaluator = MRQScorer(memory=self.memory, logger=self.logger, device=self.cfg.get("device", "cpu"))
 
     async def run(self, context: dict) -> dict:
         all_edits = []
-        goal = context.get("goal")
-        if isinstance(self.evaluator, MRQEvaluator):
+        if isinstance(self.evaluator, MRQScorer):
             self.logger.log("MRQTraining", {"type": "MRQ"})
-            self.evaluator.train_from_database(goal=goal.get("goal_text"), cfg=self.cfg)
+            self.evaluator.train_from_database(cfg=self.cfg)
 
 
         for prompt_file in self.prompt_files:
