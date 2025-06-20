@@ -10,7 +10,9 @@ from co_ai.evaluator.text_encoder import TextEncoder
 
 
 class MRQTrainer:
-    def __init__(self, memory, logger, encoder=None, value_predictor=None, device="cpu"):
+    def __init__(
+        self, memory, logger, encoder=None, value_predictor=None, device="cpu"
+    ):
         self.memory = memory
         self.logger = logger
         self.device = device
@@ -19,7 +21,7 @@ class MRQTrainer:
             self.encoder = encoder.to(device)
         else:
             self.encoder = TextEncoder().to(device)
-        if value_predictor is not None:            
+        if value_predictor is not None:
             self.value_predictor = value_predictor.to(device)
         else:
             self.value_predictor = HypothesisValuePredictor(512, 1024).to(device)
@@ -31,7 +33,7 @@ class MRQTrainer:
             prompt_emb = self.memory.embedding.get_or_create(item["prompt"])
             output_a_emb = self.memory.embedding.get_or_create(item["output_a"])
             output_b_emb = self.memory.embedding.get_or_create(item["output_b"])
-            preferred="a" if item["value_a"] >= item["value_b"] else "b"
+            preferred = "a" if item["value_a"] >= item["value_b"] else "b"
 
             zsa_a = self.encoder(
                 torch.tensor(prompt_emb).unsqueeze(0).to(self.device),
@@ -49,10 +51,10 @@ class MRQTrainer:
             # Log progress every 100 samples
             if (idx + 1) % 100 == 0 or (idx + 1) == total:
                 percent = round((idx + 1) / total * 100, 2)
-                print(
-                    f"Preparing training data: {idx + 1}/{total} samples ({percent}%)"
+                self.logger.log(
+                    "TrainingDataProgress",
+                    {"current": idx + 1, "total": total, "percent": percent},
                 )
-
 
         dataset = TensorDataset(torch.stack(inputs), torch.stack(labels))
         return DataLoader(dataset, batch_size=16, shuffle=True)
@@ -69,12 +71,15 @@ class MRQTrainer:
         best_loss = float("inf")
         epochs_no_improve = 0
 
-        self.logger.log("MRQTrainerStart", {
-            "epochs": epochs,
-            "learning_rate": lr,
-            "patience": patience,
-            "min_delta": min_delta
-        })
+        self.logger.log(
+            "MRQTrainerStart",
+            {
+                "epochs": epochs,
+                "learning_rate": lr,
+                "patience": patience,
+                "min_delta": min_delta,
+            },
+        )
         for epoch in range(epochs):
             total_loss = 0.0
             for x_batch, y_batch in dataloader:
@@ -86,10 +91,9 @@ class MRQTrainer:
                 total_loss += loss.item()
 
             avg_loss = total_loss / len(dataloader)
-            self.logger.log("MRQTrainerEpoch", {
-                "epoch": epoch + 1,
-                "avg_loss": round(avg_loss, 5)
-            })
+            self.logger.log(
+                "MRQTrainerEpoch", {"epoch": epoch + 1, "avg_loss": round(avg_loss, 5)}
+            )
 
             if best_loss - avg_loss > min_delta:
                 best_loss = avg_loss
@@ -97,10 +101,10 @@ class MRQTrainer:
             else:
                 epochs_no_improve += 1
                 if epochs_no_improve >= patience:
-                    self.logger.log("MRQTrainerEarlyStopping", {
-                        "stopped_epoch": epoch + 1,
-                        "best_loss": round(best_loss, 5)
-                    })
+                    self.logger.log(
+                        "MRQTrainerEarlyStopping",
+                        {"stopped_epoch": epoch + 1, "best_loss": round(best_loss, 5)},
+                    )
                     break
 
         self.logger.log(
