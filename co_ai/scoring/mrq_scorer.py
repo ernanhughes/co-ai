@@ -9,6 +9,7 @@ from co_ai.scoring.score_result import ScoreResult
 from co_ai.scoring.score_bundle import ScoreBundle
 from co_ai.scoring.scoring_manager import ScoringManager
 
+from co_ai.scoring.transforms.regression_tuner import RegressionTuner
 
 class MRQScorer(BaseScorer):
     def __init__(self, cfg: dict, memory, logger, dimensions=None):
@@ -24,8 +25,12 @@ class MRQScorer(BaseScorer):
         self.max_score_by_dim = {}
         self.value_predictor = HypothesisValuePredictor(512, 1024).to(self.device)
         self.encoder = TextEncoder().to(self.device)
+        self.regression_tuners = {}
 
         for dim in self.dimensions:
+            self.regression_tuners[dim] = RegressionTuner(
+                dimension=dim, logger=self.logger
+            )
             trainer = MRQTrainer(
                 memory=self.memory,
                 logger=self.logger,
@@ -66,6 +71,9 @@ class MRQScorer(BaseScorer):
     def _estimate_score(self, goal: dict, hypothesis: dict, dimension: str) -> float:
         print(f"Estimating score for dimension: {dimension}")
         if dimension not in self.models:
+            self.regression_tuners[dimension] = RegressionTuner(
+                dimension=dimension, logger=self.logger
+            )
             self.logger.log("MRQModelInitializing", {"dimension": dimension})
             trainer = MRQTrainer(
                 memory=self.memory,
@@ -98,7 +106,67 @@ class MRQScorer(BaseScorer):
 
         # Normalize to 0–100 scale
         norm_score = self.normalize_score(raw_score, dimension)
+        tuner = self.regression_tuners.get(dimension)
+        if tuner:
+            tuned_score = tuner.transform(norm_score)
+            self.logger.log(
+                "MRQTunedScore",
+                {
+                    "dimension": dimension,
+                    "raw": norm_score,
+                    "tuned": tuned_score,
+                },
+            )
+            return tuned_score
         return norm_score
+
+    def align_to_best_llm_neighbour(self, goal: dict, hypothesis: dict, dimension: str):
+        llm_scores = self.get_closest_llm_scores(hypothesis["text"], dimension)
+        if not llm_scores:
+            return  # no alignment possible
+        best_llm_score = max(llm_scores)
+        self.align_with_llm_score(dimension, goal, hypothesis, best_llm_score)
+
+    def get_closest_llm_scores(self, hypothesis_text: str, dimension: str, top_k: int = 5) -> list[float]:
+        """
+        Find the LLM scores for hypotheses with embeddings most similar to the given one.
+        Used for tuning MR.Q to better align with high-quality LLM scores.
+        """
+        # Step 1: Embed the current hypothesis
+        query_emb = self.memory.embedding.get_or_create(hypothesis_text)
+
+        # Step 2: Search similar embeddings
+        similar_items = self.memory.embedding.similarity_search(query_emb, top_k)
+
+        llm_scores = []
+        for item in similar_items:
+            # Assumes item includes 'text' or 'id' to retrieve full score record
+            matched_text = item.get("text")
+
+            # Step 3: Query LLM score from database (or memory index)
+            score_entry = self.memory.score.find_by_text_and_dimension(
+                matched_text, dimension=dimension, source="llm"
+            )
+            if score_entry:
+                llm_scores.append(score_entry.score)
+
+        return llm_scores
+
+
+    def align_with_llm_score(self, dimension: str, goal: dict, hypothesis: dict, llm_score: float):
+        """
+        Compare MR.Q score with LLM score and train the tuner.
+        """
+        mrq_score = self._estimate_score(goal, hypothesis, dimension)
+        self.regression_tuners[dimension].add_example(mrq_score, llm_score)
+        self.logger.log(
+            "MRQAlignmentDataAdded",
+            {
+                "dimension": dimension,
+                "mrq_score": mrq_score,
+                "llm_score": llm_score,
+            },
+        )
 
     def evaluate(self, prompt: str, response: str) -> ScoreBundle:
         # Evaluate each dimension using the trained models
@@ -124,8 +192,6 @@ class MRQScorer(BaseScorer):
                     source="mrq",
                 )
             )
-
-        final_score = round(sum(d.score for d in results) / len(results), 2)
 
         bundle = ScoreBundle(results={r.dimension: r for r in results})
         ScoringManager.save_score_to_memory(
