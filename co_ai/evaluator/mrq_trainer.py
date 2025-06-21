@@ -1,26 +1,30 @@
-# co_ai/evaluator/mrq_trainer.py
-import copy
-from collections import defaultdict
-
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-
-from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from collections import defaultdict
 from co_ai.evaluator.text_encoder import TextEncoder
-
+from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
 
 class MRQTrainer:
     def __init__(
-        self, memory, logger, encoder=None, value_predictor=None, device="cpu"
+        self,
+        memory,
+        logger,
+        encoder=None,
+        value_predictor=None,
+        device="cpu"
     ):
         self.memory = memory
         self.logger = logger
         self.device = device
-        self.value_predictor = HypothesisValuePredictor(512, 1024).to(self.device)
+
+        # Use provided encoder or instantiate new TextEncoder
         if encoder is not None:
             self.encoder = encoder.to(device)
         else:
             self.encoder = TextEncoder().to(device)
+
+        # Use provided predictor or instantiate new HypothesisValuePredictor
         if value_predictor is not None:
             self.value_predictor = value_predictor.to(device)
         else:
@@ -29,22 +33,27 @@ class MRQTrainer:
     def prepare_training_data(self, samples):
         inputs, labels = [], []
         total = len(samples)
+
         for idx, item in enumerate(samples):
             prompt_emb = self.memory.embedding.get_or_create(item["prompt"])
             output_a_emb = self.memory.embedding.get_or_create(item["output_a"])
             output_b_emb = self.memory.embedding.get_or_create(item["output_b"])
+
             preferred = "a" if item["value_a"] >= item["value_b"] else "b"
 
-            zsa_a = self.encoder(
-                torch.tensor(prompt_emb).unsqueeze(0).to(self.device),
-                torch.tensor(output_a_emb).unsqueeze(0).to(self.device),
-            )
-            zsa_b = self.encoder(
-                torch.tensor(prompt_emb).unsqueeze(0).to(self.device),
-                torch.tensor(output_b_emb).unsqueeze(0).to(self.device),
-            )
+            # Convert to tensor and move to device
+            prompt_tensor = torch.tensor(prompt_emb).unsqueeze(0).to(self.device)
+            output_a_tensor = torch.tensor(output_a_emb).unsqueeze(0).to(self.device)
+            output_b_tensor = torch.tensor(output_b_emb).unsqueeze(0).to(self.device)
 
+            with torch.no_grad():
+                zsa_a = self.encoder(prompt_tensor, output_a_tensor)
+                zsa_b = self.encoder(prompt_tensor, output_b_tensor)
+
+            # Compute difference based on preference
             diff = zsa_a - zsa_b if preferred == "a" else zsa_b - zsa_a
+
+            # Ensure correct shape before appending
             inputs.append(diff.squeeze(0).detach())
             labels.append(torch.tensor([1.0], device=self.device))
 
@@ -56,6 +65,7 @@ class MRQTrainer:
                     {"current": idx + 1, "total": total, "percent": percent},
                 )
 
+        # Create dataset and loader
         dataset = TensorDataset(torch.stack(inputs), torch.stack(labels))
         return DataLoader(dataset, batch_size=16, shuffle=True)
 
@@ -65,7 +75,8 @@ class MRQTrainer:
         patience = cfg.get("patience", 3)
         min_delta = cfg.get("min_delta", 0.0001)
 
-        opt = torch.optim.Adam(self.value_predictor.parameters(), lr=lr)
+        optimizer = torch.optim.Adam(self.value_predictor.parameters(), lr=lr)
+        criterion = nn.BCEWithLogitsLoss()
         self.value_predictor.train()
 
         best_loss = float("inf")
@@ -80,20 +91,28 @@ class MRQTrainer:
                 "min_delta": min_delta,
             },
         )
+
         for epoch in range(epochs):
             total_loss = 0.0
             for x_batch, y_batch in dataloader:
-                preds = self.value_predictor(x_batch)
-                loss = -torch.log(torch.sigmoid(preds)).mean()
-                opt.zero_grad()
+                assert isinstance(x_batch, torch.Tensor), "x_batch must be a single tensor"
+                # Ensure x_batch has correct shape [batch_size, zsa_dim]
+                assert len(x_batch.shape) == 2, f"Unexpected x_batch shape: {x_batch.shape}"
+
+                preds = self.value_predictor(x_batch)  # Only one input now
+                loss = criterion(preds, y_batch)
+
+                optimizer.zero_grad()
                 loss.backward()
-                opt.step()
+                optimizer.step()
+
                 total_loss += loss.item()
 
             avg_loss = total_loss / len(dataloader)
-            # self.logger.log(
-            #     "MRQTrainerEpoch", {"epoch": epoch + 1, "avg_loss": round(avg_loss, 5)}
-            # )
+            self.logger.log(
+                "MRQTrainerEpoch",
+                {"epoch": epoch + 1, "avg_loss": round(avg_loss, 5)}
+            )
 
             if best_loss - avg_loss > min_delta:
                 best_loss = avg_loss
@@ -114,15 +133,12 @@ class MRQTrainer:
 
     def train_multidimensional_model(self, contrast_pairs, cfg=None):
         """
-        Trains a separate model for each scoring dimension using the provided contrast pairs.
-        Each pair is a dict with: output_a, output_b, prompt, preferred, dimension.
+        Trains separate models per scoring dimension using contrast pairs.
+        Each pair contains: output_a, output_b, prompt, preferred, dimension.
         """
-        from collections import defaultdict
-
-        # Group contrast pairs by dimension
         by_dimension = defaultdict(list)
         for pair in contrast_pairs:
-            dim = pair["dimension"]
+            dim = pair.get("dimension", "default")
             by_dimension[dim].append(pair)
 
         trained_models = {}
@@ -140,11 +156,10 @@ class MRQTrainer:
             dataloader = self.prepare_training_data(samples)
             self.train(dataloader, cfg or {})
 
-            # Save model for this dimension if needed
             trained_models[dim] = self.value_predictor.state_dict()
-
             self.logger.log(
-                "TrainingDimensionComplete", {"dimension": dim, "samples": len(samples)}
+                "TrainingDimensionComplete",
+                {"dimension": dim, "samples": len(samples)}
             )
 
         return trained_models

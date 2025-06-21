@@ -1,5 +1,5 @@
+from collections import defaultdict
 import torch
-
 from co_ai.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
 from co_ai.evaluator.mrq_trainer import MRQTrainer
 from co_ai.evaluator.text_encoder import TextEncoder
@@ -8,8 +8,8 @@ from co_ai.scoring.base_scorer import BaseScorer
 from co_ai.scoring.score_result import ScoreResult
 from co_ai.scoring.score_bundle import ScoreBundle
 from co_ai.scoring.scoring_manager import ScoringManager
-
 from co_ai.scoring.transforms.regression_tuner import RegressionTuner
+
 
 class MRQScorer(BaseScorer):
     def __init__(self, cfg: dict, memory, logger, dimensions=None):
@@ -19,21 +19,22 @@ class MRQScorer(BaseScorer):
         self.device = cfg.get("device", "cpu")
 
         self.dimensions = dimensions or ["mrq"]
-        self.models = {}  # dimension -> (encoder, predictor)
-        self.trainers = {}  # dimension -> MRQTrainer
+        self.models = {}  # dim -> (encoder, predictor)
+        self.trainers = {}
         self.min_score_by_dim = {}
         self.max_score_by_dim = {}
         self.value_predictor = HypothesisValuePredictor(512, 1024).to(self.device)
         self.encoder = TextEncoder().to(self.device)
         self.regression_tuners = {}
 
+        # Initialize model + tuner for each dimension
         for dim in self.dimensions:
             self.regression_tuners[dim] = RegressionTuner(
                 dimension=dim, logger=self.logger
             )
             trainer = MRQTrainer(
-                memory=self.memory,
-                logger=self.logger,
+                memory=memory,
+                logger=logger,
                 value_predictor=self.value_predictor,
                 encoder=self.encoder,
                 device=self.device,
@@ -45,131 +46,125 @@ class MRQScorer(BaseScorer):
 
     def score(self, goal: dict, hypothesis: dict, dimensions: list[str]) -> ScoreBundle:
         """
-        Scores a hypothesis using MR.Q on the specified dimensions.
-        Returns a dictionary mapping dimension names to ScoreResult instances.
+        Predicts scores for given dimensions using MR.Q and applies tuning if available.
         """
         results = []
         for dim in dimensions:
             score = self._estimate_score(goal, hypothesis, dim)
             rationale = f"MRQ estimated score for {dim}."
-
             self.logger.log(
                 "MRQDimensionEvaluated",
                 {"dimension": dim, "score": score, "rationale": rationale},
             )
+            results.append(
+                ScoreResult(
+                    dimension=dim,
+                    score=score,
+                    rationale=rationale,
+                    weight=1.0,
+                    source="mrq",
+                )
+            )
+        return ScoreBundle(results={r.dimension: r for r in results})
 
-            results.append(ScoreResult(
-                dimension=dim,
-                score=score,
-                rationale=rationale,
-                weight=1.0,
-                source="mrq",
-            ))
-        bundle = ScoreBundle(results={r.dimension: r for r in results})
-        return bundle
-
-    def _estimate_score(self, goal: dict, hypothesis: dict, dimension: str) -> float:
-        print(f"Estimating score for dimension: {dimension}")
+    def _estimate_score(self, goal, hypothesis, dimension):
+        """
+        Core logic: compute embeddings, run prediction, apply optional regression tuner.
+        """
+        # Initialize dimension on demand
         if dimension not in self.models:
-            self.regression_tuners[dimension] = RegressionTuner(
-                dimension=dimension, logger=self.logger
-            )
-            self.logger.log("MRQModelInitializing", {"dimension": dimension})
-            trainer = MRQTrainer(
-                memory=self.memory,
-                logger=self.logger,
-                value_predictor=self.value_predictor,
-                encoder=self.encoder,
-                device=self.device,
-            )
-            self.models[dimension] = (self.encoder, self.value_predictor)
-            self.trainers[dimension] = trainer
-            self.min_score_by_dim[dimension] = 0.0
-            self.max_score_by_dim[dimension] = 1.0
-        encoder, predictor = self.models[dimension]
+            self._initialize_dimension(dimension)
 
-        prompt_text = goal.get("goal_text")
-        response_text = hypothesis.get("text")
-
-        # Get embeddings
         prompt_emb = torch.tensor(
-            self.memory.embedding.get_or_create(prompt_text), device=self.device
+            self.memory.embedding.get_or_create(goal.get("goal_text")),
+            device=self.device,
         ).unsqueeze(0)
-
         response_emb = torch.tensor(
-            self.memory.embedding.get_or_create(response_text), device=self.device
+            self.memory.embedding.get_or_create(hypothesis.get("text")),
+            device=self.device,
         ).unsqueeze(0)
 
-        # Encode and predict value
+        encoder, predictor = self.models[dimension]
         zsa = encoder(prompt_emb, response_emb)
         raw_score = predictor(zsa).item()
-
-        # Normalize to 0–100 scale
         norm_score = self.normalize_score(raw_score, dimension)
+
+        # Optionally apply tuner
         tuner = self.regression_tuners.get(dimension)
         if tuner:
-            tuned_score = tuner.transform(norm_score)
+            tuned = tuner.transform(norm_score)
             self.logger.log(
                 "MRQTunedScore",
-                {
-                    "dimension": dimension,
-                    "raw": norm_score,
-                    "tuned": tuned_score,
-                },
+                {"dimension": dimension, "raw": norm_score, "tuned": tuned},
             )
-            return tuned_score
+            return tuned
         return norm_score
 
-    def align_to_best_llm_neighbour(self, goal: dict, hypothesis: dict, dimension: str):
+    def _initialize_dimension(self, dimension):
+        self.regression_tuners[dimension] = RegressionTuner(
+            dimension=dimension, logger=self.logger
+        )
+        self.trainers[dimension] = MRQTrainer(
+            memory=self.memory, logger=self.logger, value_predictor=self.value_predictor, encoder=self.encoder, device=self.device
+        )
+        self.models[dimension] = (self.encoder, self.value_predictor)
+        self.min_score_by_dim[dimension] = 0.0
+        self.max_score_by_dim[dimension] = 1.0
+        self.logger.log("MRQModelInitializing", {"dimension": dimension})
+
+    def align_to_best_llm_neighbour(self, goal, hypothesis, dimension):
+        """
+        Fetch similar hypotheses that already have high LLM scores.
+        Then align MR.Q prediction to the best of them.
+        """
         llm_scores = self.get_closest_llm_scores(hypothesis["text"], dimension)
-        if not llm_scores:
-            return  # no alignment possible
-        best_llm_score = max(llm_scores)
-        self.align_with_llm_score(dimension, goal, hypothesis, best_llm_score)
+        if llm_scores:
+            self.align_with_llm_score(dimension, goal, hypothesis, max(llm_scores))
 
-    def get_closest_llm_scores(self, hypothesis_text: str, dimension: str, top_k: int = 5) -> list[float]:
+    def get_closest_llm_scores(
+        self, hypothesis_text: str, dimension: str, top_k: int = 5
+    ) -> list[float]:
         """
-        Find the LLM scores for hypotheses with embeddings most similar to the given one.
-        Used for tuning MR.Q to better align with high-quality LLM scores.
+        Finds the top_k LLM scores for hypotheses most similar to the given one.
         """
-        # Step 1: Embed the current hypothesis
         query_emb = self.memory.embedding.get_or_create(hypothesis_text)
-
-        # Step 2: Search similar embeddings
         similar_items = self.memory.embedding.similarity_search(query_emb, top_k)
 
-        llm_scores = []
+        scores = []
         for item in similar_items:
-            # Assumes item includes 'text' or 'id' to retrieve full score record
             matched_text = item.get("text")
-
-            # Step 3: Query LLM score from database (or memory index)
             score_entry = self.memory.score.find_by_text_and_dimension(
                 matched_text, dimension=dimension, source="llm"
             )
             if score_entry:
-                llm_scores.append(score_entry.score)
+                scores.append(score_entry.score)
+        return scores
 
-        return llm_scores
-
-
-    def align_with_llm_score(self, dimension: str, goal: dict, hypothesis: dict, llm_score: float):
-        """
-        Compare MR.Q score with LLM score and train the tuner.
-        """
+    def align_with_llm_score(self, dimension, goal, hypothesis, llm_score):
         mrq_score = self._estimate_score(goal, hypothesis, dimension)
+        self.logger.log(
+            "MRQAligningToLLM",
+            {
+                "goal": goal.get("goal_text"),
+                "hypothesis": hypothesis.get("text"),
+                "dimension": dimension,
+                "mrq_raw": mrq_score,
+                "llm_target": llm_score,
+            },
+        )
         self.regression_tuners[dimension].add_example(mrq_score, llm_score)
         self.logger.log(
-            "MRQAlignmentDataAdded",
+            "MRQAlignmentAdded",
             {
                 "dimension": dimension,
-                "mrq_score": mrq_score,
-                "llm_score": llm_score,
+                "example_count": len(self.regression_tuners[dimension].examples),
             },
         )
 
     def evaluate(self, prompt: str, response: str) -> ScoreBundle:
-        # Evaluate each dimension using the trained models
+        """
+        Scores a prompt-response pair across all dimensions, and saves it.
+        """
         results = []
         for dim, (encoder, predictor) in self.models.items():
             prompt_emb = torch.tensor(
@@ -178,7 +173,6 @@ class MRQScorer(BaseScorer):
             output_emb = torch.tensor(
                 self.memory.embedding.get_or_create(response), device=self.device
             ).unsqueeze(0)
-
             zsa = encoder(prompt_emb, output_emb)
             value = predictor(zsa).item()
             norm_score = self.normalize_score(value, dim)
@@ -207,34 +201,32 @@ class MRQScorer(BaseScorer):
     def normalize_score(self, raw, dim):
         min_ = self.min_score_by_dim.get(dim, 0.0)
         max_ = self.max_score_by_dim.get(dim, 1.0)
-        range_ = (max_ - min_) or 1.0
-        return round(100 * (raw - min_) / range_, 2)
+        return round(100 * (raw - min_) / (max_ - min_ or 1.0), 2)
 
     def judge(self, goal, prompt, output_a, output_b):
-        # Optional: Per-dimension judging could be added later
+        """
+        Compares two outputs via MR.Q and returns the preferred one.
+        """
         dim = self.dimensions[0]
         encoder, predictor = self.models[dim]
 
         prompt_emb = torch.tensor(
             self.memory.embedding.get_or_create(prompt), device=self.device
         ).unsqueeze(0)
-        output_a_emb = torch.tensor(
+        a_emb = torch.tensor(
             self.memory.embedding.get_or_create(output_a), device=self.device
         ).unsqueeze(0)
-        output_b_emb = torch.tensor(
+        b_emb = torch.tensor(
             self.memory.embedding.get_or_create(output_b), device=self.device
         ).unsqueeze(0)
 
-        zsa_a = encoder(prompt_emb, output_a_emb)
-        zsa_b = encoder(prompt_emb, output_b_emb)
+        value_a = predictor(encoder(prompt_emb, a_emb)).item()
+        value_b = predictor(encoder(prompt_emb, b_emb)).item()
+        preferred = output_a if value_a >= value_b else output_b
 
-        value_a = predictor(zsa_a).item()
-        value_b = predictor(zsa_b).item()
-
-        preferred_output = output_a if value_a >= value_b else output_b
-
+        # Optionally log sharpening example
         if self.memory.mrq.log_evaluations():
-            prediction = SharpeningPredictionORM(
+            pred = SharpeningPredictionORM(
                 id=None,
                 goal_id=-1,
                 prompt_text=prompt,
@@ -245,62 +237,107 @@ class MRQScorer(BaseScorer):
                 value_a=value_a,
                 value_b=value_b,
             )
-            self.memory.sharpening.insert_sharpening_prediction(
-                prediction.to_dict(), goal
-            )
+            self.memory.sharpening.insert_sharpening_prediction(pred.to_dict(), goal)
 
-        return preferred_output, {"value_a": value_a, "value_b": value_b}
+        return preferred, {"value_a": value_a, "value_b": value_b}
 
     def train_from_database(self, cfg: dict):
         all_samples = self.memory.mrq.get_training_pairs_by_dimension()
-
         for dim, samples in all_samples.items():
             if not samples:
+                self.logger.log("MRQNoTrainingSamples", {"dimension": dim})
                 continue
 
-            # Dynamically create trainer for unseen dimension
+            self.align_mrq_with_llm_scores_from_pairs(samples, dimension=dim)
+
+            self.logger.log(
+                "MRQTrainingStart", {"dimension": dim, "sample_count": len(samples)}
+            )
+
             if dim not in self.trainers:
                 self.trainers[dim] = MRQTrainer(
                     memory=self.memory,
                     logger=self.logger,
-                    value_predictor=self.value_predictor,
                     encoder=self.encoder,
+                    value_predictor=self.value_predictor,
                     device=self.device,
                 )
 
             self.update_score_bounds_from_data(samples, dim)
-            trainer = self.trainers[dim]
-            dataloader = trainer.prepare_training_data(samples)
-            trainer.train(dataloader, cfg)
+            dataloader = self.trainers[dim].prepare_training_data(samples)
+            self.trainers[dim].train(dataloader, cfg)
+
+            self.logger.log("MRQTrainingComplete", {"dimension": dim})
 
     def train_from_context(self, context: dict, cfg: dict):
         dim_samples = context.get("mrq_training_pairs_by_dimension", {})
-
         for dim, samples in dim_samples.items():
             if not samples:
+                self.logger.log("MRQNoTrainingFromContext", {"dimension": dim})
                 continue
+
+            self.logger.log(
+                "MRQContextTrainingStart",
+                {"dimension": dim, "sample_count": len(samples)},
+            )
+
             self.update_score_bounds_from_data(samples, dim)
-            trainer = self.trainers[dim]
-            dataloader = trainer.prepare_training_data(samples)
-            trainer.train(dataloader, cfg)
+            dataloader = self.trainers[dim].prepare_training_data(samples)
+            self.trainers[dim].train(dataloader, cfg)
+
+            self.logger.log("MRQContextTrainingComplete", {"dimension": dim})
 
     def update_score_bounds_from_data(self, samples: list, dim: str):
         values = []
-        for sample in samples:
-            if "value_a" in sample and "value_b" in sample:
-                values.extend([sample["value_a"], sample["value_b"]])
-            elif "value" in sample:
-                values.append(sample["value"])
-
+        for s in samples:
+            if "value_a" in s and "value_b" in s:
+                values.extend([s["value_a"], s["value_b"]])
+            elif "value" in s:
+                values.append(s["value"])
         if values:
-            self.min_score_by_dim[dim] = min(values)
-            self.max_score_by_dim[dim] = max(values)
+            min_score = min(values)
+            max_score = max(values)
+            self.min_score_by_dim[dim] = min_score
+            self.max_score_by_dim[dim] = max_score
             self.logger.log(
                 "MRQScoreBoundsUpdated",
                 {
                     "dimension": dim,
-                    "min_score": self.min_score_by_dim[dim],
-                    "max_score": self.max_score_by_dim[dim],
-                    "count": len(values),
+                    "min_score": min_score,
+                    "max_score": max_score,
+                    "example_count": len(values),
                 },
             )
+
+    def align_mrq_with_llm_scores_from_pairs(
+        self, pair_samples: list[dict], dimension: str, log_prefix: str = "MRQAlignment"
+    ):
+        for pair in pair_samples:
+            prompt = pair["prompt"]
+            for side in ["a", "b"]:
+                hyp = pair[f"output_{side}"]
+                llm_score = pair[f"value_{side}"]
+
+                # Predict MRQ score dynamically
+                mrq_score = self.score(
+                    {"goal_text": prompt}, {"text": hyp}, [dimension]
+                )
+
+                # Log the alignment
+                self.logger.log(
+                    f"{log_prefix}Dynamic",
+                    {
+                        "prompt_hash": hash(prompt),
+                        "hypothesis_hash": hash(hyp),
+                        "dimension": dimension,
+                        "llm_score": llm_score,
+                        "predicted_mrq": mrq_score,
+                    },
+                )
+
+                # Pass the pair into the regression tuner
+                if mrq_score is not None and llm_score is not None:
+                    self.regression_tuners[dimension].train_single(
+                        mrq_score=mrq_score.results[dimension].score,
+                        llm_score=llm_score,
+                    )

@@ -18,13 +18,21 @@ class RegressionTuner:
         self.y = []  # LLM scores
         self.model = None
 
-    def add_example(self, mrq_score: float, llm_score: float):
-        """Adds a new example pair and refits the regressor if enough samples."""
+    def train_single(self, mrq_score: float, llm_score: float):
+        """Adds a new training pair and refits if threshold reached."""
         self.x.append(mrq_score)
         self.y.append(llm_score)
 
         if len(self.x) >= self.min_samples:
             self._fit()
+
+        if self.logger:
+            self.logger.log("RegressionTunerTrainSingle", {
+                "dimension": self.dimension,
+                "mrq_score": mrq_score,
+                "llm_score": llm_score,
+                "total_samples": len(self.x)
+            })
 
     def _fit(self):
         """Fits a linear regression model to current examples."""
@@ -34,7 +42,7 @@ class RegressionTuner:
         self.model = LinearRegression().fit(x_arr, y_arr)
 
         if self.logger:
-            self.logger.log("MRQRegressorFitted", {
+            self.logger.log("RegressionTunerFitted", {
                 "dimension": self.dimension,
                 "count": len(self.x),
                 "coef": float(self.model.coef_[0]),

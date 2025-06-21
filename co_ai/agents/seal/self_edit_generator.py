@@ -32,6 +32,8 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
         all_edits = []
 
         mrq_scorer = MRQScorer(self.cfg, memory=self.memory, logger=self.logger)
+        mrq_scorer.train_from_database(cfg=self.cfg)
+
 
         for prompt_file in self.prompt_files:
             prompt_text = self.prompt_loader.from_file(
