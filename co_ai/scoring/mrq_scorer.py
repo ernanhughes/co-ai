@@ -60,28 +60,28 @@ class MRQScorer(BaseScorer):
                 weight=1.0,
                 source="mrq",
             ))
-
-        final_score = round(sum(d.score for d in results) / len(results), 2)
-
         bundle = ScoreBundle(results={r.dimension: r for r in results})
-        ScoringManager.save_score_to_memory(
-            bundle,
-            hypothesis,
-            cfg=self.cfg,
-            memory=self.memory,
-            logger=self.logger,
-            source="mrq",
-        )
         return bundle
 
     def _estimate_score(self, goal: dict, hypothesis: dict, dimension: str) -> float:
         print(f"Estimating score for dimension: {dimension}")
         if dimension not in self.models:
-            raise ValueError(f"Dimension '{dimension}' not found in MRQ models.")
+            self.logger.log("MRQModelInitializing", {"dimension": dimension})
+            trainer = MRQTrainer(
+                memory=self.memory,
+                logger=self.logger,
+                value_predictor=self.value_predictor,
+                encoder=self.encoder,
+                device=self.device,
+            )
+            self.models[dimension] = (self.encoder, self.value_predictor)
+            self.trainers[dimension] = trainer
+            self.min_score_by_dim[dimension] = 0.0
+            self.max_score_by_dim[dimension] = 1.0
         encoder, predictor = self.models[dimension]
 
-        prompt_text = goal.get("prompt") or goal.get("text") or ""
-        response_text = hypothesis.get("response") or hypothesis.get("text") or ""
+        prompt_text = goal.get("goal_text")
+        response_text = hypothesis.get("text")
 
         # Get embeddings
         prompt_emb = torch.tensor(

@@ -18,6 +18,9 @@ EVENT_ICONS = {
     "MRQTrainerTrainingComplete": "🏁",
     "MRQTrainerStart": "🚀" ,
     "MRQScoreBoundsUpdated": "📈", 
+    "HypothesisJudged": "⚖️",  # Hypothesis judged
+    "MRQModelInitializing": "🧠",  # Indicates model initialization
+    "MRQDimensionEvaluated": "📏",  # Indicates dimension evaluation
     "HypothesisScored": "🏆",  # Hypothesis scored
     "EditGenerated": "✍️",  # Edit generated for hypothesis
     "TrainingDataProgress": "📊",
