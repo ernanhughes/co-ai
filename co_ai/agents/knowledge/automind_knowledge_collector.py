@@ -92,7 +92,7 @@ class AutoMindKnowledgeCollector:
         return list(set(matched_labels))
 
     async def retrieve_knowledge(self, task_description: str) -> List[Dict]:
-This can't come on        papers = await self.collect_papers(task_description)
+        papers = await self.collect_papers(task_description)
         kaggle_tricks = await self.collect_kaggle_solutions(task_description)
         all_docs = papers + kaggle_tricks
 

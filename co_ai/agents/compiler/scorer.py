@@ -1,19 +1,16 @@
 # co_ai/compiler/scorer.py
-from co_ai.scoring.mrq_scorer import MRQScorer
-from co_ai.scoring.llm_scorer import LLMScorer
-
+from co_ai.agents.mixins.scoring_mixin import ScoringMixin
 from co_ai.agents.compiler.reasoning_trace import ReasoningNode
+from co_ai.agents.base_agent import BaseAgent
 
-class ReasoningNodeScorer:
-    def __init__(self, scorer_type="mrq"):
-        if scorer_type == "mrq":
-            self.scorer = MRQScorer()
-        else:
-            self.scorer = LLMScorer()
+class ReasoningNodeScorer(ScoringMixin, BaseAgent):
+    def __init__(self, cfg, memory, logger):
+        super().__init__(cfg, memory=memory, logger=logger)
 
-    def score(self, node: ReasoningNode) -> float:
-        return self.scorer.score(
-            goal=node.goal,
-            hypothesis={"text": node.response},
-            dimensions=["correctness", "clarity", "depth"]
-        )
+    def score(self, node: ReasoningNode, context: dict) -> dict:
+        hypothesis = {"text": node.response}
+        # You can change 'metrics' to 'compiler' or a list like ['correctness', 'clarity']
+        return self.score_hypothesis(hypothesis, context, metrics="compiler")
+
+    async def run(self, context):
+        pass

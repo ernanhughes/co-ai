@@ -1,6 +1,6 @@
 # co_ai/agents/compiler/reasoning_trace.py
 from typing import List, Dict, Optional, Union
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import uuid4
 
 @dataclass
@@ -12,8 +12,8 @@ class ReasoningNode:
     action: str
     response: str
     score: float = 0.0
-    children: List["ReasoningNode"] = None
-    metadata: Dict = None
+    children: List["ReasoningNode"] = field(default_factory=list)
+    metadata: Dict = field(default_factory=dict)
 
 class ReasoningTree:
     def __init__(self):
@@ -38,7 +38,7 @@ class ReasoningTree:
         node = ReasoningNode(
             id=str(uuid4()),
             parent_id=parent_id,
-            goal="",  # Inherited from root
+            goal=self.nodes[parent_id].goal,
             thought=thought,
             action=action,
             response=response,
@@ -50,6 +50,18 @@ class ReasoningTree:
         self.nodes[parent_id].children.append(node)
         return node.id
 
-    def get_best_path(self, top_k: int = 3) -> List[ReasoningNode]:
-        # DFS or BFS to find highest-scoring paths
-        pass
+    def get_best_path(self, top_k: int = 1) -> List[ReasoningNode]:
+        def dfs(node: ReasoningNode, path: List[ReasoningNode]):
+            if not node.children:
+                paths.append((sum(n.score for n in path), list(path)))
+            for child in node.children:
+                dfs(child, path + [child])
+
+        paths = []
+        root = self.nodes.get(self.root_id)
+        if not root:
+            return []
+
+        dfs(root, [root])
+        paths.sort(key=lambda x: x[0], reverse=True)
+        return paths[0][1] if paths else []

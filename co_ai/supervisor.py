@@ -180,7 +180,8 @@ class Supervisor:
                     "PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1}
                 )
                 context = await agent.run(context)
-                self.rule_applier.track_pipeline_stage(stage_dict, context)
+                if self.rule_applier.rules:
+                    self.rule_applier.track_pipeline_stage(stage_dict, context)
                 self.logger.log(
                     "PipelineIterationEnd", {STAGE: stage.name, "iteration": i + 1}
                 )
