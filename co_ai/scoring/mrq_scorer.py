@@ -11,6 +11,9 @@ from co_ai.scoring.score_bundle import ScoreBundle
 from co_ai.scoring.score_result import ScoreResult
 from co_ai.scoring.scoring_manager import ScoringManager
 from co_ai.scoring.transforms.regression_tuner import RegressionTuner
+import os
+import json
+import torch
 
 
 class MRQScorer(BaseScorer):
@@ -343,3 +346,49 @@ class MRQScorer(BaseScorer):
                         mrq_score=mrq_score.results[dimension].score,
                         llm_score=llm_score,
                     )
+
+    def save_models(self):
+        base_dir = self.cfg.get("scoring", {}).get("model_dir", "models/mrq/")
+        os.makedirs(base_dir, exist_ok=True)
+
+        for dim, (encoder, predictor) in self.models.items():
+            dim_dir = os.path.join(base_dir, dim)
+            os.makedirs(dim_dir, exist_ok=True)
+
+            torch.save(encoder.state_dict(), os.path.join(dim_dir, "encoder.pt"))
+            torch.save(predictor.state_dict(), os.path.join(dim_dir, "predictor.pt"))
+
+            # Save tuner weights
+            self.regression_tuners[dim].save(os.path.join(dim_dir, "tuner.json"))
+
+            # Save metadata
+            meta = {
+                "min_score": self.min_score_by_dim[dim],
+                "max_score": self.max_score_by_dim[dim],
+            }
+            with open(os.path.join(dim_dir, "meta.json"), "w") as f:
+                json.dump(meta, f)
+
+
+    def load_models(self):
+        base_dir = self.cfg.get("scoring", {}).get("model_dir", "models/mrq/")
+
+        for dim in self.dimensions:
+            dim_dir = os.path.join(base_dir, dim)
+            if not os.path.exists(dim_dir):
+                self.logger.log("MRQLoadMissing", {"dimension": dim})
+                continue
+
+            encoder, predictor = self.models[dim]
+
+            encoder.load_state_dict(torch.load(os.path.join(dim_dir, "encoder.pt")))
+            predictor.load_state_dict(torch.load(os.path.join(dim_dir, "predictor.pt")))
+
+            self.regression_tuners[dim].load(os.path.join(dim_dir, "tuner.json"))
+
+            with open(os.path.join(dim_dir, "meta.json")) as f:
+                meta = json.load(f)
+                self.min_score_by_dim[dim] = meta["min_score"]
+                self.max_score_by_dim[dim] = meta["max_score"]
+
+            self.logger.log("MRQModelLoaded", {"dimension": dim})
