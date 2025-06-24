@@ -145,6 +145,34 @@ class LATSProgram(dspy.Module):
 
         return child_trace, child_score
 
+class SymbolicImpactAnalyzer:
+    """
+    Analyzes structural overlap and divergence between two graph representations (e.g., symbolic vs. LATS)
+    and attributes score delta to divergent paths.
+    """
+
+    def __init__(self, score_lookup_fn):
+        self.score_lookup_fn = (
+            score_lookup_fn  # Function to get scores for a given node or trace
+        )
+
+    def analyze(self, graph1, graph2):
+        matches, only_1, only_2 = compare_graphs(graph1, graph2)
+        results = []
+
+        for node in matches:
+            score_1 = self.score_lookup_fn(node, source="graph1")
+            score_2 = self.score_lookup_fn(node, source="graph2")
+            results.append(
+                {"node": node, "type": "converged", "delta": score_2 - score_1}
+            )
+
+        for node in only_1 + only_2:
+            score = self.score_lookup_fn(node, source="graph1")
+            results.append({"node": node, "type": "diverged", "score": score})
+
+        return results
+
 
 class LATSDSPyAgent(ScoringMixin, BaseAgent):
     """
@@ -195,6 +223,7 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
 
         # Symbolic impact analyzer
         self.impact_analyzer = SymbolicImpactAnalyzer(self._get_score)
+        self.score_map ={}
 
     async def run(self, context: dict) -> dict:
         """Main LATS search loop"""
@@ -234,7 +263,7 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
                         "percent_complete": f"{percent_complete:.1f}%",
                         "best_score": self._get_best_score(root),
                     },
-                )
+                ) 
                 mermaid_lines = build_mermaid_graph(root, max_depth=3)
                 mermaid_diagram = "\n".join(mermaid_lines)
                 self.logger.log("SearchTree", {"diagram": mermaid_diagram})
@@ -388,6 +417,8 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
             score_result = self.score_hypothesis(
                 hyp, scoring_context, metrics="lats_node"
             )
+            print(f"Scoring result for {comp}: {score_result.to_dict()}")
+            self.score_map[comp] = score_result.aggregate()
 
             # Create child node with metadata
             child = self.create_node(state=new_state, trace=new_trace, parent=node)
@@ -744,6 +775,12 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
             },
         )
 
+    def _get_best_score(self, root):
+        """Get best score from a graph representation"""
+        best_node_id = max(self.score_map, key=lambda k: self.score_map[k])
+        best_score = self.score_map[best_node_id]
+        return {best_node_id, best_score}
+
     def _log_node(self, node, level="debug"):
         """
         Logs a structured representation of a node for debugging
@@ -811,7 +848,7 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
         return (
             f"ID:{node_info['id']} "
             f"V:{node_info['visits']} "
-            f"R:{node_info['reward']} "
+            f"R:{node_info['reward']} " Hi I hope I put away
             f"S:{node_info['score']} "
             f"D:{node_info['depth']} "
             f"P→{node_info['parent_id']} "
@@ -824,32 +861,3 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
         return " ".join(
             f"{dim}={data['score']}" for dim, data in dimension_scores.items()
         )
-
-
-class SymbolicImpactAnalyzer:
-    """
-    Analyzes structural overlap and divergence between two graph representations (e.g., symbolic vs. LATS)
-    and attributes score delta to divergent paths.
-    """
-
-    def __init__(self, score_lookup_fn):
-        self.score_lookup_fn = (
-            score_lookup_fn  # Function to get scores for a given node or trace
-        )
-
-    def analyze(self, graph1, graph2):
-        matches, only_1, only_2 = compare_graphs(graph1, graph2)
-        results = []
-
-        for node in matches:
-            score_1 = self.score_lookup_fn(node, source="graph1")
-            score_2 = self.score_lookup_fn(node, source="graph2")
-            results.append(
-                {"node": node, "type": "converged", "delta": score_2 - score_1}
-            )
-
-        for node in only_1 + only_2:
-            score = self.score_lookup_fn(node, source="graph1")
-            results.append({"node": node, "type": "diverged", "score": score})
-
-        return results
