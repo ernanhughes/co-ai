@@ -168,7 +168,7 @@ class ScoringManager:
             cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
             if cached_result:
                 self.logger.log("ScoreCacheHit", {"dimension": dim["name"]})
-                result = ScoreResult.from_dict(cached_result)
+                result = cached_result
                 results.append(result)
                 continue
 
