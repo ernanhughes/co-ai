@@ -39,15 +39,28 @@ class PipelineRunnerAgent(BaseAgent):
             "selected": result.get("selected"),
         }
 
-    def inject_pipeline_config(self, pipeline_def: list, tag: str = "runtime") -> OmegaConf:
+    from omegaconf import OmegaConf
+
+    def inject_pipeline_config(
+        self, pipeline_def: list, tag: str = "runtime"
+    ) -> OmegaConf:
         """
         Injects a pipeline definition into the full config structure.
         Replaces the pipeline stages and agent blocks in the config.
         """
-        full_cfg_dict = OmegaConf.to_container(self.full_cfg, resolve=True)
+        try:
+            full_cfg_dict = OmegaConf.to_container(self.full_cfg, resolve=True)
 
-        full_cfg_dict["pipeline"]["tag"] = tag
-        full_cfg_dict["pipeline"]["stages"] = pipeline_def
-        full_cfg_dict["agents"] = {stage["name"]: stage for stage in pipeline_def}
+            full_cfg_dict["pipeline"]["tag"] = tag
+            full_cfg_dict["pipeline"]["stages"] = pipeline_def
+            full_cfg_dict["agents"] = {stage["name"]: stage for stage in pipeline_def}
 
-        return OmegaConf.create(full_cfg_dict)
+            return OmegaConf.create(full_cfg_dict)
+
+        except Exception as e:
+            if hasattr(self, "logger") and self.logger:
+                self.logger.log(
+                    "PipelineInjectionError",
+                    {"error": str(e), "pipeline_def": pipeline_def, "tag": tag},
+                )
+            raise e  # Reraise the exception after logging so it can be handled upstream if needed
