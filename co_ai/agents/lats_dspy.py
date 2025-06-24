@@ -223,7 +223,9 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
 
         # Symbolic impact analyzer
         self.impact_analyzer = SymbolicImpactAnalyzer(self._get_score)
-        self.score_map ={}
+        self.score_map = {}
+        self.completed_nodes = 0
+        self.total_estimated_nodes = 1  # Start with 1 to avoid division by zero
 
     async def run(self, context: dict) -> dict:
         """Main LATS search loop"""
@@ -417,8 +419,10 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
             score_result = self.score_hypothesis(
                 hyp, scoring_context, metrics="lats_node"
             )
-            print(f"Scoring result for {comp}: {score_result.to_dict()}")
-            self.score_map[comp] = score_result.aggregate()
+            node_path = self.build_node_path(node)
+            aggregated_result = score_result.aggregate()
+            print(f"Scoring result for {node_path}: {aggregated_result}")
+            self.score_map[node_path] = aggregated_result
 
             # Create child node with metadata
             child = self.create_node(state=new_state, trace=new_trace, parent=node)
@@ -428,6 +432,9 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
 
             children.append(child)
             self._log_node(child, level="debug")
+            self.completed_nodes += 1
+            self.total_estimated_nodes = max(self.total_estimated_nodes, self.completed_nodes + len(refined_completions))  # or open_nodes
+            self._log_progress()
 
         # Store children
         self.children[id(node)] = children
@@ -437,6 +444,17 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
             self._log_node(child, level="info")  # ← Add here
 
         return children[0] if children else node
+
+    def _log_progress(self):
+        pct = (self.completed_nodes / self.total_estimated_nodes) * 100
+        print(f"🔁 Progress: {self.completed_nodes}/{self.total_estimated_nodes} nodes completed ({pct:.2f}%)")
+
+    def build_node_path(self, node):
+        path = []
+        while node:
+            path.append(str(node['id']))  # or node.name, or whatever identifies the node
+            node = node.get('parent')     # assumes each node has a 'parent' reference
+        return " → ".join(reversed(path))
 
     def simulate_and_evaluate(self, node, context):
         """Simulate until terminal state and return final reward"""
@@ -848,7 +866,7 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
         return (
             f"ID:{node_info['id']} "
             f"V:{node_info['visits']} "
-            f"R:{node_info['reward']} " Hi I hope I put away
+            f"R:{node_info['reward']} "
             f"S:{node_info['score']} "
             f"D:{node_info['depth']} "
             f"P→{node_info['parent_id']} "
