@@ -1,6 +1,8 @@
 from co_ai.agents.base_agent import BaseAgent
 from co_ai.agents.mixins.scoring_mixin import ScoringMixin
 from co_ai.agents.mixins.memory_aware_mixin import MemoryAwareMixin
+from co_ai.scoring.mrq_scorer import MRQScorer
+
 
 class StepProcessorAgent(ScoringMixin, MemoryAwareMixin, BaseAgent):
     """
@@ -10,16 +12,18 @@ class StepProcessorAgent(ScoringMixin, MemoryAwareMixin, BaseAgent):
 
     def __init__(self, cfg, memory, logger):
         super().__init__(cfg, memory, logger)
+        self.scorer = MRQScorer(cfg, memory, logger)
+        self.scorer.load_models()
 
     async def run(self, context: dict) -> dict:
         goal = context["goal"]
-        steps = context.get(self.input_key, []) # input_key: step_plan
+        steps = context.get(self.input_key, [])  # input_key: step_plan
         step_outputs = []
 
         for i, step in enumerate(steps):
             step_context = {
                 "goal": goal,
-                "step": step.description,
+                "step": step["description"],
                 "step_index": i,
                 **context,  # Include all existing context
             }
@@ -27,21 +31,24 @@ class StepProcessorAgent(ScoringMixin, MemoryAwareMixin, BaseAgent):
             output = self.call_llm(prompt, context=step_context)
 
             # Score (optional)
-            score_result = self.score_hypothesis(output, context, metrics="step_quality")
+            score_result = self.score_hypothesis(
+                {"text": output}, context, metrics="step_quality", scorer=self.scorer
+            )
             total_score = score_result.aggregate()
 
-            step_outputs.append({
-                "step": step.description,
-                "output": output,
-                "score": total_score,
-                "dimension_scores": score_result,
-            })
+            step_outputs.append(
+                {
+                    "step": step["description"],
+                    "output": output,
+                    "score": total_score,
+                    "dimension_scores": score_result.to_dict(),
+                }
+            )
 
-            self.logger.log("StepProcessed", {
-                "step": step.description,
-                "output": output,
-                "score": total_score
-            })
+            self.logger.log(
+                "StepProcessed",
+                {"step": step["description"], "output": output, "score": total_score},
+            )
 
         context["step_outputs"] = step_outputs
         return context

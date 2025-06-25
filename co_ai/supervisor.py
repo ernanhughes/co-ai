@@ -155,7 +155,7 @@ class Supervisor:
             stage_dict = OmegaConf.to_container(stage.stage_dict, resolve=True)
             self.rule_applier.apply_to_agent(stage_dict, context)
 
-            saved_context = self.load_context(stage_dict, run_id=context.get(RUN_ID))
+            saved_context = self.load_context(stage_dict, goal_id=context.get(GOAL).get("id"))
             if saved_context:
                 self.logger.log(
                     "PipelineStageSkipped",
@@ -230,13 +230,13 @@ class Supervisor:
                 {NAME: name, RUN_ID: run_id, "context_keys": list(context.keys())},
             )
 
-    def load_context(self, cfg: DictConfig, run_id: str):
+    def load_context(self, cfg: DictConfig, goal_id: int):
         if self.memory and cfg.get(SKIP_IF_COMPLETED, False):
             name = cfg.get(NAME, None)
-            if name and self.memory.context.has_completed(run_id, name):
-                saved_context = self.memory.context.load(run_id, name)
+            if name and self.memory.context.has_completed(goal_id, name):
+                saved_context = self.memory.context.load(goal_id, name) 
                 if saved_context:
-                    self.logger.log("ContextLoaded", {RUN_ID: run_id, NAME: name})
+                    self.logger.log("ContextLoaded", {"Goal Id": goal_id, NAME: name})
                     return saved_context
         return None
 

@@ -4,6 +4,7 @@ defaults:
   - logging/json_logger
   - db: postgres
   - agents/step_compiler
+  - agents/step_processor
   - agents/cot_generator
   - agents/cot_dspy_generator
 
@@ -42,5 +43,9 @@ pipeline:
   stages:
     - name: step_compiler
       cls: co_ai.agents.compiler.step_compiler.StepCompilerAgent
+      enabled: true
+      iterations: 1
+    - name: step_processor
+      cls: co_ai.agents.compiler.step_processor.StepProcessorAgent 
       enabled: true
       iterations: 1
