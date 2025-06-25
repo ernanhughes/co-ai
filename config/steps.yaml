@@ -1,0 +1,46 @@
+# config/config.yaml
+defaults:
+  - _self_
+  - logging/json_logger
+  - db: postgres
+  - agents/step_compiler
+  - agents/cot_generator
+  - agents/cot_dspy_generator
+
+goal:
+  goal_text: Break down the question "How can AI systems autonomously improve their reasoning capabilities over time?" into a symbolic step-by-step plan. Each step should map to a distinct improvement dimension (e.g., reflection, self-evaluation, prompt tuning, or memory reuse), include a reusable reasoning template, and be scored individually for impact and generality.
+  goal_type: "tactical"
+  goal_category: "meta_learning"
+  focus_area: "self_improvement"
+  strategy: "stepwise_decomposition"
+  difficulty: "medium-high"
+  expected_formats:
+    - "symbolic_prompt_plan"
+    - "stepwise_reasoning_trace"
+    - "annotated_score_vector"
+
+paths:
+  prompts: ${hydra:runtime.cwd}/prompts
+
+report:
+  generate_report: true
+  path: ${hydra:runtime.cwd}/reports
+
+web_search:
+  engine: "searxng"
+  instance_url: "http://localhost:8080"
+
+
+embeddings:
+  model: "mxbai-embed-large"
+  dimension: 1024
+  endpoint: "http://localhost:11434/api/embeddings"
+
+pipeline:
+  name: default_pipeline
+  description: "Default hypothesis generation and refinement pipeline"
+  stages:
+    - name: step_compiler
+      cls: co_ai.agents.compiler.step_compiler.StepCompilerAgent
+      enabled: true
+      iterations: 1

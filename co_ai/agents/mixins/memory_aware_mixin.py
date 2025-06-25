@@ -27,11 +27,12 @@ class MemoryAwareMixin:
     """
 
     def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.shared_memory_key = "shared_memory"
         self.episodic_memory_key = "episodic_memory"
         self.seen_hashes = set()
 
-    def inject_memory_context(self, goal: str, state: dict, **overrides) -> dict:
+    def inject_memory_context(self, goal: str, context: dict, **overrides) -> dict:
         """
         Injects both shared and episodic memory into the prompt context.
 
@@ -41,13 +42,13 @@ class MemoryAwareMixin:
             memory_skill="multi-hop"
         """
         # Parse filter context from symbolic rules or config overrides
-        filter_ctx = self._build_filter_context(state.get("symbolic_rules", {}), **overrides)
+        filter_ctx = self._build_filter_context(context.get("symbolic_rules", {}), **overrides)
 
         # Retrieve from shared memory (short-term)
         shared_traces = self._get_shared_memory_traces(filter_ctx)
 
         # Retrieve from episodic memory (long-term)
-        episodic_traces = self._get_episodic_memory_traces(goal, filter_ctx)
+        episodic_traces = self._get_episodic_memory_traces(goal, filter_ctx, context=context)
 
         # Deduplicate by content hash
         filtered_shared = [t for t in shared_traces if self._hash_trace(t) not in self.seen_hashes]
@@ -62,7 +63,7 @@ class MemoryAwareMixin:
 
         # Inject into context
         updated_context = {
-            **state,
+            **context,
             "memory": {
                 "shared": filtered_shared,
                 "episodic": filtered_episodic,
@@ -116,15 +117,17 @@ class MemoryAwareMixin:
         shared_memory = getattr(self, self.shared_memory_key, [])
         return self._filter_traces(shared_memory, filter_ctx)
 
-    def _get_episodic_memory_traces(self, goal: str, filter_ctx: MemoryFilterContext) -> List[Dict]:
+    def _get_episodic_memory_traces(self, goal: str, filter_ctx: MemoryFilterContext, context: dict) -> List[Dict]:
         """
         Retrieve similar traces from episodic memory based on current goal.
         """
-        if not self.memory:
+        memory_obj = context.get("memory", {}).get("episodic")
+
+        if not memory_obj:
             return []
 
         try:
-            results = self.memory.retrieve_similar(goal, k=filter_ctx.top_k)
+            results = memory_obj.retrieve_similar(goal, k=filter_ctx.top_k)
             return self._filter_traces(results, filter_ctx)
         except Exception as e:
             if self.logger:
@@ -164,11 +167,11 @@ class MemoryAwareMixin:
         # Take top-K
         return filtered[:filter_ctx.top_k]
 
-    def _hash_trace(self, trace: dict) -> str:
+    def _hash_trace(self, context: dict) -> str:
         """
         Generate a unique hash for a trace to prevent duplication.
         """
-        content = trace.get("trace", "") + trace.get("response", "")
+        content = context.get("trace", "") + context.get("response", "")
         return hash_dict({"content": content})
 
     def _log_memory_filter_used(self, filter_ctx: MemoryFilterContext) -> None:

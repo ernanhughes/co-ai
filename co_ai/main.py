@@ -14,7 +14,7 @@ from co_ai.supervisor import Supervisor
 from co_ai.utils import generate_run_id, get_log_file_path
 
 
-@hydra.main(version_base=None, config_path="../config", config_name="config")
+@hydra.main(config_path="../config", config_name="pipelines/cot", version_base=None)
 def run(cfg: DictConfig):
     async def main():
         print(f"Initial Config:\n{OmegaConf.to_yaml(cfg)}")

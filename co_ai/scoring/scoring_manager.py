@@ -165,6 +165,7 @@ class ScoringManager:
         dimensions_to_use = self.filter_dimensions(hypothesis, context)
 
         for dim in dimensions_to_use:
+            print(f"Evaluating dimension: {dim['name']}")
             prompt = self.prompt_renderer.render(
                 dim, {"hypothesis": hypothesis, **context}
             )
