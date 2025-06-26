@@ -1,19 +1,15 @@
-# config/config.yaml
+# config/steps.yaml
 defaults:
   - _self_
   - logging/json_logger
   - db: postgres
   - agents/step_compiler
   - agents/step_processor
-  - agents/review
   - agents/prompt_tuning
-  - agents/final_assembler
   - agents/dspy_assembler
-  - agents/cot_generator
-  - agents/cot_dspy_generator
 
 goal:
-  goal_text: Break down the question "How can AI systems autonomously improve their reasoning capabilities over time?" into a symbolic step-by-step plan. Each step should map to a distinct improvement dimension (e.g., reflection, self-evaluation, prompt tuning, or memory reuse), include a reusable reasoning template, and be scored individually for impact and generality.
+  goal_text: I want to build an AI that can teach itself to solve complex problems better over time.
   goal_type: "tactical"
   goal_category: "meta_learning"
   focus_area: "self_improvement"
@@ -31,11 +27,6 @@ report:
   generate_report: true
   path: ${hydra:runtime.cwd}/reports
 
-web_search:
-  engine: "searxng"
-  instance_url: "http://localhost:8080"
-
-
 embeddings:
   model: "mxbai-embed-large"
   dimension: 1024
@@ -46,18 +37,22 @@ pipeline:
   description: "Default hypothesis generation and refinement pipeline"
   stages:
     - name: step_compiler
+      description: "Generates steps from initial goal"
       cls: co_ai.agents.compiler.step_compiler.StepCompilerAgent
       enabled: true
       iterations: 1
     - name: step_processor
+      description: "Processes each step to generate and score the outputs"
       cls: co_ai.agents.compiler.step_processor.StepProcessorAgent 
       enabled: true
-      iterations: 
+      iterations: 1
     - name: prompt_tuning
+      description: "Tunes prompts in the previous step(s) for better performance"
       cls: co_ai.agents.compiler.prompt_tuning.PromptTuningAgent
       enabled: true
       iterations: 1
     - name: dspy_assembler
+      description: "Assembles the prompts using the scores into a single good prompt"
       cls: co_ai.agents.compiler.dspy_assembler.DSPyAssemblerAgent
       enabled: true
       iterations: 1

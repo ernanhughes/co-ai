@@ -11,6 +11,8 @@ from dspy import (
 from co_ai.agents.base_agent import BaseAgent
 from co_ai.constants import GOAL
 from co_ai.scoring.mrq_scorer import MRQScorer
+from co_ai.agents.mixins.scoring_mixin import ScoringMixin
+from co_ai.agents.mixins.memory_aware_mixin import MemoryAwareMixin
 
 
 # DSPy signature for merging multiple high-quality prompts into a coherent prompt
@@ -33,7 +35,7 @@ class PromptMerger(dspy.Module):
         return self.merger(goal=goal, prompts=prompt_text)
 
 
-class DSPyAssemblerAgent(BaseAgent):
+class DSPyAssemblerAgent(ScoringMixin, MemoryAwareMixin, BaseAgent):
     """
     DSPyAssembler uses DSPy to merge and refine multiple prompt variants into one optimal prompt.
     """
@@ -106,7 +108,9 @@ class DSPyAssemblerAgent(BaseAgent):
         # 5. Score merged result
         try:
             hypothesis = self.call_llm(merged_prompt, context)
-            score_bundle = self.scorer.score({"goal_text": goal}, {"text": hypothesis})
+            score_bundle = self.score_hypothesis(
+                {"text": hypothesis}, context, metrics="compiler", scorer=self.scorer
+            )
             final_score = score_bundle.aggregate()
         except Exception as e:
             self.logger.log("FinalScoreFailed", {"error": str(e)})
@@ -128,8 +132,8 @@ class DSPyAssemblerAgent(BaseAgent):
         try:
             merged_prompt = pred.merged_prompt
             hypothesis = self.call_llm(merged_prompt, context=context)
-            score_bundle = self.scorer.score(
-                {"goal_text": example.goal}, {"text": hypothesis}
+            score_bundle = self.score_hypothesis(
+                {"text": hypothesis}, context, metrics="compiler", scorer=self.scorer
             )
             aggregate_score = score_bundle.aggregate()
             normalized_score = aggregate_score / 100.0  # Normalize to [0, 1]

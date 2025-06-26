@@ -1,5 +1,5 @@
 stage: reasoning
-output_format: cor  # or: simple, json, etc.
+output_format: simple  # or: simple, json, etc.
 dimensions:
   - name: correctness
     file: correctness.txt

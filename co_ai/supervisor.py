@@ -20,6 +20,7 @@ from co_ai.rules.symbolic_rule_applier import SymbolicRuleApplier
 class PipelineStage:
     def __init__(self, name: str, config: dict, stage_dict: dict):
         self.name = name
+        self.description = config.get("description", "")
         self.cls = config.get("cls", "")
         self.enabled = config.get("enabled", True)
         self.iterations = config.get("iterations", 1)
@@ -175,7 +176,7 @@ class Supervisor:
 
             self.logger.log("PipelineStageStart", {STAGE: stage.name})
 
-            for i in range(stage.iterations):
+            for i in range(stage.iterations): 
                 self.logger.log(
                     "PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1}
                 )

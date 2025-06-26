@@ -5,7 +5,8 @@ step_processor:
 
   save_prompt: true
   save_context: true
-  skip_if_completed: true
+  skip_if_completed: false
+  use_memory_for_fast_prompts: false
 
   evaluator: llm         #(mrq or llm)  may not be enough items fo mrq
   evaluator_prompt_file: evaluation.txt
@@ -29,7 +30,6 @@ step_processor:
   prompt_mode: file
   prompt_file: step_processor.txt
 
-  use_memory_for_fast_prompts: true
 
   remove_think: false # we require "thinking" part of the prompt
 
