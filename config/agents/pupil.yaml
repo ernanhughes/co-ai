@@ -12,7 +12,7 @@ pupil:
     api_key: null
 
   pupil_model:
-    name: ollama/qwen:0.5b
+    name: ollama/phi4-mini
     api_base: http://localhost:11434
     api_key: null
 
