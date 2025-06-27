@@ -1,5 +1,5 @@
 import yaml
-from sklearn.metrics.pairwise import cosine_similarity
+from torch.nn.functional import cosine_similarity
 
 
 class DomainClassifier:

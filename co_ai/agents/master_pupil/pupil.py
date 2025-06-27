@@ -5,8 +5,15 @@ class PupilAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
 
-    @time_function(logger=None)
     async def run(self, context: dict) -> dict:
-        self.execute_prompt(context)
-        return context
-        
+        question = context.get(self.input_key, context.get("goal", {}).get("goal_text", ""))
+        answer = self.answer(question, context)
+        context[self.output_key] = answer
+        self.logger.log("PupilAnswerGenerated", f"Answered: {answer[:50]}...")
+        return context        
+
+    @time_function(logger=None)
+    def answer(self, question, context):
+        # Placeholder implementation
+        response = self.call_llm(question, context, self.cfg.get("pupil_model"))
+        return response

@@ -4,11 +4,20 @@ pupil:
   save_prompt: true
   save_context: true
   skip_if_completed: false
+  use_memory_for_fast_prompts: false
+
   model:
     name: ollama/qwen:0.5b
     api_base: http://localhost:11434
     api_key: null
+
+  pupil_model:
+    name: ollama/qwen:0.5b
+    api_base: http://localhost:11434
+    api_key: null
+
   input_keys: ["goal"]
-  output_key: pupil
+  input_key: question
+  output_key: pupil_answer
   prompt_mode: file
   prompt_file: pupil.txt
