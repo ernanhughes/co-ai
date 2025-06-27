@@ -1,6 +1,6 @@
 # co_ai/agents/knowledge_loader.py
 import numpy as np
-from torch.nn.functional import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity
 
 from co_ai.agents.base_agent import BaseAgent
 from co_ai.constants import GOAL

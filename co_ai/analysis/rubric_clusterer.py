@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
-from torch.nn.functional import cosine_similarity
-
+from sklearn.metrics.pairwise import cosine_similarity
 
 class RubricClusterer:
     def __init__(self, memory):

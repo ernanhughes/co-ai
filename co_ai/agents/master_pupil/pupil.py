@@ -8,7 +8,7 @@ class PupilAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         question = context.get(self.input_key, context.get("goal", {}).get("goal_text", ""))
         answer = self.answer(question, context)
-        context[self.output_key] = answer
+        context.setdefault(self.output_key, []).append(answer)
         self.logger.log("PupilAnswerGenerated", f"Answered: {answer[:50]}...")
         return context        
 
