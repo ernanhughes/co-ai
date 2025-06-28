@@ -20,7 +20,7 @@ class TrainerAgent(BaseAgent):
         return context
 
 
-    def align_response(self, question, context=None, epochs=3, plot=True):
+    def align_response(self, question, context=None, epochs=25, plot=True):
         master_answer = self.master.answer(question, context)
         self.logger.log("MasterAnswer", {"master_answer": master_answer})
         pupil_answer = self.pupil.answer(question, context)

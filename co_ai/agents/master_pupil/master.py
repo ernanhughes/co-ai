@@ -15,6 +15,4 @@ class MasterAgent(BaseAgent):
 
     @time_function(logger=None)
     def answer(self, question, context):
-        # Placeholder implementation
-        response = self.call_llm(question, context, self.cfg.get("pupil_model"))
-        return response
+        return self.call_llm(question, context, self.cfg.get("pupil_model"))
