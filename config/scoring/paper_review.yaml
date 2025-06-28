@@ -14,5 +14,5 @@ dimensions:
 
   - name: implementability
     file: implementability
-    weight: 1.0 that scoring mix in
+    weight: 1.0
     extra_data: { parser: numeric }
