@@ -42,6 +42,7 @@ class DocumentPreferencePairBuilder:
                     d.id AS doc_id,
                     d.title,
                     d.text,
+                    g.goal_text,
                     ROW_NUMBER() OVER (
                         PARTITION BY s.dimension, d.id ORDER BY s.score DESC
                     ) AS rank_high,
@@ -51,12 +52,14 @@ class DocumentPreferencePairBuilder:
                 FROM scores s
                 JOIN evaluations e ON s.evaluation_id = e.id
                 JOIN documents d ON e.pipeline_run_id = d.pipeline_run_id
+                JOIN goals g ON e.goal_id = g.id
                 WHERE s.score IS NOT NULL
                 {goal_filter}
             )
             SELECT
                 dimension,
                 title,
+                goal_text,
                 text,
                 score,
                 rank_type,
@@ -65,6 +68,7 @@ class DocumentPreferencePairBuilder:
                 SELECT
                     dimension,
                     title,
+                    goal_text, 
                     text,
                     score,
                     'top' AS rank_type,
@@ -79,6 +83,7 @@ class DocumentPreferencePairBuilder:
                 SELECT
                     dimension,
                     title,
+                    goal_text,
                     text,
                     score,
                     'bottom' AS rank_type,
