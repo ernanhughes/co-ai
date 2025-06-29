@@ -1,6 +1,7 @@
 # co_ai/agents/monitor/goal_monitor_agent.py
 from co_ai.registry.registry import get
 
+
 class GoalMonitorAgent:
     """
     Oversees the learning and performance status of all goals.

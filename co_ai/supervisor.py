@@ -10,19 +10,18 @@ from omegaconf import DictConfig, OmegaConf
 
 from co_ai.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID, PROMPT_DIR,
                              RUN_ID, SAVE_CONTEXT, SKIP_IF_COMPLETED, STAGE)
+from co_ai.engine.cycle_watcher import CycleWatcher
+from co_ai.engine.meta_confidence import MetaConfidenceTracker
+from co_ai.engine.self_validation import SelfValidationEngine
+from co_ai.engine.state_tracker import StateTracker
+from co_ai.engine.training_controller import TrainingController
 from co_ai.logs.json_logger import JSONLogger
 from co_ai.memory import MemoryTool
 from co_ai.registry import AgentRegistry
+from co_ai.registry.registry import register
 from co_ai.reports import ReportFormatter
 from co_ai.rules.symbolic_rule_applier import SymbolicRuleApplier
 
-from co_ai.registry.registry import register
-
-from co_ai.engine.state_tracker import StateTracker
-from co_ai.engine.meta_confidence import MetaConfidenceTracker
-from co_ai.engine.cycle_watcher import CycleWatcher
-from co_ai.engine.training_controller import TrainingController
-from co_ai.engine.self_validation import SelfValidationEngine
 
 class PipelineStage:
     def __init__(self, name: str, config: dict, stage_dict: dict):

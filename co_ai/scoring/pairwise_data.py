@@ -1,7 +1,8 @@
 # co_ai/scoring/pairwise_data.py
 
-from sqlalchemy.sql import text
 from collections import defaultdict
+
+from sqlalchemy.sql import text
 
 
 class PreferencePairDatasetBuilder:

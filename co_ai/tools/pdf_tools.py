@@ -9,6 +9,26 @@ from pdfminer.pdfparser import PDFSyntaxError
 
 class PDFConverter:
     @staticmethod
+    def validate_pdf(file_path: Union[str, Path]) -> bool:
+        """
+        Validates if the given file is a valid PDF.
+
+        :param file_path: Path to the PDF file
+        :return: True if valid PDF, False otherwise
+        :raises FileNotFoundError: if the file doesn't exist
+        """
+        try:
+            with open(file_path, 'rb') as f:
+                content = f.read()
+                if b"\x00" in content:
+                    return False  # PDF files should not contain null bytes
+            return True
+        except PDFSyntaxError:
+            return False
+        except Exception as e:
+            raise RuntimeError(f"Failed to validate PDF: {e}")
+
+    @staticmethod
     def pdf_to_text(file_path: Union[str, Path]) -> str:
         """
         Extracts plain text from a PDF file.

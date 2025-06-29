@@ -1,0 +1,71 @@
+# config/config.yaml
+defaults:
+  - _self_
+  - db: postgres
+  - agents/arxiv_search
+  - agents/document_loader
+  - agents/document_profiler
+  - agents/paper_score
+  - agents/knowledge_loader
+  - agents/pipeline_judge
+  - logging/json_logger
+
+goal:
+  goal_text: I want to build an AI that can teach itself to solve complex problems better over time.
+  goal_type: "tactical"
+  goal_category: "meta_learning"
+  focus_area: "self_improvement"
+  strategy: "stepwise_decomposition"
+  difficulty: "medium-high"
+  expected_formats:
+    - "symbolic_prompt_plan"
+    - "stepwise_reasoning_trace"
+    - "annotated_score_vector"
+
+post_judgment:
+  name: pipeline_judge
+  enabled: false
+  cls: co_ai.agents.pipeline_judge.PipelineJudgeAgent
+
+paths:
+  prompts: ${hydra:runtime.cwd}/prompts
+
+report:
+  generate_report: true
+  path: ${hydra:runtime.cwd}/reports
+
+web_search:
+  engine: "searxng"
+  instance_url: "http://localhost:8080"
+
+
+embeddings:
+  model: "mxbai-embed-large"
+  dimension: 1024
+  endpoint: "http://localhost:11434/api/embeddings"
+
+pipeline:
+  name: rivals
+  tag: "search_arxiv"
+  description: "Search Arxiv for papers related to a goal"
+  stages:
+     - name: arxiv_search
+       cls: co_ai.agents.knowledge.arxiv_search.ArxivSearchAgent
+       enabled: true
+       iterations: 1
+     - name: document_loader
+       cls: co_ai.agents.knowledge.document_loader.DocumentLoaderAgent
+       enabled: true
+       iterations: 1
+     - name: document_profiler
+       cls: co_ai.agents.knowledge.document_profiler.DocumentProfilerAgent
+       enabled: true
+       iterations: 1
+     - name: paper_score
+       cls: co_ai.agents.knowledge.paper_score.PaperScoreAgent
+       enabled: true
+       iterations: 1
+     - name: knowledge_loader
+       cls: co_ai.agents.knowledge.knowledge_loader.KnowledgeLoaderAgent
+       enabled: true
+       iterations: 1

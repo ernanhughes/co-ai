@@ -2,17 +2,18 @@
 import asyncio
 import json
 import logging
-from datetime import datetime
 import os
+from datetime import datetime
+
 import hydra
 import yaml
 from omegaconf import DictConfig, OmegaConf
 
 from co_ai.logs import JSONLogger
 from co_ai.memory import MemoryTool
+from co_ai.scoring.score_bundle import ScoreBundle
 from co_ai.supervisor import Supervisor
 from co_ai.utils import generate_run_id, get_log_file_path
-from co_ai.scoring.score_bundle import ScoreBundle
 
 
 @hydra.main(config_path="../config", config_name="pipelines/cot", version_base=None)
