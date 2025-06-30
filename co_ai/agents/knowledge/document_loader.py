@@ -105,10 +105,10 @@ class DocumentLoaderAgent(BaseAgent):
                         continue
 
                 # Download PDF
-                response = requests.get(url)
+                response = requests.get(url, stream=True)
                 if response.status_code != 200:
                     self.logger.log(
-                        "DocumentLoadFailed",
+                        "DocumentRequestFailed",
                         {"url": url, "error": f"HTTP {response.status_code}"},
                     )
                     continue
@@ -119,8 +119,9 @@ class DocumentLoaderAgent(BaseAgent):
                 # Save to temporary file
                 pdf_path = f"{self.download_directory}/{file_name}.pdf"
                 with open(pdf_path, "wb") as f:
-                    f.write(response.content)
-
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
                 # Extract text
                 if not PDFConverter.validate_pdf(pdf_path):
                     self.logger.log(

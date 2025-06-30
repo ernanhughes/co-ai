@@ -13,7 +13,7 @@ defaults:
   - logging/json_logger
 
 goal:
-  goal_text: I want to build an AI that can teach itself to solve complex problems better over time.
+  goal_text: I’m building an AI that refines its approach over time, using feedback to improve its performance on complex tasks.
   goal_type: "tactical"
   goal_category: "meta_learning"
   focus_area: "self_improvement"

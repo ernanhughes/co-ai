@@ -32,6 +32,7 @@ EVENT_ICONS = {
     "DocumentMRQTunerMissing": "📄❌",  # Indicates missing tuner for MRQ
     "TunerSaved": "💾🛠️",  # Indicates tuner saved
     "ModelSaved": "💾📦",  # Indicates model saved
+    "ArxivSearchStart": "🔍📚",  # Indicates start of Arxiv search
     "RegressionTunerFitted": "📈🛠️",  # Indicates regression tuner fitted
     "RegressionTunerTrainSingle": "🏋️‍♂️",  # Indicates single training of regression tuner
     "DocumentTrainingComplete": "🎉✅",  # Indicates document training completion
