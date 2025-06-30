@@ -9,6 +9,9 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from co_ai.evaluator.text_encoder import TextEncoder
 from co_ai.scoring.document_value_predictor import DocumentValuePredictor
+from co_ai.scoring.transforms.regression_tuner import RegressionTuner
+
+
 
 class DocumentMRQTrainer:
     def __init__(
@@ -25,6 +28,7 @@ class DocumentMRQTrainer:
 
         self.encoder = encoder.to(device) if encoder else TextEncoder().to(device)
         self.value_predictor = value_predictor.to(device) if value_predictor else DocumentValuePredictor(512, 1024).to(device)
+        self.regression_tuners = {}
 
     def prepare_training_data(self, samples: List[dict]):
         inputs, labels = [], []
@@ -119,7 +123,6 @@ class DocumentMRQTrainer:
             "epochs_trained": epoch + 1,
             "final_loss": round(avg_loss, 5)
         })
-
     def train_multidimensional_model(self, contrast_pairs: List[dict], cfg=None):
         by_dimension = defaultdict(list)
         for pair in contrast_pairs:
@@ -127,6 +130,7 @@ class DocumentMRQTrainer:
             by_dimension[dim].append(pair)
 
         trained_models = {}
+        regression_tuners = {}
 
         for dim, samples in by_dimension.items():
             if not samples:
@@ -138,10 +142,77 @@ class DocumentMRQTrainer:
                 "num_samples": len(samples)
             })
 
+            tuner = RegressionTuner(dimension=dim, logger=self.logger)
+            regression_tuners[dim] = tuner
+
             dataloader = self.prepare_training_data(samples)
             self.train(dataloader, cfg or {})
-
             trained_models[dim] = self.value_predictor.state_dict()
-            # torch.save(trained_models[dim], f"models/document_rm_{dim}.pt")
 
-        return trained_models
+            # Train regression tuner
+            for pair in samples:
+                for side in ["a", "b"]:
+                    llm_score = pair[f"value_{side}"]
+                    doc_text = pair[f"output_{side}"]
+                    context_text = pair.get("title", "")
+
+                    # Compute MRQ score from model
+                    context_emb = torch.tensor(self.memory.embedding.get_or_create(context_text)).unsqueeze(0).to(self.device)
+                    doc_emb = torch.tensor(self.memory.embedding.get_or_create(doc_text)).unsqueeze(0).to(self.device)
+
+                    with torch.no_grad():
+                        zsa = self.encoder(context_emb, doc_emb)
+                        mrq_score = self.value_predictor(zsa).item()
+
+                    tuner.train_single(mrq_score, llm_score)
+
+        return trained_models, regression_tuners
+
+    def align_to_best_llm_neighbour(self, goal, hypothesis, dimension):
+        """
+        Fetch similar hypotheses that already have high LLM scores.
+        Then align MR.Q prediction to the best of them.
+        """
+        llm_scores = self.get_closest_llm_scores(hypothesis["text"], dimension)
+        if llm_scores:
+            self.align_with_llm_score(dimension, goal, hypothesis, max(llm_scores))
+
+    def get_closest_llm_scores(
+        self, hypothesis_text: str, dimension: str, top_k: int = 5
+    ) -> list[float]:
+        """
+        Finds the top_k LLM scores for hypotheses most similar to the given one.
+        """
+        query_emb = self.memory.embedding.get_or_create(hypothesis_text)
+        similar_items = self.memory.embedding.search_similar_prompts_with_scores(query_emb, top_k)
+
+        scores = []
+        for item in similar_items:
+            matched_text = item.get("text")
+            score_entry = self.memory.score.find_by_text_and_dimension(
+                matched_text, dimension=dimension, source="llm"
+            )
+            if score_entry:
+                scores.append(score_entry.score)
+        return scores
+
+    def align_with_llm_score(self, dimension, goal, hypothesis, llm_score):
+        mrq_score = self._estimate_score(goal, hypothesis, dimension)
+        self.logger.log(
+            "MRQAligningToLLM",
+            {
+                "goal": goal.get("goal_text"),
+                "hypothesis": hypothesis.get("text"),
+                "dimension": dimension,
+                "mrq_raw": mrq_score,
+                "llm_target": llm_score,
+            },
+        )
+        self.regression_tuners[dimension].add_example(mrq_score, llm_score)
+        self.logger.log(
+            "MRQAlignmentAdded",
+            {
+                "dimension": dimension,
+                "example_count": len(self.regression_tuners[dimension].examples),
+            }, 
+        )

@@ -4,6 +4,15 @@ document_reward_scorer:
   save_prompt: true
   save_context: true
   skip_if_completed: false
+
+  model_save_path: "${hydra:runtime.cwd}/models/documents"
+  model_prefix: "document_rm_"
+
+  dimensions:
+    - implementability
+    - novelty
+    - relevance
+
   model:
     name: ollama/qwen3
     api_base: http://localhost:11434

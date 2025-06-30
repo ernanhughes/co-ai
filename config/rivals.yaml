@@ -7,7 +7,8 @@ defaults:
   - agents/document_profiler
   - agents/paper_score
   - agents/knowledge_loader
-  - agents/document_pair_builder
+  - agents/document_trainer
+  - agents/document_reward_scorer
   - agents/pipeline_judge
   - logging/json_logger
 
@@ -75,8 +76,13 @@ pipeline:
        cls: co_ai.agents.knowledge.knowledge_loader.KnowledgeLoaderAgent
        enabled: true
        iterations: 1
-     - name: document_pair_builder
+     - name: document_trainer
        description: "Build document pairs for training and evaluation" 
-       cls: co_ai.agents.knowledge.document_pair_builder.DocumentPairBuilderAgent 
+       cls: co_ai.agents.knowledge.document_trainer.DocumentTrainerAgent 
+       enabled: true
+       iterations: 1
+     - name: document_reward_scorer
+       description: "Score the documents based on their relevance and quality"
+       cls: co_ai.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
        enabled: true
        iterations: 1

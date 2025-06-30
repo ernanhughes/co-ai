@@ -4,10 +4,15 @@ from co_ai.scoring.document_mrq_trainer import DocumentMRQTrainer
 from co_ai.scoring.document_value_predictor import DocumentValuePredictor
 from co_ai.evaluator.text_encoder import TextEncoder
 import torch
+import os
+import torch
+import json
 
-class DocumentPairBuilderAgent(BaseAgent):
+class DocumentTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
+        self.model_save_path = cfg.get("model_save_path", "/models")
+        self.model_prefix = cfg.get("model_prefix", "document_rm_")
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
@@ -32,6 +37,10 @@ class DocumentPairBuilderAgent(BaseAgent):
                     "pairs_count": len(pairs)
                 })
 
+        self.logger.log("DocumentPairBuilderComplete", {
+            "dimensions": list(training_pairs.keys()),
+            "total_pairs": sum(len(p) for p in training_pairs.values())
+        })
 
         trainer = DocumentMRQTrainer(
             memory=self.memory,          # your MemoryTool
@@ -52,7 +61,25 @@ class DocumentPairBuilderAgent(BaseAgent):
         assert len(all_contrast_pairs) > 0, "No contrast pairs found"
 
 
-        trained_models = trainer.train_multidimensional_model(all_contrast_pairs, cfg=config)
+        trained_models, regression_tuners = trainer.train_multidimensional_model( all_contrast_pairs, cfg=config)
+        self.logger.log("DocumentTrainingComplete", {
+            "dimensions": list(trained_models.keys()), 
+            "total_models": len(trained_models) 
+        })
+
+        os.makedirs(self.model_save_path, exist_ok=True)
+
+        for dim, state_dict in trained_models.items():
+            model_path = os.path.join(self.model_save_path, f"{self.model_prefix}{dim}.pt")
+            torch.save(state_dict, model_path)
+            self.logger.log("ModelSaved", {"dimension": dim, "path": model_path})
+
+            # Save corresponding tuner
+            tuner = regression_tuners.get(dim)
+            if tuner:
+                tuner_path = os.path.join(self.model_save_path, f"{self.model_prefix}{dim}_tuner.json")
+                tuner.save(tuner_path) 
+                self.logger.log("TunerSaved", {"dimension": dim, "path": tuner_path})
 
         context[self.output_key] = training_pairs
         self.logger.log("DocumentPairBuilderComplete", {
