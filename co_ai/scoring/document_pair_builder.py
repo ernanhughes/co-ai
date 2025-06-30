@@ -41,8 +41,7 @@ class DocumentPreferencePairBuilder:
                     s.score,
                     d.id AS doc_id,
                     d.title,
-                    d.text,
-                    g.goal_text,
+                    d.content,
                     ROW_NUMBER() OVER (
                         PARTITION BY s.dimension, d.id ORDER BY s.score DESC
                     ) AS rank_high,
@@ -51,16 +50,13 @@ class DocumentPreferencePairBuilder:
                     ) AS rank_low
                 FROM scores s
                 JOIN evaluations e ON s.evaluation_id = e.id
-                JOIN documents d ON e.pipeline_run_id = d.pipeline_run_id
-                JOIN goals g ON e.goal_id = g.id
+                JOIN documents d ON e.document_id = d.id
                 WHERE s.score IS NOT NULL
-                {goal_filter}
             )
             SELECT
                 dimension,
                 title,
-                goal_text,
-                text,
+                content,
                 score,
                 rank_type,
                 doc_id
@@ -68,23 +64,21 @@ class DocumentPreferencePairBuilder:
                 SELECT
                     dimension,
                     title,
-                    goal_text, 
-                    text,
+                    content,
                     score,
                     'top' AS rank_type,
                     doc_id
                 FROM scored_docs
                 WHERE rank_high = 1
-                  AND text IS NOT NULL
-                  AND text <> ''
+                  AND content IS NOT NULL
+                  AND content <> ''
                   
                 UNION ALL
 
                 SELECT
                     dimension,
                     title,
-                    goal_text,
-                    text,
+                    content,
                     score,
                     'bottom' AS rank_type,
                     doc_id
@@ -93,7 +87,7 @@ class DocumentPreferencePairBuilder:
             ) AS ranked_pairs
             ORDER BY dimension, doc_id
             LIMIT :limit
-        """.replace("{goal_filter}", "AND d.goal_text = :goal" if goal else ""))
+        """)
 
         params = {"limit": limit}
         if goal:
@@ -101,9 +95,11 @@ class DocumentPreferencePairBuilder:
 
         try:
             rows = self.db.execute(query, params).fetchall()
+            print(f"Fetched {len(rows)} rows from the database.")
         except Exception as e:
             if self.logger:
-                self.logger.error("Failed to get document training pairs", extra={"error": str(e)})
+                self.logger.log("DocumentPairBuilderError", {"error": str(e)})
+            self.db.rollback()
             return {}
 
         grouped = defaultdict(dict)
@@ -117,8 +113,8 @@ class DocumentPreferencePairBuilder:
             if "top" in data and "bottom" in data:
                 results_by_dimension[dimension].append({
                     "title": data["top"].title,
-                    "text_a": data["top"].text,
-                    "text_b": data["bottom"].text,
+                    "output_a": data["top"].content,
+                    "output_b": data["bottom"].content,
                     "value_a": float(data["top"].score),
                     "value_b": float(data["bottom"].score)
                 })
