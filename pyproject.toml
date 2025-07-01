@@ -1,5 +1,5 @@
 [project]
-name = "co-ai"
+name = "stephanie"
 version = "0.1.0"
 description = "A modular DSPy-based pipeline for LLM-powered scientific hypothesis generation and ranking."
 authors = [{ name = "Ernan Hughes", email = "ernanhughes@gmail.com" }]
