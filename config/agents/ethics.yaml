@@ -1,19 +1,15 @@
-# configs/agents/idea_innovation.yaml
-
-idea_innovation:
-  name: idea_innovation
+ethics:
+  name: ethics
   enabled: true
   save_prompt: true
   save_context: true
   skip_if_completed: false
-  strategy:
   model:
     name: ollama/qwen3
     api_base: http://localhost:11434
     api_key: null
+  input_keys: ["goal", "hypotheses"]
+  input_key: knowledge
+  output_key: ethics
   prompt_mode: file
-  prompt_file: idea.txt
-  input_keys: ["goal"]
-  input_key:
-  output_key: idea
-
+  prompt_file: ethics.txt

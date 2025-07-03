@@ -5,6 +5,7 @@ from stephanie.analysis.domain_classifier import DomainClassifier
 from stephanie.utils.document_section_parser import DocumentSectionParser
 
 DEFAULT_SECTIONS = ["title", "abstract", "methods", "results", "contributions"]
+REQUIRED_SECTIONS = ["title", "summary"]
 
 class DocumentProfilerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -14,6 +15,7 @@ class DocumentProfilerAgent(BaseAgent):
         self.fallback_to_llm = cfg.get("fallback_to_llm", False)
         self.store_inline = cfg.get("store_inline", True)
         self.output_sections = cfg.get("output_sections", DEFAULT_SECTIONS)
+        self.required_sections = cfg.get("required_sections", REQUIRED_SECTIONS)
         self.min_chars_per_sec = cfg.get("min_chars_per_section", 120)  # quality 
 
         self.force_domain_update = cfg.get("force_domain_update", False)
@@ -133,14 +135,16 @@ class DocumentProfilerAgent(BaseAgent):
         """
         Simple heuristic:
             • Missing any requested section
-            • OR any section shorter than min_chars
+            • OR any section (except 'title') shorter than min_chars
         """
         if not data:
             return True
-        for sec in self.output_sections:
+        for sec in self.required_sections:
             if sec not in data:
+                print(f"[FALLBACK NEEDED] Missing section: {sec}")
                 return True
-            if len(data[sec]) < self.min_chars_per_sec:
+            if sec != "title" and len(data[sec]) < self.min_chars_per_sec:
+                print(f"[FALLBACK NEEDED] section too small: {sec}")
                 return True
         return False
 

@@ -24,6 +24,9 @@ document_profiler:
     - methods
     - results
     - contributions
+  required_sections:
+    - title
+    - summary
 
   model:
     name: ollama/qwen3

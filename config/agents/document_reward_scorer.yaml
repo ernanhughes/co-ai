@@ -18,6 +18,7 @@ document_reward_scorer:
     api_base: http://localhost:11434
     api_key: null
   input_keys: ["goal", "hypotheses"]
+  input_key: doucmnets
   output_key: document_reward_scorer
   prompt_mode: file
   prompt_file: document_reward_scorer.txt

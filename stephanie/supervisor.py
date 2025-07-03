@@ -272,7 +272,7 @@ class Supervisor:
         return report
 
     def save_context(self, cfg: DictConfig, context: dict):
-        if self.memory and cfg.get(SAVE_CONTEXT, False):
+        if self.memory and cfg.get(SAVE_CONTEXT, True):
             run_id = context.get(RUN_ID)
             name = cfg.get(NAME, "NoAgentNameInConfig")
             self.memory.context.save(run_id, name, context, cfg)

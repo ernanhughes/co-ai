@@ -6,8 +6,8 @@ from stephanie.scoring.scoring_manager import ScoringManager
 
 
 class PaperScoreEvaluator(ScoringManager):
-    def evaluate(self, document: dict, context: dict = None, llm_fn=None):
-        text = document.get("content", "")
+    def evaluate(self, document: dict, context: dict = None, llm_fn=None, text_to_evaluate: str = "content") -> dict:
+        text = document.get(text_to_evaluate, "")
         chunks = self.chunk_text(text, max_tokens=1000)  # Adjust token limit as needed
         scores_accumulator = []
 
