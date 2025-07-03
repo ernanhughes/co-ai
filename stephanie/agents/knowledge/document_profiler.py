@@ -52,18 +52,17 @@ class DocumentProfilerAgent(BaseAgent):
                 else:
                     chosen = unstruct_data
 
-                prompt = self.prompt_loader.from_file(
-                    self.summary_prompt_file, self.cfg, context
-                )
-                generated_summary = self.call_llm(prompt, context)
-
                 # no point in overwriting arxiv data
                 if title:
                     chosen["title"] = title
                 if summary:
-                    chosen["abstract"] = (
-                        summary  
+                    chosen["summary"] = summary 
+                else:
+                    prompt = self.prompt_loader.from_file(
+                        self.summary_prompt_file, self.cfg, context
                     )
+                    chosen["summary"] = self.call_llm(prompt, context)
+
 
                 # -- STEP 3 : Persist ------------------------------------------
                 for section, text in chosen.items():
@@ -73,7 +72,7 @@ class DocumentProfilerAgent(BaseAgent):
                             "section_name": section,
                             "section_text": text,
                             "source": "unstructured+llm",
-                            "summary": generated_summary,
+                            "summary": summary,
                         }
                     )
 

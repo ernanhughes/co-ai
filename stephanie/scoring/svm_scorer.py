@@ -20,7 +20,7 @@ class SVMScorer(BaseScorer):
         self.cfg = cfg
         self.memory = memory
         self.logger = logger
-        self.dimensions = dimensions or ["alignment"]
+        self.dimensions = dimensions or ["alignment", "clarity", "actionability", "relevance"]
         self.models = {dim: SVR() for dim in self.dimensions}
         self.scalers = {dim: StandardScaler() for dim in self.dimensions}
         self.trained = {dim: False for dim in self.dimensions}
@@ -73,13 +73,13 @@ class SVMScorer(BaseScorer):
         vec = emb_goal + emb_hyp
 
         # Optional MRQ bridge feature
-        mrq = self.memory.score.find_by_text_and_dimension(
-            hypothesis["text"], dimension="alignment", source="mrq"
-        )
-        if mrq:
-            vec.append(mrq.score / 100.0)  # normalized to [0,1]
-        else:
-            vec.append(0.5)  # neutral if no MRQ score
+        # mrq = self.memory.scores.find_by_text_and_dimension(
+        #     hypothesis["text"], dimension="alignment", source="mrq"
+        # )
+        # if mrq:
+        #     vec.append(mrq.score / 100.0)  # normalized to [0,1]
+        # else:
+        #     vec.append(0.5)  # neutral if no MRQ score
 
         return vec
 
@@ -195,12 +195,12 @@ class SVMScorer(BaseScorer):
                     vec = self._build_feature_vector({"goal_text": prompt}, {"text": hypothesis})
                     X.append(vec)
                     y.append(llm_score)
-                    self.regression_tuners[dim].add_example(llm_score, llm_score)  # no-op, self-alignment fallback
+                    self.regression_tuners[dim].train_single(llm_score, llm_score)  # no-op, self-alignment fallback
 
         if not X:
             return
 
-        X_scaled = self.scalers[dim].fit_transform(X)
+        X_scaled = nt
         self.models[dim].fit(X_scaled, y)
         self.trained[dim] = True
 

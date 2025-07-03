@@ -14,6 +14,9 @@ EVENT_ICONS = {
     "ContextLoaded": "📂",
     "ContextSaved": "💾",
     "ContextAfterStage": "🗃️",
+    "ArxivSearchCompleted": "✅📚",  # Indicates successful completion of Arxiv search
+    "ScoreCacheHit": "✅",
+    "SectionDomainInserted": "📂🏷️",  # Indicates domain insertion for a section
     "ContextYAMLDumpSaved": "📄",
     "MRQTrainerTrainingComplete": "🏁",
     "MRQTrainerStart": "🚀" ,

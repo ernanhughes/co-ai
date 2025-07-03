@@ -7,6 +7,9 @@ from stephanie.models.score import ScoreORM
 from stephanie.models.evaluation import EvaluationORM
 
 
+DEFAULT_DIMENSIONS = ["alignment", "implementability", "clarity", "relevance"]
+
+
 class DocumentRewardScorerAgent(BaseAgent):
     """
     Scores document sections or full documents to assess reward value
@@ -15,7 +18,8 @@ class DocumentRewardScorerAgent(BaseAgent):
 
     def __init__(self, cfg, memory=None, logger=None, scorer: SVMScorer = None):
         super().__init__(cfg, memory, logger)
-        self.scorer = scorer or SVMScorer(cfg, memory=memory, logger=logger)
+        self.dimensions = cfg.get("dimensions", DEFAULT_DIMENSIONS)
+        self.scorer = scorer or SVMScorer(cfg, memory=memory, logger=logger, dimensions=self.dimensions)
 
     async def run(self, context: dict) -> dict:
         documents = context.get(self.input_key, [])
@@ -23,13 +27,13 @@ class DocumentRewardScorerAgent(BaseAgent):
 
         for doc in documents:
             doc_id = doc["id"]
-            goal = {"goal_text": context.get("goal", "")}
-            hypothesis = {"text": doc.get("summary") or doc.get("text", "")}
+            goal = context.get("goal", "")
+            hypothesis = {"text": doc.get("summary") or doc.get("content", "")}
 
             score_bundle: ScoreBundle = self.scorer.score(
                 goal=goal,
                 hypothesis=hypothesis,
-                dimensions=["alignment", "actionability", "clarity"]
+                dimensions=self.dimensions,
             )
 
             if self.logger:
