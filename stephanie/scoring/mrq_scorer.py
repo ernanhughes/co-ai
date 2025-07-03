@@ -13,7 +13,7 @@ from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-
+from stephanie.scoring.scorable import Scorable
 
 class MRQScorer(BaseScorer):
     def __init__(self, cfg: dict, memory, logger, dimensions=None):
@@ -52,13 +52,13 @@ class MRQScorer(BaseScorer):
     def name(self) -> str:
         return "mrq"
 
-    def score(self, goal: dict, hypothesis: dict, dimensions: list[str]) -> ScoreBundle:
+    def score(self, goal: dict, scorable: Scorable, dimensions: list[str]) -> ScoreBundle:
         """
         Predicts scores for given dimensions using MR.Q and applies tuning if available.
         """
         results = []
         for dim in dimensions:
-            score = self._estimate_score(goal, hypothesis, dim)
+            score = self._estimate_score(goal, scorable, dim)
             rationale = f"MRQ estimated score for {dim}."
             self.logger.log(
                 "MRQDimensionEvaluated",
@@ -71,11 +71,12 @@ class MRQScorer(BaseScorer):
                     rationale=rationale,
                     weight=1.0,
                     source="mrq",
+                    target=scorable.target_type,  # Default target for MR.Q scores
                 )
             )
         return ScoreBundle(results={r.dimension: r for r in results})
 
-    def _estimate_score(self, goal, hypothesis, dimension):
+    def _estimate_score(self, goal:dict, scorable: Scorable, dimension: str) -> float:
         """
         Core logic: compute embeddings, run prediction, apply optional regression tuner.
         """
@@ -88,7 +89,7 @@ class MRQScorer(BaseScorer):
             device=self.device,
         ).unsqueeze(0)
         response_emb = torch.tensor(
-            self.memory.embedding.get_or_create(hypothesis.get("text")),
+            self.memory.embedding.get_or_create(scorable.text),
             device=self.device,
         ).unsqueeze(0)
 
@@ -328,7 +329,7 @@ class MRQScorer(BaseScorer):
 
                 # Predict MRQ score dynamically
                 mrq_score = self.score(
-                    {"goal_text": prompt}, {"text": hyp}, [dimension]
+                    {"goal_text": prompt}, Scorable(text=hyp), [dimension]
                 )
 
                 # Log the alignment

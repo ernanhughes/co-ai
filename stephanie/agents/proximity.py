@@ -153,10 +153,11 @@ class ProximityAgent(ScoringMixin, BaseAgent):
         # Save per-hypothesis score
         for hypothesis in current_hypotheses:
             score_obj = EvaluationORM(
+                goal_id=goal.get("goal_id"),
+                target_type="hypothesis",
+                target_id=hypothesis.get("id"),
                 agent_name=self.name,
                 model_name=self.model_name,
-                goal_id=goal.get("goal_id"),
-                hypothesis_id=hypothesis.get("id"),
                 evaluator_name=self.name,
                 extra_data={"summary": summary_output},
                 scores=structured_scores, 

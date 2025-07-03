@@ -13,7 +13,7 @@ from stephanie.scoring.base_scorer import BaseScorer
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-
+from stephanie.scoring.scorable import Scorable
 
 class SVMScorer(BaseScorer):
     def __init__(self, cfg: dict, memory, logger, dimensions=None):
@@ -68,9 +68,9 @@ class SVMScorer(BaseScorer):
                 "score_max": float(np.max(y)),
             })
 
-    def _build_feature_vector(self, goal: dict, hypothesis: dict):
+    def _build_feature_vector(self, goal: dict, scorable: Scorable):
         emb_goal = self.memory.embedding.get_or_create(goal["goal_text"])
-        emb_hyp = self.memory.embedding.get_or_create(hypothesis["text"])
+        emb_hyp = self.memory.embedding.get_or_create(scorable.text)
 
         # Optional: make sure they're both numpy arrays
         emb_goal = np.array(emb_goal)
@@ -80,7 +80,7 @@ class SVMScorer(BaseScorer):
 
         return vec
 
-    def train_from_database(self, cfg:dict):
+    def train_from_database(self, cfg: dict):
         pair_samples = self.memory.mrq.get_training_pairs_by_dimension()
         samples_by_dim = self.convert_mrq_pairs_to_supervised_examples(pair_samples)
 
@@ -140,10 +140,10 @@ class SVMScorer(BaseScorer):
             "num_samples": len(y)
         })
 
-    def score(self, goal: dict, hypothesis: dict, dimensions: list[str]) -> ScoreBundle:
+    def score(self, goal: dict, scorable: Scorable, dimensions: list[str]) -> ScoreBundle:
         results = {}
         for dim in dimensions:
-            vec = self._build_feature_vector(goal, hypothesis)
+            vec = self._build_feature_vector(goal, scorable)
 
             # Dynamic training if needed
             if not self.trained[dim]:
@@ -162,7 +162,7 @@ class SVMScorer(BaseScorer):
             self.logger.log("SVMScoreComputed", {
                 "dimension": dim,
                 "score": score,
-                "hypothesis": hypothesis.get("text"),
+                "hypothesis": scorable.text,
             })
 
             results[dim] = ScoreResult(

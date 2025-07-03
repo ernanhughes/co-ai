@@ -1,13 +1,17 @@
-from abc import ABC, abstractmethod
+class Scorable:
+    def __init__(self, text: str, id: str = "",  target_type: str = "custom"):
+        self._id = id
+        self._text = text
+        self._target_type = target_type
 
-class Scorable(ABC):
     @property
-    @abstractmethod
     def text(self) -> str:
-        """Returns the string content to be scored."""
-        pass
+        return self._text
 
     @property
     def id(self) -> str:
-        """Optional: unique ID if available."""
-        return ""
+        return self._id
+
+    @property
+    def target_type(self) -> str:
+        return self._target_type

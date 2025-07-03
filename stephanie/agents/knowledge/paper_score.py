@@ -71,8 +71,13 @@ class PaperScoreAgent(BaseAgent, PaperScoringMixin):
                 },
             )
 
-    def get_scores_by_document_id (self, document_id: int) -> list[ScoreORM]:
-        evaluations = self.memory.session.query(EvaluationORM).filter_by(document_id=document_id).all()
+    def get_scores_by_document_id(self, document_id: int) -> list[ScoreORM]:
+        evaluations = (
+            self.memory.session.query(EvaluationORM)
+            .filter_by(target_type="document", target_id=document_id)
+            .all()
+        )
+
         scores = []
         for evaluation in evaluations:
             scores.extend(

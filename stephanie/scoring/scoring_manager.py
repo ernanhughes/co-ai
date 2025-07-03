@@ -237,7 +237,8 @@ class ScoringManager:
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
-            hypothesis_id=hypothesis_id,
+            target_type="hypothesis",
+            target_id=hypothesis_id,
             agent_name=cfg.get("name"),
             model_name=cfg.get("model", {}).get("name"),
             evaluator_name=cfg.get("evaluator", "ScoreEvaluator"),
@@ -294,7 +295,8 @@ class ScoringManager:
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
-            document_id=document_id,
+            target_type="document",
+            target_id=document_id,
             agent_name=cfg.get("name"),
             model_name=cfg.get("model", {}).get("name"),
             evaluator_name=cfg.get("evaluator", "ScoreEvaluator"),
