@@ -59,8 +59,13 @@ class DocumentRewardScorerAgent(BaseAgent):
     def _store_evaluation(self, document_id, context) -> int:
         evaluation = EvaluationORM(
             document_id=document_id,
-            goal_text=context.get("goal", ""),
-            metadata={"source": "reward_scorer"}
+            goal_id=context.get("goal", {}).get("id"),
+            metadata={"source": "reward_scorer"},
+            pipeline_run_id=context.get("pipeline_run_id"),
+            agent_name=self.name,
+            model_name=self.model_name,
+            evaluator_name=self.scorer.name,
+            strategy=self.strategy,
         )
         self.memory.session.add(evaluation)
         self.memory.session.commit()

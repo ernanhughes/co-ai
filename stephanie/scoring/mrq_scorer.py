@@ -48,6 +48,10 @@ class MRQScorer(BaseScorer):
             self.min_score_by_dim[dim] = 0.0
             self.max_score_by_dim[dim] = 1.0
 
+    @property
+    def name(self) -> str:
+        return "mrq"
+
     def score(self, goal: dict, hypothesis: dict, dimensions: list[str]) -> ScoreBundle:
         """
         Predicts scores for given dimensions using MR.Q and applies tuning if available.

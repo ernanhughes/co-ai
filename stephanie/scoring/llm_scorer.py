@@ -18,6 +18,10 @@ class LLMScorer(BaseScorer):
         self.logger = logger
         self.prompt_loader = prompt_loader
 
+    @property
+    def name(self) -> str:
+        return "llm"
+
     def score(self, goal, hypothesis, dimensions):
         """
         Returns dict of dimension -> {score, rationale, weight} + final_score.

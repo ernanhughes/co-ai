@@ -28,6 +28,10 @@ class SVMScorer(BaseScorer):
         for dim in self.dimensions:
             self._initialize_dimension(dim)
 
+    @property
+    def name(self) -> str:
+        return "svm"
+
     def _initialize_dimension(self, dim):
         self.models[dim] = SVR()
         self.scalers[dim] = StandardScaler()
@@ -65,21 +69,14 @@ class SVMScorer(BaseScorer):
             })
 
     def _build_feature_vector(self, goal: dict, hypothesis: dict):
-        """
-        Basic feature vector: concat prompt + hypothesis embeddings + MRQ raw score (if available)
-        """
         emb_goal = self.memory.embedding.get_or_create(goal["goal_text"])
         emb_hyp = self.memory.embedding.get_or_create(hypothesis["text"])
-        vec = emb_goal + emb_hyp
 
-        # Optional MRQ bridge feature
-        # mrq = self.memory.scores.find_by_text_and_dimension(
-        #     hypothesis["text"], dimension="alignment", source="mrq"
-        # )
-        # if mrq:
-        #     vec.append(mrq.score / 100.0)  # normalized to [0,1]
-        # else:
-        #     vec.append(0.5)  # neutral if no MRQ score
+        # Optional: make sure they're both numpy arrays
+        emb_goal = np.array(emb_goal)
+        emb_hyp = np.array(emb_hyp)
+
+        vec = np.concatenate([emb_goal, emb_hyp])
 
         return vec
 
@@ -200,7 +197,7 @@ class SVMScorer(BaseScorer):
         if not X:
             return
 
-        X_scaled = nt
+        X_scaled = self.scalers[dim].fit_transform(X)
         self.models[dim].fit(X_scaled, y)
         self.trained[dim] = True
 
