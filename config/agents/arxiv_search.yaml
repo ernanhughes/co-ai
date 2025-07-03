@@ -1,5 +1,6 @@
 arxiv_search:
   name: arxiv_search
+  description: "Search Arxiv for papers related to a goal"
   enabled: true
   save_prompt: true
   save_context: true

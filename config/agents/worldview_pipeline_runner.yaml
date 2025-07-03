@@ -1,15 +1,11 @@
-world_create:
-  name: world_create
+worldview_pipeline_runner:
+  name: worldview_pipeline_runner
   enabled: true
   save_prompt: true
   save_context: true
   skip_if_completed: false
 
-  base_directory: ${hydra:runtime.cwd}/worldviews
-  
-  pipelines:
-    - search_arxiv
-
+  pipeline_registry_path: ${hydra:runtime.cwd}/config/registry/pipeline_registry.yaml
 
 
   model:
