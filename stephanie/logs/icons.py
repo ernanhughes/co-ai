@@ -13,11 +13,12 @@ EVENT_ICONS = {
     "AgentInitialized": "🛠️",
     "ContextLoaded": "📂",
     "ContextSaved": "💾",
+    "DocumentsToJudge": "📄",
+    "ArxivSearchComplete": "🔍✅",
     "ContextAfterStage": "🗃️",
     "DocumentScored": "📄✅",  # Indicates a document has been score
     "SVMScoreComputed": "📊",  # Indicates SVM score computed
     "SVMAlignmentDynamic": "📈",  # Indicates dynamic alignment score
-    "ArxivSearchCompleted": "✅📚",  # Indicates successful completion of Arxiv search
     "ScoreCacheHit": "✅",
     "SectionDomainInserted": "📂🏷️",  # Indicates domain insertion for a section
     "ContextYAMLDumpSaved": "📄",

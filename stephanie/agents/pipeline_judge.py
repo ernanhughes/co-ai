@@ -10,6 +10,8 @@ from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.analysis.rule_analytics import RuleAnalytics
 from stephanie.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from stephanie.constants import PIPELINE_RUN_ID
+from stephanie.scoring.scorable import Scorable
+from stephanie.models.evaluation import TargetType
 
 
 class PipelineJudgeAgent(ScoringMixin, BaseAgent):
@@ -40,19 +42,29 @@ class PipelineJudgeAgent(ScoringMixin, BaseAgent):
         )
 
         for doc in documents:
-            score_result = self.score_hypothesis(
-                hypothesis=doc,
+            scorable = Scorable(
+                id=doc.get("id"),
+                text=doc.get("summary", ""),
+                target_type=TargetType.DOCUMENT,
+            )
+            score_result = self.score_item(
+                scorable=scorable,
                 context=context,
                 metrics="pipeline_judge",
             )
             self.logger.log(
                 "HypothesisJudged",
-                {"hypothesis_id": hypo.get("id"), "score": score_result.to_dict()},
+                {"hypothesis_id": doc.get("id"), "score": score_result.to_dict()},
             )
 
         for hypo in hypotheses:
-            score_result = self.score_hypothesis(
-                hypothesis=hypo,
+            scorable = Scorable(
+                id=hypo.get("id"),
+                text=hypo.get("text", ""),
+                target_type=TargetType.HYPOTHESIS,
+            )
+            score_result = self.score_item(
+                scorable=scorable,
                 context=context,
                 metrics="pipeline_judge",
             )

@@ -11,7 +11,8 @@ from stephanie.constants import (DATABASE_MATCHES, GOAL, GOAL_TEXT,
 from stephanie.models import EvaluationORM
 from stephanie.scoring.proximity import ProximityHeuristicEvaluator
 from stephanie.utils import compute_similarity_matrix
-
+from stephanie.scoring.scorable import Scorable
+from stephanie.models.evaluation import TargetType
 
 class ProximityAgent(ScoringMixin, BaseAgent):
     """
@@ -89,8 +90,9 @@ class ProximityAgent(ScoringMixin, BaseAgent):
         summary_output = self.call_llm(summary_prompt, merged)
         context["proximity_summary"] = summary_output
 
-        score_result = self.score_hypothesis(
-            hypothesis={"text": summary_output, "proximity_analysis": summary_output},
+        scorable = Scorable(text=summary_output, target_type=TargetType.HYPOTHESIS)
+        score_result = self.score_item(
+            scorable=scorable,
             context=context,
             metrics="proximity",  # Must match your config key: `proximity_score_config`
             scorer=ProximityHeuristicEvaluator(),

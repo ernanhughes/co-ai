@@ -1,6 +1,7 @@
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
-
+from stephanie.scoring.scorable import Scorable
+from stephanie.models.evaluation import TargetType
 
 class ReflectionAgent(ScoringMixin, BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -11,7 +12,12 @@ class ReflectionAgent(ScoringMixin, BaseAgent):
 
         reflections = []
         for hyp in hypotheses:
-            score = self.score_hypothesis(hyp, context, metrics="reflection")
+            scorable = {
+                "id": hyp.get("id", ""),
+                "text": hyp.get("text", ""),
+                "target_type": TargetType.HYPOTHESIS,
+            }   
+            score = self.score_item(scorable, context, metrics="reflection")
             self.logger.log(
                 "ReflectionScoreComputed",
                 score,

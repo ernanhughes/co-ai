@@ -14,7 +14,7 @@ from stephanie.scoring.calculations.weighted_average import \
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
-
+from stephanie.scoring.scorable import Scorable
 
 class ScoringManager:
     def __init__(self, dimensions, prompt_loader, cfg, logger, memory, calculator=None, dimension_filter_fn=None):
@@ -28,13 +28,13 @@ class ScoringManager:
         self.calculator = calculator or WeightedAverageCalculator()
         self.dimension_filter_fn = dimension_filter_fn  # Optional hook
 
-    def filter_dimensions(self, hypothesis, context):
+    def filter_dimensions(self, scorable, context):
         """
         Returns the list of dimensions to use for this evaluation.
         Override or provide a hook function to filter dynamically.
         """
         if self.dimension_filter_fn:
-            return self.dimension_filter_fn(self.dimensions, hypothesis, context)
+            return self.dimension_filter_fn(self.dimensions, scorable, context)
         return self.dimensions
 
     @staticmethod
@@ -149,27 +149,21 @@ class ScoringManager:
 
         raise ValueError(f"Could not extract numeric score from response: {response}")
 
-    def evaluate(self, hypothesis: dict, context: dict = {}, llm_fn=None, is_document=False):
-        if self.output_format == "cor":
-            return self._evaluate(hypothesis, context, llm_fn, format="cor", is_document=is_document)
-        else:
-            return self._evaluate(hypothesis, context, llm_fn, format="simple", is_document=is_document)
-
-    def _evaluate(self, hypothesis: dict, context: dict, llm_fn, format="simple", is_document=False):
+    def evaluate(self, scorable: Scorable, context: dict = {}, llm_fn=None):
         if llm_fn is None:
             raise ValueError("You must pass a call_llm function to evaluate")
 
         results = []
     
          # Use filter_dimensions if available
-        dimensions_to_use = self.filter_dimensions(hypothesis, context)
+        dimensions_to_use = self.filter_dimensions(scorable, context)
 
         for dim in dimensions_to_use:
             print(f"Evaluating dimension: {dim['name']}")
             prompt = self.prompt_renderer.render(
-                dim, {"hypothesis": hypothesis, **context}
+                dim, {"hypothesis": scorable, **context}
             )
-            prompt_hash = str(hash(prompt + str(hypothesis.get("id", ""))))
+            prompt_hash = str(hash(prompt + scorable.id))
             # 2. Check cache or memory for existing score
             cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
             if cached_result:
@@ -209,10 +203,7 @@ class ScoringManager:
             )
 
         bundle = ScoreBundle(results={r.dimension: r for r in results})
-        if is_document:
-            self.save_document_score_to_memory(bundle, hypothesis, context, self.cfg, self.memory, self.logger)
-        else:
-            self.save_score_to_memory(bundle, hypothesis, context, self.cfg, self.memory, self.logger)
+        self.save_score_to_memory(bundle, scorable, context, self.cfg, self.memory, self.logger)
         return bundle
 
     def handle_score_error(self, dim, response, error):
@@ -221,11 +212,10 @@ class ScoringManager:
         raise ValueError(f"Failed to parse score {response} for {dim['name']}: {error}")
 
     @staticmethod
-    def save_score_to_memory(bundle, hypothesis, context, cfg, memory, logger, source="ScoreEvaluator"):
+    def save_score_to_memory(bundle, scorable, context, cfg, memory, logger, source="ScoreEvaluator"):
         
         goal = context.get("goal")
         pipeline_run_id = context.get("pipeline_run_id")
-        hypothesis_id = hypothesis.get("id")
         weighted_score = bundle.calculator.calculate(bundle)
 
         scores_json = {
@@ -237,8 +227,8 @@ class ScoringManager:
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
-            target_type="hypothesis",
-            target_id=hypothesis_id,
+            target_type=scorable.target_type,
+            target_id=scorable.id,
             agent_name=cfg.get("name"),
             model_name=cfg.get("model", {}).get("name"),
             evaluator_name=cfg.get("evaluator", "ScoreEvaluator"),
@@ -268,12 +258,13 @@ class ScoringManager:
             "ScoreSavedToMemory",
             {
                 "goal_id": goal.get("id"),
-                "hypothesis_id": hypothesis_id,
+                "target_id": scorable.id,
+                "target_type": scorable.target_type,
                 "scores": scores_json,
             },
         )
         ScoreDeltaCalculator(cfg, memory, logger).log_score_delta(
-            hypothesis_id, weighted_score, goal.get("id")
+            scorable, weighted_score, goal.get("id")
         )
         ScoreDisplay.show(bundle.to_dict(), weighted_score)
 

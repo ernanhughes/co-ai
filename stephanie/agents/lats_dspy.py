@@ -3,8 +3,7 @@ import re
 from collections import defaultdict
 
 import dspy
-from dspy import (BootstrapFewShot, Example, InputField, OutputField, Predict,
-                  Signature)
+from dspy import BootstrapFewShot, Example, InputField, OutputField, Predict, Signature
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
@@ -15,8 +14,12 @@ from stephanie.constants import GOAL
 from stephanie.scoring.mrq_scorer import MRQScorer
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.svm_scorer import SVMScorer
-from stephanie.utils.graph_tools import (build_mermaid_graph, compare_graphs,
-                                     save_mermaid_to_file)
+from stephanie.utils.graph_tools import (
+    build_mermaid_graph,
+    compare_graphs,
+    save_mermaid_to_file,
+)
+from stephanie.scoring.scorable import Scorable
 
 
 class TraceStep(Signature):
@@ -425,10 +428,10 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
             }
 
             # Score using dimensional scorers
-            hyp = {"text": comp, "goal_id": context[GOAL]["id"]}
+            scorable = Scorable(text=comp)
 
-            score_result = self.score_hypothesis(
-                hyp, scoring_context, metrics="lats_node", scorer=self.scorer
+            score_result = self.score_item(
+                scorable, scoring_context, metrics="lats_node", scorer=self.scorer
             )
             node_path = self.build_node_path(node)
             aggregated_result = score_result.aggregate()
@@ -512,13 +515,9 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
 
         # Fallback: dimensional scoring
         print(node)
-        hyp = {
-            "text": "\n".join(node["trace"]),
-            "goal_id": node["state"].get("goal_id"),
-        }
-
-        score_result = self.score_hypothesis(
-            hyp, context, metrics="lats_reflection", scorer=self.scorer
+        scorable = Scorable(text="\n".join(node["trace"]))
+        score_result = self.score_item(
+            scorable, context, metrics="lats_reflection", scorer=self.scorer
         )
         return score_result.aggregate() / 100, score_result
 
@@ -643,13 +642,11 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
         goal_text = state.get("goal", "Unknown goal")
 
         # Build hypothesis for scoring
-        hyp = {
-            "text": "\n".join(trace),
-        }
+        scorable = Scorable(text="\n".join(trace))
 
         # Score using dimensional scorers
-        score_result = self.score_hypothesis(
-            hyp,
+        score_result = self.score_item(
+            scorable,
             {"goal": {"goal_text": goal_text}},  # Always a dict
             metrics="lats_reflection",
             scorer=self.scorer,
@@ -718,11 +715,14 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
     def _get_dimension_score(self, trace):
         """Get dimensional scores for trace"""
         # Build hypothesis
-        hyp = {"text": "\n".join(trace), "id": f"hyp_{len(self.nodes)}"}
+        scorable = Scorable(text="\n".join(trace))
 
         # Score across dimensions
-        score_result = self.score_hypothesis(
-            hyp, {"goal": {"goal_text": trace["goal"]}}, metrics="lats_reflection", scorer=self.scorer
+        score_result = self.score_item(
+            scorable,
+            {"goal": {"goal_text": trace["goal"]}},
+            metrics="lats_reflection",
+            scorer=self.scorer,
         )
         return score_result.aggregate() / 100  # Normalize
 
@@ -758,7 +758,7 @@ class LATSDSPyAgent(ScoringMixin, BaseAgent):
     def _get_dimension_scores(self, trace) -> ScoreBundle:
         """Get scores across all dimensions"""
         hyp = {"text": "\n".join(trace)}
-        return self.score_hypothesis(hyp, {}, metrics="lats_node", scorer=self.scorer)
+        return self.score_item(hyp, {}, metrics="lats_node", scorer=self.scorer)
 
     def _generate_reflection(self, node):
         """Generate reflection for failed trajectory"""

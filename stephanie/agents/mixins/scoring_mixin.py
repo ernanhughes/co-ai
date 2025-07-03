@@ -1,7 +1,7 @@
 from stephanie.scoring.base_scorer import BaseScorer
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.scoring_manager import ScoringManager
-
+from stephanie.scoring.scorable import Scorable
 
 class ScoringMixin:
     """
@@ -61,9 +61,9 @@ class ScoringMixin:
         scorer = self.get_scorer(stage)
         return scorer.get_dimensions()
 
-    def score_hypothesis(
+    def score_item(
         self,
-        hypothesis: dict,
+        scorable: Scorable,
         context: dict,
         metrics: str = "review",
         scorer: BaseScorer = None,
@@ -90,11 +90,11 @@ class ScoringMixin:
 
         if scorer:
             dimensions = default_scorer.get_dimensions()
-            result = scorer.score(context.get("goal"), hypothesis, dimensions)
+            result = scorer.score(context.get("goal"), scorable, dimensions)
             self.logger.log("HypothesisScored", result.to_dict())
         else:
             result = default_scorer.evaluate(
-                hypothesis=hypothesis,
+                hypothesis=scorable,
                 context=context,
                 llm_fn=self.call_llm
             )

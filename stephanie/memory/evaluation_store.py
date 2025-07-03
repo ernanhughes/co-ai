@@ -8,6 +8,7 @@ from stephanie.models import RuleApplicationORM
 from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.evaluation_rule_link import EvaluationRuleLinkORM
 from stephanie.models.goal import GoalORM
+from stephanie.scoring.scorable import Scorable
 
 
 class EvaluationStore:
@@ -166,10 +167,19 @@ class EvaluationStore:
                 })
             return []
         
-    def get_latest_score(self, hypothesis_id, stage=None):
-        query = self.session.query(EvaluationORM).filter_by(hypothesis_id=hypothesis_id)
+    def get_latest_score(self, scorable: Scorable, stage: str = None):
+        query = self.session.query(EvaluationORM).filter_by(
+            target_type=scorable.target_type,
+            target_id=scorable.id
+        )
+
+        if stage:
+            query = query.filter(EvaluationORM.stage == stage)
+
         query = query.order_by(EvaluationORM.created_at.desc())
         latest = query.first()
+
         if latest and latest.scores:
             return latest.scores.get("final_score")
+
         return None
