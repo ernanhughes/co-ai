@@ -1,12 +1,8 @@
 import random
 
-import numpy as np
-from openai import OpenAI
-
 
 class InstructionEngine:
     def __init__(self, api_key, base_goal):
-        self.client = OpenAI(api_key=api_key)
         self.base_goal = base_goal
         self.variation_strategies = [
             "Change methodology to experimental approach",

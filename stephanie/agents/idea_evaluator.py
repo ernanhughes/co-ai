@@ -1,5 +1,5 @@
 # stephanie/agents/idea_evaluator.py
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import GOAL
 from stephanie.evaluator.llm_judge_evaluator import LLMJudgeEvaluator
 from stephanie.evaluator.mrq_self_evaluator import MRQSelfEvaluator

@@ -1,4 +1,4 @@
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.analysis.rubric_classifier import RubricClassifierMixin
 from stephanie.constants import GOAL, GOAL_TEXT

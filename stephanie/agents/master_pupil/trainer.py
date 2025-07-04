@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.agents.master_pupil.finetuner import PupilFineTuner
 
 

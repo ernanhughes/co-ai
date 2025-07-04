@@ -1,12 +1,9 @@
-import json
 import os
 from datetime import datetime
 
 from evolution_selector import EvolutionarySelector
-from fusion_engine import CartridgeMerger
-from instruction_engine import InstructionEngine
-from quality_evaluator import CartridgeScorer
 from slave_system import ResearchSlave
+from stephanie.agents.evolution.instruction_engine import InstructionEngine
 
 from stephanie.reports.report_generator import ReportGenerator
 

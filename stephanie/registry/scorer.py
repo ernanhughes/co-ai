@@ -1,12 +1,15 @@
 from stephanie.scoring.llm_scorer import LLMScorer
 from stephanie.scoring.mrq_scorer import MRQScorer
 from stephanie.scoring.svm_scorer import SVMScorer
+from stephanie.scoring.proximity_scorer import ProximityScorer
 
 SCORER_REGISTRY = {
     "mrq": MRQScorer,
     "llm": LLMScorer,
     "svm": SVMScorer,
+    "proximity": ProximityScorer,
 }
+
 def get_scorer(scorer_type: str, cfg: dict, memory=None, logger=None):
     """
     Factory function to get a scorer instance by type.

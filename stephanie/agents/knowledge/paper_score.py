@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.agents.mixins.paper_scoring_mixin import PaperScoringMixin
 from stephanie.models import EvaluationORM, ScoreORM
 from stephanie.models.evaluation import TargetType

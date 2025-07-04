@@ -1,6 +1,6 @@
 import re
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import GOAL, REFLECTION
 
 

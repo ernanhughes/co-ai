@@ -6,7 +6,7 @@ import dspy
 from dspy import (BootstrapFewShot, Example, InputField, OutputField, Predict,
                   Signature)
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.agents.proximity import ProximityAgent
 from stephanie.agents.rule_tuner import RuleTunerAgent

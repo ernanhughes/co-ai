@@ -1,6 +1,6 @@
 # stephanie/agents/idea_sharpening.py
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import GOAL, HYPOTHESES, PIPELINE
 from stephanie.evaluator import MRQSelfEvaluator
 

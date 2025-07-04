@@ -249,3 +249,35 @@ class EmbeddingStore(BaseStore):
             else:
                 print(f"[PromptSearchFailed] {e}")
             return []
+
+    def get_id_for_text(self, text: str) -> int | None:
+        """
+        Retrieves the embedding ID for the given text if it exists in the database.
+        Returns:
+            The embedding ID (int) if found, otherwise None.
+        """
+        text_hash = self.get_text_hash(text)
+
+        # First check the cache to avoid unnecessary DB hit
+        cached = self._cache.get(text_hash)
+        if cached:
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute("SELECT id FROM embeddings WHERE text_hash = %s", (text_hash,))
+                    row = cur.fetchone()
+                    return row[0] if row else None
+            except Exception as e:
+                if self.logger:
+                    self.logger.log("EmbeddingIdFetchFailed", {"error": str(e)})
+                return None
+        else:
+            # No cache, still check DB
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute("SELECT id FROM embeddings WHERE text_hash = %s", (text_hash,))
+                    row = cur.fetchone()
+                    return row[0] if row else None
+            except Exception as e:
+                if self.logger:
+                    self.logger.log("EmbeddingIdFetchFailed", {"error": str(e)})
+                return None

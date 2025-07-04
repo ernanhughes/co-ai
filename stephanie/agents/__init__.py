@@ -12,7 +12,7 @@ Agents responsible for core reasoning steps:
 - generic
 - refiner
 """
-from .base_agent import BaseAgent
+from .world.base_agent import BaseAgent
 from .dots_planner import DOTSPlannerAgent
 from .evolution import EvolutionAgent
 from .generation import GenerationAgent

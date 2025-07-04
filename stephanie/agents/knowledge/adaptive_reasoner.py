@@ -1,6 +1,6 @@
 from typing import Union
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import GOAL
 from stephanie.dataloaders import ARMDataLoader
 from stephanie.evaluator import ARMReasoningSelfEvaluator, LLMJudgeEvaluator

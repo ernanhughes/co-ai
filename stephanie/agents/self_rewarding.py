@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import PIPELINE_RUN_ID
 from stephanie.evaluator.base import BaseEvaluator
 from stephanie.memory import SymbolicRuleStore

@@ -1,7 +1,7 @@
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.agents.master_pupil.master import MasterAgent
 from stephanie.agents.master_pupil.pupil import PupilAgent
 from stephanie.agents.master_pupil.trainer import TrainerAgent

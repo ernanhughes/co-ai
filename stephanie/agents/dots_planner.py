@@ -1,4 +1,4 @@
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import GOAL, STRATEGY
 from stephanie.utils.goal_classifier import classify_goal_strategy  # See below
 

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.models.evaluation import TargetType
 from stephanie.scoring.mrq_scorer import MRQScorer

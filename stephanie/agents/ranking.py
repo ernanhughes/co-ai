@@ -4,7 +4,7 @@ import random
 import re
 from typing import Optional
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 
 
 class RankingAgent(BaseAgent):

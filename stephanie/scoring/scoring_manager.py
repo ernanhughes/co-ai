@@ -165,9 +165,9 @@ class ScoringManager:
             prompt = self.prompt_renderer.render(
                 dim, {"hypothesis": scorable, **context}
             )
-            prompt_hash = str(hash(prompt + str(scorable.id)))
 
             if not force_rescore:
+                prompt_hash = ScoreORM.compute_prompt_hash(prompt, scorable)
                 cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
                 if cached_result:
                     self.logger.log("ScoreCacheHit", {"dimension": dim["name"]})

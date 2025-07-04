@@ -3,7 +3,7 @@ from datetime import datetime
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.agents.icl.prompt_builder import PromptBuilder
 from stephanie.core.knowledge_cartridge import KnowledgeCartridge
 from stephanie.scoring.svm_scorer import SVMScorer

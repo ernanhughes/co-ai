@@ -50,7 +50,7 @@ import re
 
 import requests
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.analysis.domain_classifier import DomainClassifier
 from stephanie.constants import GOAL
 from stephanie.tools.arxiv_tool import fetch_arxiv_metadata

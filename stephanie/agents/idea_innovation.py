@@ -1,5 +1,5 @@
 # stephanie/agents/idea_innovation.py
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import GOAL
 from stephanie.memory import IdeaStore
 from stephanie.models.idea import IdeaORM

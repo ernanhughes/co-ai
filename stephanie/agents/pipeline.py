@@ -3,7 +3,7 @@ import re
 from dataclasses import asdict
 from datetime import datetime
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import PIPELINE, PIPELINE_RUN_ID, RUN_ID
 from stephanie.models import EvaluationORM, RuleApplicationORM
 

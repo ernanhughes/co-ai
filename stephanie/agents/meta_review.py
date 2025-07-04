@@ -1,6 +1,6 @@
 # stephanie/agents/meta_review.py
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.constants import (DATABASE_MATCHES, EVOLVED, HYPOTHESES,
                                  PROXIMITY, RANKING, REFLECTION, REVIEW)
 

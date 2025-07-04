@@ -744,6 +744,24 @@ CREATE TABLE IF NOT EXISTS worldviews (
 );
 
 
+CREATE TABLE IF NOT EXISTS cartridges (
+    id SERIAL PRIMARY KEY,
+    goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
+    source_type TEXT,                      -- e.g., 'document', 'hypothesis', etc.
+    source_uri TEXT,                              -- Can store external ID or reference
+    embedding_id INTEGER REFERENCES embeddings(id) ON DELETE SET NULL,
+    markdown_content TEXT,                        -- Structured markdown representation
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cartridge_domains (
+    id SERIAL PRIMARY KEY,
+    cartridge_id INTEGER NOT NULL,
+    domain VARCHAR NOT NULL,
+    score FLOAT NOT NULL,
+    FOREIGN KEY (cartridge_id) REFERENCES cartridges(id) ON DELETE CASCADE,
+    UNIQUE (cartridge_id, domain)
+);
 
 
 

@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.models.mrq_memory_entry import MRQMemoryEntryORM
 from stephanie.models.mrq_preference_pair import MRQPreferencePairORM
 
