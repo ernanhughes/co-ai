@@ -80,12 +80,12 @@ pipeline:
      - name: document_trainer
        description: "Build document pairs for training and evaluation" 
        cls: stephanie.agents.knowledge.document_trainer.DocumentTrainerAgent 
-       enabled: true
+       enabled: false
        iterations: 1
      - name: document_reward_scorer
        description: "Score the documents based on their relevance and quality"
        cls: stephanie.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
-       enabled: true
+       enabled: false
        iterations: 1
      - name: cartridge
        description: "Generate a cartridge from the knowledge"

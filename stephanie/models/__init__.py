@@ -26,3 +26,6 @@ from .sharpening_prediction import SharpeningPredictionORM
 from .sharpening_result import SharpeningResultORM
 from .symbolic_rule import SymbolicRuleORM
 from .unified_mrq import UnifiedMRQModelORM
+from .cartridge import CartridgeORM
+from .cartridge_domain import CartridgeDomainORM
+from .embedding import EmbeddingORM

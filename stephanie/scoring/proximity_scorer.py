@@ -128,7 +128,7 @@ class ProximityScorer(BaseScorer):
                 score = tuned_score
                 rationale = f"SVM predicted and aligned score for {dim}"
 
-            self.logger.log("SVMScoreComputed", {
+            self.logger.log("ProximityScoreComputed", {
                 "dimension": dim,
                 "score": score,
                 "hypothesis": scorable.text,

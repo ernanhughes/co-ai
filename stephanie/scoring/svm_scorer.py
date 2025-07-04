@@ -15,7 +15,7 @@ from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-
+from stephanie.models.score import ScoreORM
 
 class SVMScorer(BaseScorer):
     def __init__(self, cfg: dict, memory, logger, dimensions=None):
@@ -26,6 +26,7 @@ class SVMScorer(BaseScorer):
         self.models = {dim: SVR() for dim in self.dimensions}
         self.scalers = {dim: StandardScaler() for dim in self.dimensions}
         self.trained = {dim: False for dim in self.dimensions}
+        self.force_rescore = cfg.get("force_rescore", False)
         self.regression_tuners = {}  
         for dim in self.dimensions:
             self._initialize_dimension(dim)
@@ -145,6 +146,16 @@ class SVMScorer(BaseScorer):
     def score(self, goal: dict, scorable: Scorable, dimensions: list[str]) -> ScoreBundle:
         results = {}
         for dim in dimensions:
+            if not self.force_rescore:
+                prompt_hash = ScoreORM.compute_prompt_hash(goal.get("goal_text"), scorable)
+                cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
+                if cached_result:
+                    self.logger.log("ScoreCacheHit", {"dimension": dim["name"]})
+                    result = cached_result
+                    results.append(result)
+                    continue
+
+
             vec = self._build_feature_vector(goal, scorable)
 
             # Dynamic training if needed

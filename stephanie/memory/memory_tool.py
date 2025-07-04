@@ -32,6 +32,8 @@ from stephanie.memory.search_result_store import SearchResultStore
 from stephanie.memory.sharpening_store import SharpeningStore
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
+from stephanie.memory.cartridge_domain_store import CartridgeDomainStore
+from stephanie.memory.cartridge_store import CartridgeStore
 
 
 class MemoryTool:
@@ -81,6 +83,9 @@ class MemoryTool:
         self.register_store(DocumentDomainStore(self.session, logger))
         self.register_store(DocumentSectionStore(self.session, logger))
         self.register_store(DocumentSectionDomainStore(self.session, logger))
+        self.register_store(CartridgeDomainStore(self.session, logger))
+        self.register_store(CartridgeStore(self.session, logger))
+        
 
 
 

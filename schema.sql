@@ -743,16 +743,21 @@ CREATE TABLE IF NOT EXISTS worldviews (
     db_path TEXT
 );
 
-
 CREATE TABLE IF NOT EXISTS cartridges (
     id SERIAL PRIMARY KEY,
-    goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
-    source_type TEXT,                      -- e.g., 'document', 'hypothesis', etc.
-    source_uri TEXT,                              -- Can store external ID or reference
+    goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL,
+    source_type TEXT NOT NULL,
+    source_uri TEXT,
+    markdown_content TEXT NOT NULL,
     embedding_id INTEGER REFERENCES embeddings(id) ON DELETE SET NULL,
-    markdown_content TEXT,                        -- Structured markdown representation
+    title TEXT,
+    summary TEXT,
+    sections JSONB,
+    triples JSONB,
+    domain_tags JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 
 CREATE TABLE IF NOT EXISTS cartridge_domains (
     id SERIAL PRIMARY KEY,

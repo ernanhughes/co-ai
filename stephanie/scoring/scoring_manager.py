@@ -251,7 +251,8 @@ class ScoringManager:
                 score=score_result.score,
                 weight=score_result.weight,
                 rationale=score_result.rationale,
-                prompt_hash=score_result.prompt_hash,
+                prompt_hash=score_result.prompt_hash or ScoreORM.compute_prompt_hash(
+                    goal.get("goal_text", ""), scorable) 
             )
             memory.session.add(score)
 
