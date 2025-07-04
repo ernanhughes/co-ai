@@ -94,7 +94,7 @@ class ScoringMixin:
             self.logger.log("HypothesisScored", result.to_dict())
         else:
             result = default_scorer.evaluate(
-                hypothesis=scorable,
+                scorable=scorable,
                 context=context,
                 llm_fn=self.call_llm
             )

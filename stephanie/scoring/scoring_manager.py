@@ -163,7 +163,7 @@ class ScoringManager:
             prompt = self.prompt_renderer.render(
                 dim, {"hypothesis": scorable, **context}
             )
-            prompt_hash = str(hash(prompt + scorable.id))
+            prompt_hash = str(hash(prompt + str(scorable.id)))
             # 2. Check cache or memory for existing score
             cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
             if cached_result:

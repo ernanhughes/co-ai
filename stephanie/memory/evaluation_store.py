@@ -167,14 +167,14 @@ class EvaluationStore:
                 })
             return []
         
-    def get_latest_score(self, scorable: Scorable, stage: str = None):
+    def get_latest_score(self, scorable: Scorable, agent_name: str = None):
         query = self.session.query(EvaluationORM).filter_by(
             target_type=scorable.target_type,
             target_id=scorable.id
         )
 
-        if stage:
-            query = query.filter(EvaluationORM.stage == stage)
+        if agent_name:
+            query = query.filter(EvaluationORM.agent_name == agent_name)
 
         query = query.order_by(EvaluationORM.created_at.desc())
         latest = query.first()

@@ -5,7 +5,7 @@ class ScoreDeltaCalculator:
         self.logger = logger
 
     def log_score_delta(self, hypothesis_id, new_score, goal_id=None):
-        prev = self.memory.evaluations.get_latest_score(hypothesis_id, stage=self.cfg.get("name"))
+        prev = self.memory.evaluations.get_latest_score(hypothesis_id, agent_name=self.cfg.get("name"))
         if prev is not None:
             delta = round(new_score - prev, 2)
             if self.logger:

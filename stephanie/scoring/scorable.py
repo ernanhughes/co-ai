@@ -15,3 +15,10 @@ class Scorable:
     @property
     def target_type(self) -> str:
         return self._target_type
+
+    def __repr__(self):
+        return (
+            f"Scorable(id='{self._id}', "
+            f"target_type='{self._target_type}', "
+            f"text_preview='{self._text[:30].replace('\n', ' ')}...')"
+        )
