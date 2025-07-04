@@ -7,6 +7,7 @@ from stephanie.agents.mixins.paper_scoring_mixin import PaperScoringMixin
 from stephanie.models import EvaluationORM, ScoreORM
 from stephanie.models.evaluation import TargetType
 
+
 class PaperScoreAgent(BaseAgent, PaperScoringMixin):
 
     def __init__(self, cfg, memory=None, logger=None):

@@ -2,6 +2,7 @@
 
 from stephanie.analysis.paper_score_evaluator import PaperScoreEvaluator
 
+
 class EthicsScoringMixin:
     def score_ethics(self, doc: dict, context: dict = None) -> dict:
         context = context or {}

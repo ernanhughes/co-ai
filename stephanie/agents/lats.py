@@ -5,9 +5,10 @@ import uuid
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.constants import GOAL
-from stephanie.utils.timing import time_function
-from stephanie.scoring.scorable import Scorable
 from stephanie.models.evaluation import TargetType
+from stephanie.scoring.scorable import Scorable
+from stephanie.utils.timing import time_function
+
 
 class LATSNode:
     """Unified node structure for MCTS"""

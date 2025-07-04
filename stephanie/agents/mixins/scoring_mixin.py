@@ -1,7 +1,8 @@
 from stephanie.scoring.base_scorer import BaseScorer
+from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.scoring_manager import ScoringManager
-from stephanie.scoring.scorable import Scorable
+
 
 class ScoringMixin:
     """

@@ -1,6 +1,8 @@
 import random
+
 import numpy as np
 from openai import OpenAI
+
 
 class InstructionEngine:
     def __init__(self, api_key, base_goal):

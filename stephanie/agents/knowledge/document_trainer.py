@@ -1,12 +1,15 @@
-from stephanie.agents.base_agent import BaseAgent
-from stephanie.scoring.document_pair_builder import DocumentPreferencePairBuilder
-from stephanie.scoring.document_mrq_trainer import DocumentMRQTrainer
-from stephanie.scoring.document_value_predictor import DocumentValuePredictor
-from stephanie.evaluator.text_encoder import TextEncoder
-import torch
-import os
-import torch
 import json
+import os
+
+import torch
+
+from stephanie.agents.base_agent import BaseAgent
+from stephanie.evaluator.text_encoder import TextEncoder
+from stephanie.scoring.document_mrq_trainer import DocumentMRQTrainer
+from stephanie.scoring.document_pair_builder import \
+    DocumentPreferencePairBuilder
+from stephanie.scoring.document_value_predictor import DocumentValuePredictor
+
 
 class DocumentTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

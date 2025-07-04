@@ -12,7 +12,6 @@ from stephanie.scoring.document_value_predictor import DocumentValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 
 
-
 class DocumentMRQTrainer:
     def __init__(
         self,
@@ -123,6 +122,7 @@ class DocumentMRQTrainer:
             "epochs_trained": epoch + 1,
             "final_loss": round(avg_loss, 5)
         })
+
     def train_multidimensional_model(self, contrast_pairs: List[dict], cfg=None):
         by_dimension = defaultdict(list)
         for pair in contrast_pairs:

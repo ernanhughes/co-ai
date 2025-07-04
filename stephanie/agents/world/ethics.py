@@ -1,5 +1,4 @@
 from stephanie.agents.base_agent import BaseAgent
-
 from stephanie.agents.mixins.ethics_scoring_mixin import EthicsScoringMixin
 
 

@@ -4,16 +4,18 @@ from collections import defaultdict
 
 import torch
 
-from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from stephanie.evaluator.hypothesis_value_predictor import \
+    HypothesisValuePredictor
 from stephanie.evaluator.mrq_trainer import MRQTrainer
 from stephanie.evaluator.text_encoder import TextEncoder
 from stephanie.models.sharpening_prediction import SharpeningPredictionORM
 from stephanie.scoring.base_scorer import BaseScorer
+from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-from stephanie.scoring.scorable import Scorable
+
 
 class MRQScorer(BaseScorer):
     def __init__(self, cfg: dict, memory, logger, dimensions=None):

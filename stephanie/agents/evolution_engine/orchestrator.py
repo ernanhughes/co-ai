@@ -1,12 +1,15 @@
-import os
 import json
+import os
 from datetime import datetime
-from instruction_engine import InstructionEngine
-from slave_system import ResearchSlave
-from fusion_engine import CartridgeMerger
-from quality_evaluator import CartridgeScorer
+
 from evolution_selector import EvolutionarySelector
+from fusion_engine import CartridgeMerger
+from instruction_engine import InstructionEngine
+from quality_evaluator import CartridgeScorer
+from slave_system import ResearchSlave
+
 from stephanie.reports.report_generator import ReportGenerator
+
 
 class ResearchOrchestrator:
     def __init__(self, base_goal, api_key, num_slaves=20, max_generations=5):

@@ -17,8 +17,9 @@ class Scorable:
         return self._target_type
 
     def __repr__(self):
+        preview = self._text[:30].replace("\n", " ")
         return (
             f"Scorable(id='{self._id}', "
             f"target_type='{self._target_type}', "
-            f"text_preview='{self._text[:30].replace('\n', ' ')}...')"
+            f"text_preview='{preview}...')"
         )

@@ -7,12 +7,13 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import \
     ScoringMixin  # Adjust path if needed
 from stephanie.constants import (DATABASE_MATCHES, GOAL, GOAL_TEXT,
-                             PIPELINE_RUN_ID, TEXT)
+                                 PIPELINE_RUN_ID, TEXT)
 from stephanie.models import EvaluationORM
-from stephanie.scoring.proximity import ProximityHeuristicEvaluator
-from stephanie.utils import compute_similarity_matrix
-from stephanie.scoring.scorable import Scorable
 from stephanie.models.evaluation import TargetType
+from stephanie.scoring.proximity import ProximityHeuristicEvaluator
+from stephanie.scoring.scorable import Scorable
+from stephanie.utils import compute_similarity_matrix
+
 
 class ProximityAgent(ScoringMixin, BaseAgent):
     """

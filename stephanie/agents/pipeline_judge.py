@@ -10,8 +10,8 @@ from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.analysis.rule_analytics import RuleAnalytics
 from stephanie.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from stephanie.constants import PIPELINE_RUN_ID
-from stephanie.scoring.scorable import Scorable
 from stephanie.models.evaluation import TargetType
+from stephanie.scoring.scorable import Scorable
 
 
 class PipelineJudgeAgent(ScoringMixin, BaseAgent):

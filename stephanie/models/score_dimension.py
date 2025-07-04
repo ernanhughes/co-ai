@@ -4,6 +4,7 @@ from sqlalchemy.orm import declarative_base, relationship
 
 from stephanie.models.base import Base
 
+
 class ScoreDimensionORM(Base):
     __tablename__ = "score_dimensions"
 

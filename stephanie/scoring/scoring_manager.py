@@ -11,10 +11,11 @@ from stephanie.prompts.prompt_renderer import PromptRenderer
 from stephanie.scoring.calculations.score_delta import ScoreDeltaCalculator
 from stephanie.scoring.calculations.weighted_average import \
     WeightedAverageCalculator
+from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
-from stephanie.scoring.scorable import Scorable
+
 
 class ScoringManager:
     def __init__(self, dimensions, prompt_loader, cfg, logger, memory, calculator=None, dimension_filter_fn=None):
@@ -154,8 +155,9 @@ class ScoringManager:
             raise ValueError("You must pass a call_llm function to evaluate")
 
         results = []
-    
-         # Use filter_dimensions if available
+        force_rescore = context.get("force_rescore", False)
+
+        # Use filter_dimensions if available
         dimensions_to_use = self.filter_dimensions(scorable, context)
 
         for dim in dimensions_to_use:
@@ -164,18 +166,19 @@ class ScoringManager:
                 dim, {"hypothesis": scorable, **context}
             )
             prompt_hash = str(hash(prompt + str(scorable.id)))
-            # 2. Check cache or memory for existing score
-            cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
-            if cached_result:
-                self.logger.log("ScoreCacheHit", {"dimension": dim["name"]})
-                result = cached_result
-                results.append(result)
-                continue
+
+            if not force_rescore:
+                cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
+                if cached_result:
+                    self.logger.log("ScoreCacheHit", {"dimension": dim["name"]})
+                    result = cached_result
+                    results.append(result)
+                    continue
 
             response = llm_fn(prompt, context=context)
             try:
                 score = dim["parser"](response)
-                score = dim.get("postprocess", lambda s: s)(score) 
+                score = dim.get("postprocess", lambda s: s)(score)
             except Exception as e:
                 self.logger.log(
                     "MgrScoreParseError",

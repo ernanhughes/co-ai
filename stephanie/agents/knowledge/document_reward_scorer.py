@@ -1,11 +1,10 @@
 # stephanie/agents/knowledge/document_reward_scorer.py
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.scoring.svm_scorer import SVMScorer
+from stephanie.models.evaluation import EvaluationORM, TargetType
+from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.models.score import ScoreORM
-from stephanie.models.evaluation import EvaluationORM
-
+from stephanie.scoring.svm_scorer import SVMScorer
 
 DEFAULT_DIMENSIONS = ["alignment", "implementability", "clarity", "relevance"]
 
@@ -28,11 +27,12 @@ class DocumentRewardScorerAgent(BaseAgent):
         for doc in documents:
             doc_id = doc["id"]
             goal = context.get("goal", "")
-            hypothesis = {"text": doc.get("summary") or doc.get("content", "")}
+            text = doc.get("summary") or doc.get("content", "")
+            scorable = Scorable(text=text, target_type=TargetType.DOCUMENT, id=doc_id)
 
             score_bundle: ScoreBundle = self.scorer.score(
                 goal=goal,
-                hypothesis=hypothesis,
+                scorable=scorable,
                 dimensions=self.dimensions,
             )
 
@@ -44,7 +44,7 @@ class DocumentRewardScorerAgent(BaseAgent):
                 })
 
             # Persist results
-            evaluation_id = self._store_evaluation(doc_id, context)
+            evaluation_id = self._store_evaluation(scorable, context)
             self._store_scores(score_bundle, evaluation_id)
 
             results.append({
@@ -56,9 +56,10 @@ class DocumentRewardScorerAgent(BaseAgent):
         context[self.output_key] = results
         return context
 
-    def _store_evaluation(self, document_id, context) -> int:
+    def _store_evaluation(self, scorable, context) -> int:
         evaluation = EvaluationORM(
-            document_id=document_id,
+            target_id=scorable.id,
+            target_type=scorable.target_type,
             goal_id=context.get("goal", {}).get("id"),
             metadata={"source": "reward_scorer"},
             pipeline_run_id=context.get("pipeline_run_id"),

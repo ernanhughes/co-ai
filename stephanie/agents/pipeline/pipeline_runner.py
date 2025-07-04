@@ -1,5 +1,6 @@
-from stephanie.utils.pipeline_runner import PipelineRunner
 from stephanie.agents.base_agent import BaseAgent
+from stephanie.utils.pipeline_runner import PipelineRunner
+
 
 class PipelineRunnerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None, full_cfg=None):

@@ -9,11 +9,13 @@ import torch
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
 
+from stephanie.models.evaluation import TargetType
 from stephanie.scoring.base_scorer import BaseScorer
+from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-from stephanie.scoring.scorable import Scorable
+
 
 class SVMScorer(BaseScorer):
     def __init__(self, cfg: dict, memory, logger, dimensions=None):
@@ -189,7 +191,8 @@ class SVMScorer(BaseScorer):
                 hypothesis = s[f"output_{side}"]
                 llm_score = s.get(f"value_{side}")
                 if prompt and hypothesis and llm_score is not None:
-                    vec = self._build_feature_vector({"goal_text": prompt}, {"text": hypothesis})
+                    scorable = Scorable(text=hypothesis, target_type=TargetType.TRAINING)
+                    vec = self._build_feature_vector({"goal_text": prompt}, scorable)
                     X.append(vec)
                     y.append(llm_score)
                     self.regression_tuners[dim].train_single(llm_score, llm_score)  # no-op, self-alignment fallback
@@ -217,8 +220,8 @@ class SVMScorer(BaseScorer):
                 llm_score = s.get(f"value_{side}")
                 if llm_score is None:
                     continue
-
-                vec = self._build_feature_vector({"goal_text": prompt}, {"text": hypothesis})
+                scorable = Scorable(text=hypothesis, target_type=TargetType.TRAINING)
+                vec = self._build_feature_vector({"goal_text": prompt}, scorable)
                 x = self.scalers[dim].transform([vec])
                 raw_score = self.models[dim].predict(x)[0]
 

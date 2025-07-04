@@ -1,7 +1,8 @@
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
-from stephanie.scoring.scorable import Scorable
 from stephanie.models.evaluation import TargetType
+from stephanie.scoring.scorable import Scorable
+
 
 class ReviewAgent(ScoringMixin, BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

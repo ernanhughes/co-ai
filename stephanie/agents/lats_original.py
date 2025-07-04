@@ -9,9 +9,10 @@ from stephanie.agents.rule_tuner import RuleTunerAgent
 from stephanie.agents.unified_mrq import UnifiedMRQAgent
 from stephanie.analysis.symbolic_impact_analyzer import SymbolicImpactAnalyzer
 from stephanie.constants import GOAL
-from stephanie.utils.graph_tools import build_mermaid_graph, save_mermaid_to_file
-from stephanie.scoring.scorable import Scorable
 from stephanie.models.evaluation import TargetType
+from stephanie.scoring.scorable import Scorable
+from stephanie.utils.graph_tools import (build_mermaid_graph,
+                                         save_mermaid_to_file)
 
 
 class LATSAgent(ScoringMixin, BaseAgent):

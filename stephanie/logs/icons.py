@@ -13,6 +13,7 @@ EVENT_ICONS = {
     "AgentInitialized": "🛠️",
     "ContextLoaded": "📂",
     "ContextSaved": "💾",
+    "EthicsReviewsGenerated": "🧑‍⚖️", 
     "SupervisorComponentsRegistered": "🧑‍🏫",
     "PromptExecuted": "📝",
     "KeywordsExtracted": "🔑",

@@ -8,8 +8,9 @@ from uuid import uuid4
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID, PROMPT_DIR,
-                             RUN_ID, SAVE_CONTEXT, SKIP_IF_COMPLETED, STAGE)
+from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID,
+                                 PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
+                                 SKIP_IF_COMPLETED, STAGE)
 from stephanie.engine.cycle_watcher import CycleWatcher
 from stephanie.engine.meta_confidence import MetaConfidenceTracker
 from stephanie.engine.self_validation import SelfValidationEngine

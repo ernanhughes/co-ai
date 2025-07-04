@@ -1,7 +1,8 @@
 from typing import Any, Dict
 
-from stephanie.scoring.scorable import Scorable
 from stephanie.models.evaluation import TargetType
+from stephanie.scoring.scorable import Scorable
+
 
 class ResearchEnv:
     """

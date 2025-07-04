@@ -1,13 +1,13 @@
 # models/score.py
 from datetime import datetime, timezone
+from enum import Enum as PyEnum
 
 from sqlalchemy import (JSON, Column, DateTime, Enum, ForeignKey, Integer,
                         String, Text)
 from sqlalchemy.orm import relationship
-from enum import Enum as PyEnum
-
 
 from stephanie.models.base import Base
+
 
 class TargetType(PyEnum):
     DOCUMENT = "document"
@@ -15,6 +15,7 @@ class TargetType(PyEnum):
     CARTRIDGE = "cartridge"
     PROMPT = "prompt"
     RESPONSE = "response"
+    TRAINING = "training"
 
 class EvaluationORM(Base):
     __tablename__ = "evaluations"

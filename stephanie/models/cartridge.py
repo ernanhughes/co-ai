@@ -1,8 +1,10 @@
 # models/cartridge.py
 from datetime import datetime
-from sqlalchemy import (Column, DateTime, ForeignKey, Integer, String)
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 
 from stephanie.models.base import Base
+
 
 class CartridgeORM(Base):
     __tablename__ = 'cartridges'

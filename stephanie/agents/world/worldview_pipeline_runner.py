@@ -1,8 +1,9 @@
 # worldview_pipeline_runner.py
 
 from datetime import datetime
-from stephanie.registry.pipeline import PipelineRegistry
+
 from stephanie.agents.base_agent import BaseAgent
+from stephanie.registry.pipeline import PipelineRegistry
 from stephanie.utils.pipeline_runner import PipelineRunner
 
 

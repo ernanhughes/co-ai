@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+
 from stephanie.scoring.scorable import Scorable
+
 
 class BaseScorer(ABC):
     @property
