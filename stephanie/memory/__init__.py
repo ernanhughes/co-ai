@@ -18,3 +18,6 @@ from .rule_application_store import RuleApplicationStore
 from .search_result_store import SearchResultStore
 from .sharpening_store import SharpeningStore
 from .symbolic_rule_store import SymbolicRuleStore
+from .cartridge_domain_store import CartridgeDomainStore
+from .cartridge_store import CartridgeStore 
+from .cartridge_triple_store import CartridgeTripleStore

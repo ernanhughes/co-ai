@@ -34,6 +34,7 @@ class CartridgeORM(Base):
 
     domains_rel = relationship("CartridgeDomainORM", back_populates="cartridge", cascade="all, delete-orphan")
 
+    triples_rel = relationship("CartridgeTripleORM", back_populates="cartridge", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {

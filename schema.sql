@@ -723,6 +723,9 @@ CREATE TABLE IF NOT EXISTS evaluations (
     scores JSON DEFAULT '{}'::json,
     extra_data JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP DEFAULT NOW()
+
+     -- Add unique constraint here
+    CONSTRAINT unique_source_type_uri UNIQUE (source_type, source_uri)
 );
 
 CREATE TABLE IF NOT EXISTS evaluation_rule_links (
@@ -766,6 +769,17 @@ CREATE TABLE IF NOT EXISTS cartridge_domains (
     score FLOAT NOT NULL,
     FOREIGN KEY (cartridge_id) REFERENCES cartridges(id) ON DELETE CASCADE,
     UNIQUE (cartridge_id, domain)
+);
+
+CREATE TABLE IF NOT EXISTS cartridge_triples (
+    id SERIAL PRIMARY KEY,
+    cartridge_id INTEGER NOT NULL REFERENCES cartridges(id) ON DELETE CASCADE,
+    subject TEXT NOT NULL,
+    predicate TEXT NOT NULL,
+    object TEXT NOT NULL,
+    confidence FLOAT DEFAULT 1.0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (cartridge_id, subject, predicate, object)
 );
 
 

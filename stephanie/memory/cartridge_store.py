@@ -2,7 +2,7 @@
 
 from sqlalchemy.orm import Session
 from stephanie.models.cartridge import CartridgeORM
-
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 class CartridgeStore:
     def __init__(self, session: Session, logger=None):
@@ -11,18 +11,28 @@ class CartridgeStore:
         self.name = "cartridge"
 
     def add_cartridge(self, data: dict) -> CartridgeORM:
-        cartridge = CartridgeORM(
-            goal_id=data.get("goal_id"),
-            source_type=data["source_type"],
-            source_uri=data.get("source_uri"),
-            markdown_content=data["markdown_content"],
-            embedding_id=data.get("embedding_id"),
-            title=data.get("title"),
-            summary=data.get("summary"),
-            sections=data.get("sections"),
-            triples=data.get("triples"),
-            domain_tags=data.get("domain_tags"),
+        if self.session.in_transaction():
+            self.session.rollback()
+
+        existing = (
+            self.session.query(CartridgeORM)
+            .filter_by(source_type=data["source_type"], source_uri=data["source_uri"])
+            .first()
         )
+
+        if existing:
+            # Optionally update content
+            existing.markdown_content = data.get("markdown_content", existing.markdown_content)
+            existing.title = data.get("title", existing.title)
+            existing.summary = data.get("summary", existing.summary)
+            existing.sections = data.get("sections", existing.sections)
+            existing.triples = data.get("triples", existing.triples)
+            existing.domain_tags = data.get("domain_tags", existing.domain_tags)
+            existing.embedding_id = data.get("embedding_id", existing.embedding_id)
+            self.session.commit()
+            return existing
+
+        cartridge = CartridgeORM(**data)
         self.session.add(cartridge)
         self.session.commit()
         return cartridge

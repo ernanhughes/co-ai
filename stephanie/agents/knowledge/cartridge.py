@@ -14,6 +14,7 @@ class CartridgeAgent(BaseAgent):
         self.force_domain_update = cfg.get("force_domain_update", False)
         self.top_k_domains = cfg.get("top_k_domains", 3)
         self.min_classification_score = cfg.get("min_classification_score", 0.6)
+        self.triplets_file = cfg.get("triplets_file", "triplet.txt")
         self.domain_classifier = DomainClassifier(
             memory=self.memory,
             logger=self.logger,
@@ -34,8 +35,6 @@ class CartridgeAgent(BaseAgent):
 
                 full_text = f"# {title}\n\n## Summary\n\n{summary}\n\n## Content\n\n{text}"
 
-
-                # Get embedding
                 self.memory.embedding.get_or_create(text)
                 embedding_vector_id = self.memory.embedding.get_id_for_text(text)
                 if not embedding_vector_id:
@@ -44,6 +43,7 @@ class CartridgeAgent(BaseAgent):
 
                 sections = self._split_into_sections(text, context)
 
+                triplets = self.construct_triplets(sections, context)
                 # Create and store CartridgeORM
                 cartridge = CartridgeORM(
                     goal_id=goal_id,
@@ -60,6 +60,20 @@ class CartridgeAgent(BaseAgent):
                 )
                 self.memory.session.add(cartridge)
                 self.memory.session.flush()  # get cartridge.id
+
+                for subj, pred, obj in triplets:
+                    if not subj or not pred or not obj:
+                        self.logger.log("InvalidTriplet", {
+                            "subject": subj, "predicate": pred, "object": obj
+                        })
+                        continue
+                    self.memory.cartridge_triplets.insert({
+                        "cartridge_id": cartridge.id,
+                        "subject": subj,
+                        "predicate": pred,
+                        "object": obj,
+                    })
+
                 self.assign_domains_to_cartridge(cartridge)
                 self.logger.log("CartridgeCreated", cartridge.to_dict())
                 cartridges.append(cartridge.to_dict())
@@ -101,56 +115,46 @@ class CartridgeAgent(BaseAgent):
         Splits the text into sections based on common headings.
         This is a simple heuristic and can be improved with NLP.
         """
-        merged_context = {"text":text, **context}
+        merged_context = {"text":text, 
+                          "goal": context.get("goal"),
+                          **context}
         prompt = self.prompt_loader.load_prompt(self.cfg, merged_context)
         response = self.call_llm(prompt, context=merged_context)
         return self.parse_response(response)
 
+    def construct_triplets(self, points: list, context: dict) -> list:
+        merged_context = {"points": points, 
+                          "goal": context.get("goal"),
+                          **context}
+        prompt = self.prompt_loader.from_file(self.triplets_file, self.cfg, merged_context)
+        response = self.call_llm(prompt, context=merged_context)
+        print("Triplet response:\n", response)
+        return self.parse_triplets(response) 
+    
+    def parse_triplets(self, markdown_text: str) -> list[tuple[str, str, str]]:
+        pattern = re.compile(
+            r"-\s*\(\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*(.+?)\s*\)"
+        )
+        matches = pattern.findall(markdown_text)
+        return [(subj.strip(), pred.strip(), obj.strip()) for subj, pred, obj in matches]
 
-    def parse_response(self, markdown_text: str) -> dict:
+    def parse_response(self, markdown_text: str) -> list:
         """
-        Parses the LLM markdown response into structured cartridge components.
-        Expected sections:
-        - Summary (first paragraph)
-        - Key Points (bullet list)
-        - Strategic Implications (markdown section)
-        - Related Concepts or Domains (bullet list)
-
-        Returns:
-            dict with: title, summary, sections, domain_tags
+        Extracts bullet-like lines from markdown supporting prefixes like:
+        - '- '
+        - '* '
+        - '** '
+        - '# '
+        - '## '
+        
+        Strips common markdown formatting and whitespace.
         """
-        result = {
-            "title": None,
-            "summary": "",
-            "sections": {},
-            "triples": [],
-            "domain_tags": []
-        }
-
-        # Optional: extract first H1 or H2 as title
-        title_match = re.search(r"^#\s+(.+)$", markdown_text, re.MULTILINE)
-        if title_match:
-            result["title"] = title_match.group(1).strip()
-
-        # Extract summary (first paragraph, skipping title)
-        summary_match = re.search(r"(?<=\n\n)([^#\n][^\n]+(?:\n(?!#).+)*)", markdown_text)
-        if summary_match:
-            result["summary"] = summary_match.group(1).strip()
-
-        # Extract Key Points (markdown bullets)
-        key_points = re.findall(r"(?m)^[-*+]\s+(.*)", markdown_text)
-        if key_points:
-            result["sections"]["Key Points"] = key_points
-
-        # Extract Strategic Implications section
-        strat_imp_match = re.search(r"(?i)##?\s+Strategic Implications\s*\n(.+?)(?=\n##|\Z)", markdown_text, re.DOTALL)
-        if strat_imp_match:
-            result["sections"]["Strategic Implications"] = strat_imp_match.group(1).strip()
-
-        # Extract Related Concepts or Domains
-        related_match = re.search(r"(?i)##?\s+Related Concepts(?: or Domains)?\s*\n(.+?)(?=\n##|\Z)", markdown_text, re.DOTALL)
-        if related_match:
-            domains = re.findall(r"[-*+]\s+(.*)", related_match.group(1))
-            result["domain_tags"] = [d.strip() for d in domains if d.strip()]
-
-        return result
+        # Match lines that start with one or two of: '*', '-', or '#' followed by whitespace
+        bullet_pattern = re.compile(r"^\s*([#*-]{1,2})\s+(.*)", re.MULTILINE)
+        
+        raw_lines = bullet_pattern.findall(markdown_text)
+        
+        # Clean and return just the content portion
+        bullet_points = [re.sub(r"\*\*(.*?)\*\*", r"\1", content).strip() for _, content in raw_lines]
+        
+        return bullet_points

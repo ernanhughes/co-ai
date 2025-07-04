@@ -34,7 +34,7 @@ from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
 from stephanie.memory.cartridge_domain_store import CartridgeDomainStore
 from stephanie.memory.cartridge_store import CartridgeStore
-
+from stephanie.memory.cartridge_triple_store import CartridgeTripleStore
 
 class MemoryTool:
     def __init__(self, cfg, logger: Optional[JSONLogger] = None):
@@ -85,7 +85,7 @@ class MemoryTool:
         self.register_store(DocumentSectionDomainStore(self.session, logger))
         self.register_store(CartridgeDomainStore(self.session, logger))
         self.register_store(CartridgeStore(self.session, logger))
-        
+        self.register_store(CartridgeTripleStore(self.session, logger))
 
 
 
