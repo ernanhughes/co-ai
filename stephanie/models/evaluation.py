@@ -13,6 +13,7 @@ class TargetType(PyEnum):
     DOCUMENT = "document"
     HYPOTHESIS = "hypothesis"
     CARTRIDGE = "cartridge"
+    CARTRIDGE_TRIPLE = "cartridge_triple"
     PROMPT = "prompt"
     RESPONSE = "response"
     TRAINING = "training"

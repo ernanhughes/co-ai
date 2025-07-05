@@ -1,0 +1,46 @@
+{% if mode == "triple" %}
+
+You are scoring a single knowledge triplet for **composability** with reference to the goal.
+
+## Goal
+{{ goal.goal_text }}
+
+## Triplet
+({{ triplet.subject }}, {{ triplet.predicate }}, {{ triplet.object }})
+
+## Instructions
+
+Composability means the triplet can be easily used alongside others to support planning, reasoning, or broader goal achievement.
+
+Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+rationale: <brief explanation>
+
+score: <0–100>
+
+{% else %}
+
+Evaluate the **composibility** of the data cartridge with reference to the goal.
+
+### Goal
+{{ goal.goal_text }}
+
+### Data cartridge
+Title: {{ cartridge.title }}
+Summary: {{ cartridge.summary }}
+Sections:
+{% for name, content in cartridge.sections.items() %}
+### {{ name }}
+{{ content }}
+{% endfor %}
+
+Composability means the information in the cartridge can be easily integrated with other cartridges or reasoning chains to support planning, decision-making, or higher-level synthesis.
+
+Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+rationale: <brief explanation>
+
+score: <0–100>
+
+{% endif %}
+

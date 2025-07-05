@@ -14,34 +14,40 @@ class CartridgeTripleStore:
 
     def insert(self, data: dict) -> CartridgeTripleORM:
         """
-        Insert or update a triple for a cartridge.
+        Insert or update a triple for a cartridge manually.
 
         Expected dict keys: cartridge_id, subject, predicate, object, (optional) confidence
         """
-        stmt = (
-            pg_insert(CartridgeTripleORM)
-            .values(**data)
-            .on_conflict_do_nothing(index_elements=["cartridge_id", "subject", "predicate", "object"])
-            .returning(CartridgeTripleORM.id)
-        )
-
-        result = self.session.execute(stmt)
-        inserted_id = result.scalar()
-        self.session.commit()
-
-        if inserted_id and self.logger:
-            self.logger.log("TripleUpserted", data)
-
-        return (
+        query = (
             self.session.query(CartridgeTripleORM)
             .filter_by(
                 cartridge_id=data["cartridge_id"],
                 subject=data["subject"],
                 predicate=data["predicate"],
-                object=data["object"]
+                object=data["object"],
             )
-            .first()
         )
+
+        existing = query.first()
+
+        if existing:
+            updated = False
+            # Update confidence if it's different and provided
+            if "confidence" in data and existing.confidence != data["confidence"]:
+                existing.confidence = data["confidence"]
+                updated = True
+            if updated:
+                self.session.commit()
+                if self.logger:
+                    self.logger.log("TripleUpdated", data)
+            return existing
+        else:
+            new_triple = CartridgeTripleORM(**data)
+            self.session.add(new_triple)
+            self.session.commit()
+            if self.logger:
+                self.logger.log("TripleInserted", data)
+            return new_triple
 
     def get_triples(self, cartridge_id: int) -> list[CartridgeTripleORM]:
         return (

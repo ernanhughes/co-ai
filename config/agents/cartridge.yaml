@@ -5,6 +5,7 @@ cartridge:
   save_context: true
   skip_if_completed: false
 
+  use_memory_for_fast_prompts: false
   triplets_file: triplet.txt
 
   model:

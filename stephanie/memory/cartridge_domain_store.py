@@ -12,29 +12,33 @@ class CartridgeDomainStore:
 
     def insert(self, data: dict) -> CartridgeDomainORM:
         """
-        Insert or update a domain classification entry.
+        Insert or update a domain classification entry manually.
 
         Expected dict keys: cartridge_id, domain, score
         """
-        stmt = (
-            pg_insert(CartridgeDomainORM)
-            .values(**data)
-            .on_conflict_do_nothing(index_elements=["cartridge_id", "domain"])
-            .returning(CartridgeDomainORM.id)
-        )
-
-        result = self.session.execute(stmt)
-        inserted_id = result.scalar()
-        self.session.commit()
-
-        if inserted_id and self.logger:
-            self.logger.log("CartridgeDomainUpserted", data)
-
-        return (
+        # Try to find existing entry
+        existing = (
             self.session.query(CartridgeDomainORM)
             .filter_by(cartridge_id=data["cartridge_id"], domain=data["domain"])
             .first()
         )
+
+        if existing:
+            # Update score if it has changed
+            if existing.score != data["score"]:
+                existing.score = data["score"]
+                self.session.commit()
+                if self.logger:
+                    self.logger.log("CartridgeDomainUpdated", data)
+            return existing
+        else:
+            # Create new entry
+            domain_obj = CartridgeDomainORM(**data)
+            self.session.add(domain_obj)
+            self.session.commit()
+            if self.logger:
+                self.logger.log("CartridgeDomainInserted", data)
+            return domain_obj
 
     def get_domains(self, cartridge_id: int) -> list[CartridgeDomainORM]:
         return (

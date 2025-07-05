@@ -8,11 +8,9 @@ class CartridgeStore:
     def __init__(self, session: Session, logger=None):
         self.session = session
         self.logger = logger
-        self.name = "cartridge"
+        self.name = "cartridges"
 
     def add_cartridge(self, data: dict) -> CartridgeORM:
-        if self.session.in_transaction():
-            self.session.rollback()
 
         existing = (
             self.session.query(CartridgeORM)

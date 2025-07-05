@@ -4,11 +4,14 @@ from datetime import datetime
 import re
 from stephanie.models.cartridge import CartridgeORM
 from stephanie.analysis.domain_classifier import DomainClassifier
+from stephanie.agents.mixins.scoring_mixin import ScoringMixin
+from stephanie.models.evaluation import TargetType
+from stephanie.scoring.scorable import Scorable
 
 CARTRIDGE_UPDATE_THRESHOLD = 0.7  # Threshold for updating cartridges based on feedback
 
-    
-class CartridgeAgent(BaseAgent):
+
+class CartridgeAgent(ScoringMixin, BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.force_domain_update = cfg.get("force_domain_update", False)
@@ -24,7 +27,6 @@ class CartridgeAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         documents = context.get(self.input_key, [])
         cartridges = []
-
         for doc in documents:
             try:
                 doc_id = doc["id"]
@@ -33,7 +35,7 @@ class CartridgeAgent(BaseAgent):
                 text = doc.get("content", doc.get("text", ""))
                 goal_id = context.get("goal_id")  # optional
 
-                full_text = f"# {title}\n\n## Summary\n\n{summary}\n\n## Content\n\n{text}"
+                # full_text = f"# {title}\n\n## Summary\n\n{summary}\n\n## Content\n\n{text}"
 
                 self.memory.embedding.get_or_create(text)
                 embedding_vector_id = self.memory.embedding.get_id_for_text(text)
@@ -42,24 +44,28 @@ class CartridgeAgent(BaseAgent):
                     continue
 
                 sections = self._split_into_sections(text, context)
-
                 triplets = self.construct_triplets(sections, context)
-                # Create and store CartridgeORM
+
                 cartridge = CartridgeORM(
                     goal_id=goal_id,
                     source_type="document",
                     source_uri=str(doc_id),
-                    markdown_content=full_text,
+                    # markdown_content=full_text,
                     title=title,
                     summary=summary,
                     sections=sections,
-                    triples=[],  # could extract via NLP if available
-                    domain_tags=[],  # filled later
+                    triples=[],
+                    domain_tags=[],
                     embedding_id=embedding_vector_id,
                     created_at=datetime.utcnow(),
                 )
-                self.memory.session.add(cartridge)
-                self.memory.session.flush()  # get cartridge.id
+                cartridge.markdown_content = self.format_cartridge_text(cartridge)
+                cartridge = self.memory.cartridges.add_cartridge(cartridge.to_dict())
+
+                scorable = Scorable(id=cartridge.id, text=cartridge.markdown_content, target_type=TargetType.CARTRIDGE)
+                score = self.score_item(scorable, context, metrics="cartridge")
+                self.logger.log("CartridgeScored", score.to_dict())
+                context.setdefault("cartridge_scores", []).append(score.to_dict())
 
                 for subj, pred, obj in triplets:
                     if not subj or not pred or not obj:
@@ -67,7 +73,7 @@ class CartridgeAgent(BaseAgent):
                             "subject": subj, "predicate": pred, "object": obj
                         })
                         continue
-                    self.memory.cartridge_triplets.insert({
+                    self.memory.cartridge_triples.insert({
                         "cartridge_id": cartridge.id,
                         "subject": subj,
                         "predicate": pred,
@@ -122,19 +128,15 @@ class CartridgeAgent(BaseAgent):
         response = self.call_llm(prompt, context=merged_context)
         return self.parse_response(response)
 
-    def construct_triplets(self, points: list, context: dict) -> list:
-        merged_context = {"points": points, 
-                          "goal": context.get("goal"),
-                          **context}
+    def construct_triplets(self, points: list, context: dict) -> list[tuple[str, str, str]]:
+        merged_context = {"points": points, "goal": context.get("goal"), **context}
         prompt = self.prompt_loader.from_file(self.triplets_file, self.cfg, merged_context)
         response = self.call_llm(prompt, context=merged_context)
         print("Triplet response:\n", response)
-        return self.parse_triplets(response) 
-    
+        return self.parse_triplets(response)
+
     def parse_triplets(self, markdown_text: str) -> list[tuple[str, str, str]]:
-        pattern = re.compile(
-            r"-\s*\(\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*(.+?)\s*\)"
-        )
+        pattern = re.compile(r"-\s*\(\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*(.+?)\s*\)")
         matches = pattern.findall(markdown_text)
         return [(subj.strip(), pred.strip(), obj.strip()) for subj, pred, obj in matches]
 
@@ -151,10 +153,27 @@ class CartridgeAgent(BaseAgent):
         """
         # Match lines that start with one or two of: '*', '-', or '#' followed by whitespace
         bullet_pattern = re.compile(r"^\s*([#*-]{1,2})\s+(.*)", re.MULTILINE)
-        
         raw_lines = bullet_pattern.findall(markdown_text)
-        
-        # Clean and return just the content portion
         bullet_points = [re.sub(r"\*\*(.*?)\*\*", r"\1", content).strip() for _, content in raw_lines]
-        
         return bullet_points
+
+    def format_cartridge_text(self, cartridge: CartridgeORM) -> str:
+        """
+        Constructs a clean, unified text string from a cartridge's components:
+        Title, Summary, and Section Points.
+
+        Useful for scoring, embedding, or logging.
+        """
+        lines = []
+
+        if cartridge.title:
+            lines.append(f"Title: {cartridge.title}")
+
+        if cartridge.summary:
+            lines.append(f"Summary: {cartridge.summary}")
+
+        if cartridge.sections:
+            for section in cartridge.sections:
+                lines.append(f"{section}")
+
+        return "\n\n".join(lines).strip()

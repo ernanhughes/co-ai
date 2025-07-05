@@ -1,0 +1,44 @@
+{% if mode == "triple" %}
+You are scoring a single knowledge triplet for **novelty** in relation to the goal.
+
+## Goal
+{{ goal.goal_text }}
+
+## Triplet
+({{ triplet.subject }}, {{ triplet.predicate }}, {{ triplet.object }})
+
+## Instructions
+
+Novelty means how unexpected, original, or non-obvious the information is, relative to existing knowledge and typical content related to the goal.
+
+Provide your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+rationale: <brief explanation>
+
+score: <0–100>
+
+{% else %}
+
+Evaluate the **novelty** of the following data cartridge in relation to the goal.
+
+## Goal
+{{ goal.goal_text }}
+
+## Data cartridge
+Title: {{ cartridge.title }}
+Summary: {{ cartridge.summary }}
+Sections:
+{% for name, content in cartridge.sections.items() %}
+### {{ name }}
+{{ content }}
+{% endfor %}
+
+Novelty means how unexpected, original, or non-obvious the information is, relative to existing knowledge and typical content related to the goal.
+
+Provide your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
+
+rationale: <brief explanation>
+
+score: <0–100>
+
+{% endif %}
