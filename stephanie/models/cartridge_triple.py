@@ -28,3 +28,10 @@ class CartridgeTripleORM(Base):
             "object": self.object,
             "confidence": self.confidence
         }
+
+    def __repr__(self):
+        return (
+            f"<CartridgeTripleORM(id={self.id}, cartridge_id={self.cartridge_id}, "
+            f"subject='{self.subject}', predicate='{self.predicate}', object='{self.object}', "
+            f"confidence={self.confidence:.2f})>"
+        )

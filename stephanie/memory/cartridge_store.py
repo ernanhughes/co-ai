@@ -58,8 +58,8 @@ class CartridgeStore:
     def get_by_id(self, cartridge_id: int) -> CartridgeORM | None:
         return self.session.query(CartridgeORM).filter_by(id=cartridge_id).first()
 
-    def get_by_source_uri(self, uri: str) -> CartridgeORM | None:
-        return self.session.query(CartridgeORM).filter_by(source_uri=uri).first()
+    def get_by_source_uri(self, uri: str, source_type: str) -> CartridgeORM | None:
+        return self.session.query(CartridgeORM).filter_by(source_uri=uri, source_type=source_type).first()
 
     def get_all(self, limit=100) -> list[CartridgeORM]:
         return self.session.query(CartridgeORM).limit(limit).all()

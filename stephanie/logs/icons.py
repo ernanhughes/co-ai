@@ -48,6 +48,7 @@ PIPELINE_FLOW = {
     "AgentRunStarted": "🤖▶️",                # Agent run started
     "AgentRunCompleted": "🤖⏹️",             # Agent run completed
     "AgentRanSuccessfully": "🤖✅",           # Agent succeeded
+    "PipelineJudgeAgentEnd": "⚖️⏹️",         # Judge agent completed
 }
 
 # =====================
@@ -73,7 +74,6 @@ SCORING = {
 # REASONING & ANALYSIS
 # =====================
 REASONING = {
-    "PromptExecuted": "💬▶️",                 # Prompt executed
     "KeywordsExtracted": "🔑",                # Keywords extracted
     "ProximityAnalysisScored": "📌🗺️",        # Proximity analysis
     "ProximityGraphComputed": "📊🌐",         # Proximity graph
@@ -108,6 +108,14 @@ TRAINING = {
     "DocumentTrainingProgress": "📈🔄",       # Training progress
     "DocumentMRQTrainDimension": "🧩📊",      # Dimension training
     "DocumentPairBuilderProgress": "📊📑",    # Pair building progress
+}
+
+PROMPTS = {
+    "PromptLoaded": "📄✅",                   # Prompt loaded
+    "PromptStored": "💾📄",                   # Prompt stored
+    "PromptExecuted": "💬▶️",                 # Prompt executed
+    "PromptFileLoading": "📄🔄",            # Prompt file loading
+    "PromptFileLoaded": "📄✅",              # Prompt file loaded
 }
 
 # ==================
@@ -207,4 +215,5 @@ EVENT_ICONS = {
     **DEBUGGING,
     **ERROR_STATES,
     **SPECIAL,
+    **PROMPTS,
 }

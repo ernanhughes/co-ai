@@ -8,6 +8,8 @@ cartridge:
   cartridge_score_config: ${hydra:runtime.cwd}/config/scoring/cartridge.yaml
   use_memory_for_fast_prompts: false
   triplets_file: triplet.txt
+  score_cartridges: true
+  score_triplets: true
 
   model:
     name: ollama/qwen3
