@@ -29,9 +29,9 @@ Evaluate the **composibility** of the data cartridge with reference to the goal.
 Title: {{ cartridge.title }}
 Summary: {{ cartridge.summary }}
 Sections:
-{% for name, content in cartridge.sections.items() %}
-### {{ name }}
-{{ content }}
+{% for section in cartridge.sections %}
+---
+    {{ section }}
 {% endfor %}
 
 Composability means the information in the cartridge can be easily integrated with other cartridges or reasoning chains to support planning, decision-making, or higher-level synthesis.

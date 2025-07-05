@@ -28,9 +28,9 @@ Evaluate the **specificity** of the data cartridge with reference to the goal.
 Title: {{ cartridge.title }}
 Summary: {{ cartridge.summary }}
 Sections:
-{% for name, content in cartridge.sections.items() %}
-### {{ name }}
-{{ content }}
+{% for section in cartridge.sections %}
+---
+    {{ section }}
 {% endfor %}
 
 Specificity refers to how detailed and narrowly focused the content is in addressing the goal, avoiding vague or overly broad statements.

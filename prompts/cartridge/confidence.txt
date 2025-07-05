@@ -29,9 +29,9 @@ Evaluate your **confidence** in the following data cartridge with reference to t
 Title: {{ cartridge.title }}
 Summary: {{ cartridge.summary }}
 Sections:
-{% for name, content in cartridge.sections.items() %}
-### {{ name }}
-{{ content }}
+{% for section in cartridge.sections %}
+---
+    {{ section }}
 {% endfor %}
 
 Confidence means how certain you are that the cartridge is factually correct, internally consistent, and aligned with the goal.

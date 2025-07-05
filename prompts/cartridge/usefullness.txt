@@ -28,9 +28,9 @@ Evaluate the **usefulness** of the following data cartridge to the goal.
 Title: {{ cartridge.title }}
 Summary: {{ cartridge.summary }}
 Sections:
-{% for name, content in cartridge.sections.items() %}
-### {{ name }}
-{{ content }}
+{% for section in cartridge.sections %}
+---
+    {{ section }}
 {% endfor %}
 
 Usefulness refers to how practically helpful the content is in advancing understanding or decision-making for the goal.

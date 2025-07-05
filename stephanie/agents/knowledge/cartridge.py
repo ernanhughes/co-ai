@@ -61,9 +61,13 @@ class CartridgeAgent(ScoringMixin, BaseAgent):
                 )
                 cartridge.markdown_content = self.format_cartridge_text(cartridge)
                 cartridge = self.memory.cartridges.add_cartridge(cartridge.to_dict())
-
+                merged_context = {
+                    "cartridge": cartridge.to_dict(),
+                    "goal": context.get("goal"),
+                    **context
+                }
                 scorable = Scorable(id=cartridge.id, text=cartridge.markdown_content, target_type=TargetType.CARTRIDGE)
-                score = self.score_item(scorable, context, metrics="cartridge")
+                score = self.score_item(scorable, merged_context, metrics="cartridge")
                 self.logger.log("CartridgeScored", score.to_dict())
                 context.setdefault("cartridge_scores", []).append(score.to_dict())
 

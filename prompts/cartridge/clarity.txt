@@ -28,9 +28,9 @@ Evaluate the **clarity** of the following data cartridge with reference to the g
 Title: {{ cartridge.title }}
 Summary: {{ cartridge.summary }}
 Sections:
-{% for name, content in cartridge.sections.items() %}
-### {{ name }}
-{{ content }}
+{% for section in cartridge.sections %}
+---
+    {{ section }}
 {% endfor %}
 
 

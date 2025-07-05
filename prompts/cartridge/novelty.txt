@@ -24,13 +24,13 @@ Evaluate the **novelty** of the following data cartridge in relation to the goal
 ## Goal
 {{ goal.goal_text }}
 
-## Data cartridge
+### Data cartridge
 Title: {{ cartridge.title }}
 Summary: {{ cartridge.summary }}
 Sections:
-{% for name, content in cartridge.sections.items() %}
-### {{ name }}
-{{ content }}
+{% for section in cartridge.sections %}
+---
+    {{ section }}
 {% endfor %}
 
 Novelty means how unexpected, original, or non-obvious the information is, relative to existing knowledge and typical content related to the goal.
