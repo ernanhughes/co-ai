@@ -45,6 +45,10 @@ class CartridgeAgent(ScoringMixin, BaseAgent):
                     continue
 
                 # 2. Extract and insert triplets
+                if self.memory.cartridge_triples.has_triples(cartridge.id):
+                    self.logger.log("TriplesAlreadyExist", {"cartridge_id": cartridge.id})
+                    continue
+
                 triplets = self.triplet_extractor.extract(cartridge.sections, context)
                 for subj, pred, obj in triplets:
                     triple_orm = self.memory.cartridge_triples.insert({

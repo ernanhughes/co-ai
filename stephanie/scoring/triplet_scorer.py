@@ -30,6 +30,7 @@ class TripletScorer:
         try:
             triplet_text = f"({triplet_orm.subject}, {triplet_orm.predicate}, {triplet_orm.object})"
             merged_context = {
+                "mode": "triple",
                 "triplet": triplet_orm.to_dict(),
                 "goal": goal,
                 **context

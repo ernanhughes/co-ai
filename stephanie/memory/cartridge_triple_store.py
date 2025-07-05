@@ -62,6 +62,9 @@ class CartridgeTripleStore:
         if self.logger:
             self.logger.log("TriplesDeleted", {"cartridge_id": cartridge_id})
 
+    def has_triples(self, cartridge_id: int) -> bool:
+        return self.session.query(CartridgeTripleORM).filter_by(cartridge_id=cartridge_id).first() is not None
+
     def set_triples(self, cartridge_id: int, triples: list[tuple[str, str, str, float]]):
         """
         Clear and re-add triples for a cartridge.

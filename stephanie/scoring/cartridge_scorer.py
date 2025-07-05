@@ -29,6 +29,7 @@ class CartridgeScorer:
         """
         try:
             merged_context = {
+                "mode": "cartridge",
                 "cartridge": cartridge_orm.to_dict(),
                 "goal": goal,
                 **context,
