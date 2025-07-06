@@ -1,0 +1,6 @@
+Given the following text:
+
+{section_text}
+
+Extract any clearly stated theorems or general rules explicitly presented.  
+Return each theorem statement on a separate line.

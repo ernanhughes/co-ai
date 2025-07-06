@@ -61,12 +61,26 @@ class CartridgeAgent(ScoringMixin, BaseAgent):
                         score = self.triplet_scorer.score_triplet(triple_orm, goal, context)
                         context.setdefault("cartridge_scores", []).append(score)
 
-                # 3. Score Cartridge
+                 # 3. Extract and insert theorems
+                theorems = self.theorem_extractor.extract(cartridge.sections, context)
+                for theorem in theorems:
+                    theorem.embedding_id = self.memory.embedding.create(theorem.statement)
+                    theorem.cartridges.append(cartridge)
+                    self.memory.session.add(theorem)
+
+                    # Optional: Score theorem immediately
+                    theorem_score = self.theorem_scorer.score_theorem(theorem, goal, context)
+                    context.setdefault("theorem_scores", []).append(theorem_score)
+
+                # Commit new theorems
+                self.memory.session.commit()
+
+                # 4. Score Cartridge
                 if self.score_cartridges:
                     score = self.cartridge_scorer.score_cartridge(cartridge, goal, context)
                     context.setdefault("cartridge_scores", []).append(score)
 
-                # 4. Assign Domains
+                # 5. Assign Domains
                 self.assign_domains(cartridge)
 
                 self.logger.log("CartridgeCreated", cartridge.to_dict())

@@ -9,8 +9,7 @@ from stephanie.models.score import ScoreORM
 from stephanie.models.score_dimension import ScoreDimensionORM
 from stephanie.prompts.prompt_renderer import PromptRenderer
 from stephanie.scoring.calculations.score_delta import ScoreDeltaCalculator
-from stephanie.scoring.calculations.weighted_average import \
-    WeightedAverageCalculator
+from stephanie.scoring.calculations.weighted_average import WeightedAverageCalculator
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
@@ -18,7 +17,16 @@ from stephanie.scoring.score_result import ScoreResult
 
 
 class ScoringManager:
-    def __init__(self, dimensions, prompt_loader, cfg, logger, memory, calculator=None, dimension_filter_fn=None):
+    def __init__(
+        self,
+        dimensions,
+        prompt_loader,
+        cfg,
+        logger,
+        memory,
+        calculator=None,
+        dimension_filter_fn=None,
+    ):
         self.dimensions = dimensions
         self.prompt_loader = prompt_loader
         self.cfg = cfg
@@ -47,12 +55,18 @@ class ScoringManager:
         if ptype == "normalize_10":
             return lambda s: min(s / 10.0, 1.0)
         if ptype == "exp_boost":
-            return lambda s: round((1.2 ** s) - 1, 2)
+            return lambda s: round((1.2**s) - 1, 2)
         return lambda s: s  # Default is identity
 
     @classmethod
     def from_db(
-        cls, session: Session, stage: str, prompt_loader=None, cfg=None, logger=None, memory=None
+        cls,
+        session: Session,
+        stage: str,
+        prompt_loader=None,
+        cfg=None,
+        logger=None,
+        memory=None,
     ):
         rows = session.query(ScoreDimensionORM).filter_by(stage=stage).all()
         dimensions = [
@@ -62,15 +76,20 @@ class ScoringManager:
                 "weight": row.weight,
                 "parser": cls.get_parser(row.extra_data or {}),
                 "file": row.extra_data.get("file") if row.extra_data else None,
-                "postprocess": cls.get_postprocessor(row.extra_data or {}), 
+                "postprocess": cls.get_postprocessor(row.extra_data or {}),
             }
             for row in rows
         ]
-        return cls(dimensions, prompt_loader=prompt_loader, cfg=cfg, logger=logger, memory=memory)
+        return cls(
+            dimensions,
+            prompt_loader=prompt_loader,
+            cfg=cfg,
+            logger=logger,
+            memory=memory,
+        )
 
     def get_dimensions(self):
         return [d["name"] for d in self.dimensions]
-
 
     @classmethod
     def from_file(cls, filepath: str, prompt_loader, cfg, logger, memory):
@@ -89,7 +108,7 @@ class ScoringManager:
                 ),  # fallback to file
                 "weight": d.get("weight", 1.0),
                 "parser": cls.get_parser(d.get("extra_data", {})),
-                "postprocess": cls.get_postprocessor(d.get("extra_data", {})), 
+                "postprocess": cls.get_postprocessor(d.get("extra_data", {})),
             }
             for d in data["dimensions"]
         ]
@@ -206,7 +225,9 @@ class ScoringManager:
             )
 
         bundle = ScoreBundle(results={r.dimension: r for r in results})
-        self.save_score_to_memory(bundle, scorable, context, self.cfg, self.memory, self.logger)
+        self.save_score_to_memory(
+            bundle, scorable, context, self.cfg, self.memory, self.logger
+        )
         return bundle
 
     def handle_score_error(self, dim, response, error):
@@ -215,8 +236,9 @@ class ScoringManager:
         raise ValueError(f"Failed to parse score {response} for {dim['name']}: {error}")
 
     @staticmethod
-    def save_score_to_memory(bundle, scorable, context, cfg, memory, logger, source="ScoreEvaluator"):
-        
+    def save_score_to_memory(
+        bundle, scorable, context, cfg, memory, logger, source="ScoreEvaluator"
+    ):
         goal = context.get("goal")
         pipeline_run_id = context.get("pipeline_run_id")
         weighted_score = bundle.calculator.calculate(bundle)
@@ -251,8 +273,8 @@ class ScoringManager:
                 score=score_result.score,
                 weight=score_result.weight,
                 rationale=score_result.rationale,
-                prompt_hash=score_result.prompt_hash or ScoreORM.compute_prompt_hash(
-                    goal.get("goal_text", ""), scorable) 
+                prompt_hash=score_result.prompt_hash
+                or ScoreORM.compute_prompt_hash(goal.get("goal_text", ""), scorable),
             )
             memory.session.add(score)
 
@@ -270,16 +292,18 @@ class ScoringManager:
         ScoreDeltaCalculator(cfg, memory, logger).log_score_delta(
             scorable, weighted_score, goal.get("id")
         )
-        ScoreDisplay.show(bundle.to_dict(), weighted_score)
-
+        ScoreDisplay.show(scorable, bundle.to_dict(), weighted_score)
 
     @staticmethod
-    def save_document_score_to_memory(bundle, document, context, cfg, memory, logger, source="DocumentEvaluator"):
-        
+    def save_document_score_to_memory(
+        bundle, document, context, cfg, memory, logger, source="DocumentEvaluator"
+    ):
         goal = context.get("goal")
         pipeline_run_id = context.get("pipeline_run_id")
         document_id = document.get("id")
         weighted_score = bundle.calculator.calculate(bundle)
+
+        scorable = Scorable(target_type="document", id=document_id)
 
         scores_json = {
             "stage": cfg.get("stage", "review"),
@@ -328,4 +352,4 @@ class ScoringManager:
         ScoreDeltaCalculator(cfg, memory, logger).log_score_delta(
             document_id, weighted_score, goal.get("id")
         )
-        ScoreDisplay.show(bundle.to_dict(), weighted_score)
+        ScoreDisplay.show(scorable, bundle.to_dict(), weighted_score)

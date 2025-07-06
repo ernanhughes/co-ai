@@ -783,5 +783,22 @@ CREATE TABLE IF NOT EXISTS cartridge_triples (
 );
 
 
+CREATE TABLE IF NOT EXISTS theorems (
+	id SERIAL PRIMARY KEY,
+    statement TEXT NOT NULL,
+    proof TEXT,
+    embedding_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (embedding_id) REFERENCES embeddings(id)
+);
 
+CREATE TABLE IF NOT EXISTS theorem_cartridges (
+    theorem_id INTEGER NOT NULL,
+    cartridge_id INTEGER NOT NULL,
+    PRIMARY KEY (theorem_id, cartridge_id),
+    FOREIGN KEY (theorem_id) REFERENCES theorems(id),
+    FOREIGN KEY (cartridge_id) REFERENCES cartridges(id)
+);
 
+CREATE INDEX idx_theorem_cartridges_theorem_id ON theorem_cartridges(theorem_id);
+CREATE INDEX idx_theorem_cartridges_cartridge_id ON theorem_cartridges(cartridge_id);

@@ -36,6 +36,12 @@ class CartridgeORM(Base):
 
     triples_rel = relationship("CartridgeTripleORM", back_populates="cartridge", cascade="all, delete-orphan")
 
+    theorems = relationship(
+        "TheoremORM",
+        secondary="theorem_cartridges",
+        back_populates="cartridges")
+    
+
     def to_dict(self):
         return {
             "id": self.id,
