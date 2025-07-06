@@ -355,7 +355,7 @@ class ScoringManager:
             },
         )
         ScoreDeltaCalculator(cfg, memory, logger).log_score_delta(
-            document_id, weighted_score, goal.get("id")
+            scorable, weighted_score, goal.get("id")
         )
         ScoreDisplay.show(scorable, bundle.to_dict(), weighted_score)
 

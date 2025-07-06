@@ -1,6 +1,7 @@
 scoring_profile: cartridge
 prompt_dir: prompts/cartridge
 output_format: simple  # or: simple, json, etc.
+scorer: mrq
 dimensions:
   - name: relavance
     file: relavance.txt

@@ -6,7 +6,8 @@ from stephanie.models.theorem import TheoremORM
 from stephanie.models.theorem import CartridgeORM
 from stephanie.models.cartridge_domain import CartridgeDomainORM
 from stephanie.analysis.domain_classifier import DomainClassifier
-from stephanie.models.evaluation import EvaluationORM, ScoreORM, TargetType
+from stephanie.models.evaluation import EvaluationORM, TargetType
+from stephanie.models.score import ScoreORM
 
 class ICLReasoningAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
