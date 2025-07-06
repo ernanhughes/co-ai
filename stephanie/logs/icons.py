@@ -23,7 +23,7 @@ SYSTEM_INIT = {
 KNOWLEDGE_OPS = {
     "CartridgeCreated": "💾📦",                # Cartridge created
     "CartridgeAlreadyExists": "💾✅",          # Cartridge exists check
-    "TriplesAlreadyExists": "🔗✅",            # Triples exist check
+    "TriplesAlreadyExist": "🔗✅",            # Triples exist check
     "DimensionEvaluated": "📏✅",            # Dimension evaluated All right thanks Dan Dance Engineer the dance
     "CartridgeDomainInserted": "💾🏷️",         # Cartridge domain added
     "TripleInserted": "🔗",                   # Triple inserted
