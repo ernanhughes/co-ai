@@ -11,6 +11,8 @@ cartridge:
   score_cartridges: true
   score_triplets: true
 
+  theorem_extraction_prompt: ${hydra:runtime.cwd}/prompts/theorem/theorem_extraction.txt
+
   model:
     name: ollama/qwen3
     api_base: http://localhost:11434

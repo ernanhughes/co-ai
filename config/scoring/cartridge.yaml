@@ -1,4 +1,4 @@
-stage: cartridge
+scoring_profile: cartridge
 output_format: simple  # or: simple, json, etc.
 dimensions:
   - name: relavance

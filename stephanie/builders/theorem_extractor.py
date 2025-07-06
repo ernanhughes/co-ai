@@ -14,8 +14,8 @@ class TheoremExtractor:
         extracted_theorems = []
 
         for section in sections:
-            prompt_context = {"section_text": section.content}
-            prompt = self.prompt_loader.from_file(self.prompt_template, self.cfg, prompt_context)
+            merged_context = {"section_text": section, **context}
+            prompt = self.prompt_loader.from_file(self.prompt_template, self.cfg, merged_context)
             
             response = self.call_llm(prompt, context=context)
             theorem_statements = self.parse_llm_response(response)

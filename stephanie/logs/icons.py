@@ -34,6 +34,11 @@ KNOWLEDGE_OPS = {
     "DocumentAlreadyExists": "📄✅",           # Document exists check
     "DomainUpserted": "🏷️🔄",                 # Domain updated
     "ContextYAMLDumpSaved": "📄💾",            # YAML context saved
+    "CartridgeProcessingStarted": "💾▶️",      # Cartridge processing started
+    "CartridgeDocumentProcessingStarted": "💾📄▶️",  # Document processing started
+    "CartridgeBuilt": "💾✅",                  # Cartridge built
+    "TripletsExtractionCompleted": "🔗✅",        # Triplets extracted
+
 }
 
 # =================

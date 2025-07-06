@@ -17,6 +17,8 @@ class TargetType(PyEnum):
     PROMPT = "prompt"
     RESPONSE = "response"
     TRAINING = "training"
+    THEOREM = "theorem"
+    SYMBOLIC_RULE = "symbolic_rule"
 
 class EvaluationORM(Base):
     __tablename__ = "evaluations"

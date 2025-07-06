@@ -1,0 +1,56 @@
+# stephanie/scoring/scoring_engine.py
+
+from stephanie.models.evaluation import TargetType
+from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.score_bundle import ScoreBundle
+from stephanie.scoring.scoring_manager import ScoringManager
+
+
+class ScoringEngine:
+    def __init__(self, cfg, memory, prompt_loader, logger, call_llm):
+        self.cfg = cfg
+        self.memory = memory
+        self.prompt_loader = prompt_loader
+        self.logger = logger
+        self.call_llm = call_llm
+        self.scoring_managers = {}
+
+    def get_manager(self, scoring_profile: str) -> ScoringManager:
+        if scoring_profile not in self.scoring_managers:
+            config_path = self.cfg.get(f"{scoring_profile}", f"config/scoring/{scoring_profile}.yaml")
+            self.scoring_managers[scoring_profile] = ScoringManager.from_file(
+                filepath=config_path,
+                prompt_loader=self.prompt_loader,
+                cfg=self.cfg,
+                logger=self.logger,
+                memory=self.memory
+            )
+        return self.scoring_managers[scoring_profile]
+
+    def score(self, target_id, target_type: TargetType, text: str, context: dict, stage: str) -> dict:
+        try:
+            scorable = Scorable(id=target_id, text=text, target_type=target_type)
+            scoring_manager = self.get_manager(stage)
+
+            merged_context = {
+                "target_type": target_type.value,
+                "target": scorable.to_dict(),
+                **context
+            }
+
+            score_result: ScoreBundle = scoring_manager.evaluate(
+                scorable=scorable,
+                context=merged_context,
+                llm_fn=self.call_llm
+            )
+
+            self.logger.log("ItemScored", score_result.to_dict())
+            return score_result.to_dict()
+
+        except Exception as e:
+            self.logger.log("ScoringFailed", {
+                "target_id": target_id,
+                "target_type": target_type,
+                "error": str(e)
+            })
+            return {}

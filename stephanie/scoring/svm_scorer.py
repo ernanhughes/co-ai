@@ -25,7 +25,7 @@ class SVMScorer(BaseScorer):
         self.dimensions = dimensions or ["alignment", "clarity", "actionability", "relevance"]
         self.models = {dim: SVR() for dim in self.dimensions}
         self.scalers = {dim: StandardScaler() for dim in self.dimensions}
-        self.trained = {dim: False for dim in self.dimensions}
+        self.trained = dict.fromkeys(self.dimensions, False)
         self.force_rescore = cfg.get("force_rescore", False)
         self.regression_tuners = {}  
         for dim in self.dimensions:
