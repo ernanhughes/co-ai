@@ -11,6 +11,7 @@ from stephanie.prompts.prompt_renderer import PromptRenderer
 from stephanie.scoring.calculations.score_delta import ScoreDeltaCalculator
 from stephanie.scoring.calculations.weighted_average import WeightedAverageCalculator
 from stephanie.scoring.scorable import Scorable
+from stephanie.models.evaluation import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
@@ -306,7 +307,8 @@ class ScoringManager:
         document_id = document.get("id")
         weighted_score = bundle.calculator.calculate(bundle)
 
-        scorable = Scorable(target_type="document", id=document_id)
+        soring_text = ScoringManager.get_scoring_text(document)
+        scorable = Scorable(text=soring_text, target_type=TargetType.DOCUMENT, id=document_id)
 
         scores_json = {
             "stage": cfg.get("stage", "review"),
@@ -317,7 +319,7 @@ class ScoringManager:
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
-            target_type="document",
+            target_type=TargetType.DOCUMENT,
             target_id=document_id,
             agent_name=cfg.get("name"),
             model_name=cfg.get("model", {}).get("name"),
@@ -356,3 +358,12 @@ class ScoringManager:
             document_id, weighted_score, goal.get("id")
         )
         ScoreDisplay.show(scorable, bundle.to_dict(), weighted_score)
+
+    @staticmethod
+    def get_scoring_text(document: dict) -> str:
+        if document.get("summary"):
+            return f"{document.get('title', '')}\n\n{document['summary']}".strip()
+        elif document.get("content"):
+            return document["content"][:1500]  # Safely truncate
+        else:
+            return document.get("title", "")

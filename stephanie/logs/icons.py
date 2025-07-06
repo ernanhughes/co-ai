@@ -39,6 +39,12 @@ KNOWLEDGE_OPS = {
     "CartridgeBuilt": "💾✅",                  # Cartridge built
     "TripletsExtractionCompleted": "🔗✅",        # Triplets extracted
     "DatabaseHypothesesMatched": "📊✅",         # Hypotheses matched in DB
+    "TripletsInserted": "🔗💾",                # Triplets inserted
+    "TheoremExtracted": "📜✅",                  # Theorem extracted
+    "TheoremsExtractionCompleted": "📜✅",          # Theorems extracted
+    "DocumentProfiled": "📄📋",                # Document profiled
+    "MaxSectionsReached": "📄⏭️",              # Max sections reached
+    "ItemScored": "📊✅",                  # Item scored
 }
 
 # =================

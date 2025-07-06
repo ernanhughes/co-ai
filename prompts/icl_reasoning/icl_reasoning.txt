@@ -7,7 +7,7 @@ You are a strategic reasoning agent. Your task is to analyze a set of distilled 
 {{ learned_facts }}
 
 Relevant Theorems:
-{learned_theorems}
+{{ learned_theorems }}
 
 ## Instructions
 

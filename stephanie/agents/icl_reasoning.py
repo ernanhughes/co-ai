@@ -1,12 +1,12 @@
 from stephanie.agents.world.base_agent import BaseAgent
 from stephanie.models.cartridge_triple import CartridgeTripleORM
-from stephanie.models.evaluation import TargetType
-from stephanie.models.score import ScoreORM
-from stephanie.models.evaluation import EvaluationORM
 from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy import func, case
 from stephanie.models.theorem import TheoremORM
-
+from stephanie.models.theorem import CartridgeORM
+from stephanie.models.cartridge_domain import CartridgeDomainORM
+from stephanie.analysis.domain_classifier import DomainClassifier
+from stephanie.models.evaluation import EvaluationORM, ScoreORM, TargetType
 
 class ICLReasoningAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -27,6 +27,12 @@ class ICLReasoningAgent(BaseAgent):
         self.prompt_template = cfg.get(
             "icl_prompt_template", "icl_reasoning_prompt.txt"
         )
+        self.domain_classifier = DomainClassifier(
+            memory,
+            logger,
+            cfg.get("domain_seed_config_path", "config/domain/seeds.yaml"),
+        )
+
 
     async def run(self, context: dict) -> dict:
         goal = context.get("goal")
@@ -46,7 +52,6 @@ class ICLReasoningAgent(BaseAgent):
 
         prompt = self.prompt_loader.load_prompt(self.cfg, merged_context)
         response = self.call_llm(prompt, context=context)
-        print(f"ICL Reasoning Response: {response}")
 
         self.logger.log(
             "ICLPromptResponse",
@@ -76,6 +81,29 @@ class ICLReasoningAgent(BaseAgent):
         return "\n".join(lines)
 
     def retrieve_top_triplets(self, goal: dict) -> list[CartridgeTripleORM]:
+        session = self.memory.session
+        goal_text = goal["goal_text"]
+        goal_domains = self.domain_classifier.classify(goal_text)
+        goal_domain_names = [d[0] for d in goal_domains]
+
+        query = (
+           session.query(CartridgeTripleORM)
+            .join(CartridgeTripleORM.cartridge)
+            .join(CartridgeORM.domains_rel)
+            .filter(CartridgeDomainORM.domain.in_(goal_domain_names))
+        )        # Create a mapping of dimensions to their weights
+
+        triplets = query.distinct().all()
+        
+        self.logger.log("TripletsRetrievedByDomain", {
+                "goal": goal_text,
+                "domains": goal_domain_names,
+                "triplet_count": len(triplets),
+            })
+
+        return triplets[:self.top_k_triplets] if self.top_k_triplets else triplets
+
+    def retrieve_top_triplets_by_score(self, goal: dict) -> list[CartridgeTripleORM]:
         session = self.memory.session
         goal_id = goal["id"]
         weight_map = self.score_weights  # e.g., {"usefulness": 0.5, "clarity": 0.3}
@@ -123,8 +151,8 @@ class ICLReasoningAgent(BaseAgent):
 
         return triplets[: self.top_k_triplets]
 
-    def similarity(self, goal_vec, triplet: CartridgeTripleORM) -> float:
-        text = f"{triplet.subject} {triplet.predicate} {triplet.object}"
+
+    def similarity(self, goal_vec, text: str) -> float:
         vec = self.memory.embedding.get_or_create(text)
         return float(cosine_similarity([goal_vec], [vec])[0][0])
 
