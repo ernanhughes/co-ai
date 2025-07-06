@@ -49,8 +49,8 @@ class ScoringEngine:
                     llm_fn=self.call_llm
                 )
             else:
-                score_result = scorer.score(context.get("goal"), scorable, scooring_manager.dimensions)
-                self.logger.log("HypothesisScored", result.to_dict())
+                score_result = scorer.score(context.get("goal"), scorable, scoring_manager.dimensions)
+                self.logger.log("HypothesisScored", score_result.to_dict())
 
             self.logger.log("ItemScored", score_result.to_dict())
             return score_result.to_dict()

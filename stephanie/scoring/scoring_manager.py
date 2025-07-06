@@ -199,7 +199,7 @@ class ScoringManager:
 
 
         try:
-            score = self.scorer.score(context, scorable, self.dimension_names())        
+            score = self.scorer.score(context.get("goal"), scorable, self.dimension_names())        
         except Exception as e:
             self.logger.log(
                 "MgrScoreParseError",
@@ -211,7 +211,7 @@ class ScoringManager:
         )
         self.logger.log(
             log_key,
-            {"ScoreCompleted": score},
+            {"ScoreCompleted": score.to_dict()},
         )
 
         return score

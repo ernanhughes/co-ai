@@ -60,20 +60,21 @@ class MRQScorer(BaseScorer):
         """
         results = []
         for dim in dimensions:
-            score = self._estimate_score(goal, scorable, dim)
-            rationale = f"MRQ estimated score for {dim}."
+            dimension_name = dim["name"]
+            score = self._estimate_score(goal, scorable, dimension_name)
+            rationale = f"MRQ estimated score for {dimension_name}."
             self.logger.log(
                 "MRQDimensionEvaluated",
-                {"dimension": dim, "score": score, "rationale": rationale},
+                {"dimension": dimension_name, "score": score, "rationale": rationale},
             )
             results.append(
                 ScoreResult(
-                    dimension=dim,
+                    dimension=dimension_name,
                     score=score,
                     rationale=rationale,
                     weight=1.0,
                     source="mrq",
-                    target=scorable.target_type,  # Default target for MR.Q scores
+                    target_type=scorable.target_type,  # Default target for MR.Q scores
                 )
             )
         return ScoreBundle(results={r.dimension: r for r in results})

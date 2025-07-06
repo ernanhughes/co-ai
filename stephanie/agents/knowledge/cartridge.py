@@ -218,7 +218,7 @@ class CartridgeAgent(ScoringMixin, BaseAgent):
         if existing:
             self.logger.log(
                 "DomainAssignmentSkipped",
-                {"cartridge_id": cartridge.id, "existing_domains": [e["domain"] for e in existing]},
+                {"cartridge_id": cartridge.id, "existing_domains": [e.domain for e in existing]},
             )
             return
 
@@ -226,7 +226,7 @@ class CartridgeAgent(ScoringMixin, BaseAgent):
         results = self.domain_classifier.classify(
             cartridge.markdown_content,
             top_k=self.top_k_domains,
-            threshold=self.min_classification_score,
+            min_score=self.min_classification_score,
         )
         for domain, score in results:
             self.memory.cartridge_domains.insert(

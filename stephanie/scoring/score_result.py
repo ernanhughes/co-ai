@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
+from stephanie.models.evaluation import TargetType
 
 
 @dataclass
@@ -29,7 +30,7 @@ class ScoreResult:
             "prompt_hash": self.prompt_hash,
             "source": self.source,
             "parser_error": self.parser_error,
-            "target_type": self.target_type,
+            "target_type": self.target_type.value if isinstance(self.target_type, TargetType) else self.target_type,
         }
 
     @classmethod

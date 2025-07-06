@@ -21,6 +21,8 @@ SYSTEM_INIT = {
 # KNOWLEDGE STORAGE
 # =================
 KNOWLEDGE_OPS = {
+    "DomainAssigned": "🏷️✅",                # Domain assigned
+    "MRQTunedScore": "🧠📊",               # MRQ tuned score
     "CartridgeCreated": "💾📦",                # Cartridge created
     "CartridgeAlreadyExists": "💾✅",          # Cartridge exists check
     "TriplesAlreadyExist": "🔗✅",            # Triples exist check
@@ -45,6 +47,11 @@ KNOWLEDGE_OPS = {
     "DocumentProfiled": "📄📋",                # Document profiled
     "MaxSectionsReached": "📄⏭️",              # Max sections reached
     "ItemScored": "📊✅",                  # Item scored
+    "CartridgeScored": "💾📊",                # Cartridge scored
+    "DomainAssignmentSkipped": "🏷️⏭️",            # Domain assignment skipped
+    "CartridgeProcessingCompleted": "💾✅",        # Cartridge processing completed
+    "DocumentAlreadyProfiled": "📄✅",          # Document already profiled
+    "StoreRegistered": "💾✅",                  # Store registered
 }
 
 # =================
@@ -83,6 +90,8 @@ SCORING = {
     "MRQDimensionEvaluated": "📏🧠",          # Dimension evaluated
     "CorDimensionEvaluated": "📐✅",          # COR dimension evaluated
     "MRQScoringComplete": "📊✅",             # MRQ scoring complete
+    "MRQTunedScore": "🧠📊",               # MRQ tuned score
+
 }
 
 # =====================
