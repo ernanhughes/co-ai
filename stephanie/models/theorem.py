@@ -27,6 +27,27 @@ class TheoremORM(Base):
         back_populates="theorems"
     )
 
+    def to_dict(self, include_cartridges: bool = False) -> dict:
+        data = {
+            "id": self.id,
+            "statement": self.statement,
+            "proof": self.proof,
+            "embedding_id": self.embedding_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+        if include_cartridges:
+            data["cartridges"] = [
+                {
+                    "id": c.id,
+                    "title": c.title,
+                    "source_type": c.source_type,
+                    "source_uri": c.source_uri
+                }
+                for c in self.cartridges
+            ]
+
+        return data
 
 class CartridgeORM(Base):
     __tablename__ = 'cartridges'

@@ -3,6 +3,8 @@ from textwrap import wrap
 
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.scoring_manager import ScoringManager
+from stephanie.scoring.scorable import Scorable
+from stephanie.models.evaluation import TargetType
 
 
 class PaperScoreEvaluator(ScoringManager):
@@ -17,7 +19,12 @@ class PaperScoreEvaluator(ScoringManager):
             context["document"] = document
             chunk_context = {**context, "paper_score": temp_paper}
 
-            result = super().evaluate(temp_paper, chunk_context, llm_fn)
+            scorable = Scorable(
+                id=document.get("id"),
+                text=chunk,
+                target_type=TargetType.CHUNK,
+            )
+            result = super().evaluate(scorable, chunk_context, llm_fn)
 
             scores_accumulator.append(result)
 

@@ -122,10 +122,10 @@ class CartridgeAgent(ScoringMixin, BaseAgent):
                             triplet_text = f"({subj}, {pred}, {obj})"
                             score = self.scoring_engine.score(
                                 target_id=triple_orm.id,
-                                target_type=TargetType.CARTRIDGE_TRIPLE,
+                                target_type=TargetType.TRIPLE,
                                 text=triplet_text,
                                 context=context,
-                                stage="cartridge"
+                                scoring_profile="cartridge"
                             )
                             context.setdefault("triplet_scores", []).append(score)
                 self.logger.log("TripletsInserted", {"cartridge_id": cartridge.id})
@@ -144,13 +144,20 @@ class CartridgeAgent(ScoringMixin, BaseAgent):
                     theorem.cartridges.append(cartridge)
                     self.memory.session.add(theorem)
 
+                    merged_context = {
+                        "theorem": theorem.to_dict(),
+                        "cartridge_title": cartridge.title,
+                        "cartridge_id": cartridge.id,
+                        **context
+                    }
+
                     # Score theorem immediately
                     theorem_score = self.scoring_engine.score(
                         target_id=theorem.id,
                         target_type=TargetType.THEOREM,
                         text=theorem.statement,
-                        context=context,
-                        stage="cartridge"
+                        context=merged_context,
+                        scoring_profile="cartridge"
                     )
                     context.setdefault("theorem_scores", []).append(theorem_score)
                 self.memory.session.commit()
@@ -163,7 +170,7 @@ class CartridgeAgent(ScoringMixin, BaseAgent):
                         target_type=TargetType.CARTRIDGE,
                         text=cartridge.markdown_content,
                         context=context,
-                        stage="cartridge"
+                        scoring_profile="cartridge"
                     )
                     context.setdefault("cartridge_scores", []).append(score)
                     self.logger.log("CartridgeScored", {"cartridge_id": cartridge.id})

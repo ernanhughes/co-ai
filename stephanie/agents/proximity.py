@@ -96,7 +96,7 @@ class ProximityAgent(ScoringMixin, BaseAgent):
             scorable=scorable,
             context=context,
             metrics="proximity",  # Must match your config key: `proximity_score_config`
-            scorer=ProximityScorer(),
+            scorer=ProximityScorer(self.cfg, self.memory, self.logger, self.call_llm),
         )
         score = score_result["score"]
 

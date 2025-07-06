@@ -12,8 +12,10 @@ class TheoremExtractor:
 
     def extract(self, sections, context):
         extracted_theorems = []
-
-        for section in sections:
+        for count, section in enumerate(sections):
+            if count >= self.cfg.get("max_sections", 2):
+                self.logger.log("MaxSectionsReached", {"max_sections": self.cfg.get("max_sections")})
+                break
             merged_context = {"section_text": section, **context}
             prompt = self.prompt_loader.from_file(self.prompt_template, self.cfg, merged_context)
             

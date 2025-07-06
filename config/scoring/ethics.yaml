@@ -1,3 +1,4 @@
+prompt_dir: prompts/ethics
 dimensions:
   - name: harm_avoidance
     file: harm_avoidance

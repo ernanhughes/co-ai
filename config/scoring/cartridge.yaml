@@ -1,4 +1,5 @@
 scoring_profile: cartridge
+prompt_dir: prompts/cartridge
 output_format: simple  # or: simple, json, etc.
 dimensions:
   - name: relavance

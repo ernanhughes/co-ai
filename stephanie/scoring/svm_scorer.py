@@ -71,18 +71,6 @@ class SVMScorer(BaseScorer):
                 "score_max": float(np.max(y)),
             })
 
-    def _build_feature_vector(self, goal: dict, scorable: Scorable):
-        emb_goal = self.memory.embedding.get_or_create(goal["goal_text"])
-        emb_hyp = self.memory.embedding.get_or_create(scorable.text)
-
-        # Optional: make sure they're both numpy arrays
-        emb_goal = np.array(emb_goal)
-        emb_hyp = np.array(emb_hyp)
-
-        vec = np.concatenate([emb_goal, emb_hyp])
-
-        return vec
-
     def train_from_database(self, cfg: dict):
         pair_samples = self.memory.mrq.get_training_pairs_by_dimension()
         samples_by_dim = self.convert_mrq_pairs_to_supervised_examples(pair_samples)

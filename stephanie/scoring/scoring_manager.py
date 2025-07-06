@@ -26,6 +26,7 @@ class ScoringManager:
         memory,
         calculator=None,
         dimension_filter_fn=None,
+        scoring_profile=None,
     ):
         self.dimensions = dimensions
         self.prompt_loader = prompt_loader
@@ -35,7 +36,8 @@ class ScoringManager:
         self.output_format = cfg.get("output_format", "simple")  # default
         self.prompt_renderer = PromptRenderer(prompt_loader, cfg)
         self.calculator = calculator or WeightedAverageCalculator()
-        self.dimension_filter_fn = dimension_filter_fn  # Optional hook
+        self.dimension_filter_fn = dimension_filter_fn
+        self.scoring_profile = scoring_profile
 
     def filter_dimensions(self, scorable, context):
         """
@@ -92,7 +94,7 @@ class ScoringManager:
         return [d["name"] for d in self.dimensions]
 
     @classmethod
-    def from_file(cls, filepath: str, prompt_loader, cfg, logger, memory):
+    def from_file(cls, filepath: str, prompt_loader, cfg, logger, memory, scoring_profile=None):
         with open(Path(filepath), "r") as f:
             data = yaml.safe_load(f)
 
@@ -123,6 +125,7 @@ class ScoringManager:
             cfg=cfg,
             logger=logger,
             memory=memory,
+            scoring_profile=scoring_profile
         )
 
     @staticmethod

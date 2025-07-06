@@ -97,7 +97,7 @@ class ICLReasoningAgent(BaseAgent):
             .join(ScoreORM, ScoreORM.evaluation_id == EvaluationORM.id)
             .filter(
                 EvaluationORM.goal_id == goal_id,
-                EvaluationORM.target_type == TargetType.CARTRIDGE_TRIPLE,
+                EvaluationORM.target_type == TargetType.TRIPLE,
             )
             .group_by(EvaluationORM.target_id)
             .subquery()

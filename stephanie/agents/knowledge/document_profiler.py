@@ -36,6 +36,16 @@ class DocumentProfilerAgent(BaseAgent):
         for doc in documents:
             try:
                 doc_id = doc["id"]
+
+                existing_sections = self.memory.document_section.get_by_document(doc_id)
+                if existing_sections and not self.force_domain_update:
+                    # If we already have sections and not forcing update, skip
+                    self.logger.log(
+                        "DocumentAlreadyProfiled",
+                        {"doc_id": doc_id, "title": doc.get("title", "")},
+                    )
+                    continue
+
                 title = doc.get("title")
                 summary = doc.get("summary")
                 text = doc.get("content", doc.get("text", ""))

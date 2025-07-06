@@ -38,7 +38,7 @@ KNOWLEDGE_OPS = {
     "CartridgeDocumentProcessingStarted": "💾📄▶️",  # Document processing started
     "CartridgeBuilt": "💾✅",                  # Cartridge built
     "TripletsExtractionCompleted": "🔗✅",        # Triplets extracted
-
+    "DatabaseHypothesesMatched": "📊✅",         # Hypotheses matched in DB
 }
 
 # =================

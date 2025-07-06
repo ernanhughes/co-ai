@@ -17,7 +17,10 @@ class ScoringEngine:
 
     def get_manager(self, scoring_profile: str) -> ScoringManager:
         if scoring_profile not in self.scoring_managers:
-            config_path = self.cfg.get(f"{scoring_profile}", f"config/scoring/{scoring_profile}.yaml")
+            config_path = self.cfg.get(
+                f"{scoring_profile}_score_config",
+                f"config/scoring/{scoring_profile}.yaml"
+            )
             self.scoring_managers[scoring_profile] = ScoringManager.from_file(
                 filepath=config_path,
                 prompt_loader=self.prompt_loader,
@@ -27,10 +30,10 @@ class ScoringEngine:
             )
         return self.scoring_managers[scoring_profile]
 
-    def score(self, target_id, target_type: TargetType, text: str, context: dict, stage: str) -> dict:
+    def score(self, target_id, target_type: TargetType, text: str, context: dict, scoring_profile: str) -> dict:
         try:
             scorable = Scorable(id=target_id, text=text, target_type=target_type)
-            scoring_manager = self.get_manager(stage)
+            scoring_manager = self.get_manager(scoring_profile)
 
             merged_context = {
                 "target_type": target_type.value,
