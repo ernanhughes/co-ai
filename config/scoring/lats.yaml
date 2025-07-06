@@ -2,6 +2,7 @@
 scoring_profile: lats
 prompt_dir: prompts/lats
 output_format: cor
+scorer: llm
 dimensions:
   - name: correctness
     file: correctness_cor.txt

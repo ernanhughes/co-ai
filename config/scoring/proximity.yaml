@@ -1,6 +1,7 @@
 # /config/scoring/proximity.yaml
 scoring_profile: proximity
 prompt_dir: prompts/proximity
+scorer: llm
 output_format: simple
 dimensions:
   - name: proximity_usefulness

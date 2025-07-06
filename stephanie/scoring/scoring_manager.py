@@ -16,7 +16,6 @@ from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
 
-
 class ScoringManager:
     def __init__(
         self,
@@ -28,6 +27,7 @@ class ScoringManager:
         calculator=None,
         dimension_filter_fn=None,
         scoring_profile=None,
+        scorer=None,
     ):
         self.dimensions = dimensions
         self.prompt_loader = prompt_loader
@@ -39,6 +39,11 @@ class ScoringManager:
         self.calculator = calculator or WeightedAverageCalculator()
         self.dimension_filter_fn = dimension_filter_fn
         self.scoring_profile = scoring_profile
+        self.scorer = scorer
+
+    def dimension_names(self):
+        """Returns the names of all dimensions."""
+        return [dim["name"] for dim in self.dimensions]
 
     def filter_dimensions(self, scorable, context):
         """
@@ -120,13 +125,30 @@ class ScoringManager:
         cfg = cfg.copy()
         cfg["output_format"] = output_format
 
+        from stephanie.scoring.mrq_scorer import MRQScorer  
+        from stephanie.scoring.llm_scorer import LLMScorer
+        from stephanie.scoring.svm_scorer import SVMScorer
+
+        if data["scorer"] == "mrq":
+            # Use MRQ scoring profile if specified
+            scorer = MRQScorer(cfg, memory, logger)
+            scorer.load_models()
+        elif data["scorer"] == "svm":
+            # Use SVM scoring profile if specified
+            scorer = SVMScorer(cfg, memory, logger)
+            scorer.load_models()   
+        else:
+            # Default to LLM scoring profile
+            scorer = LLMScorer(cfg, memory, logger)
+
         return cls(
             dimensions=dimensions,
             prompt_loader=prompt_loader,
             cfg=cfg,
             logger=logger,
             memory=memory,
-            scoring_profile=scoring_profile
+            scoring_profile=scoring_profile,
+            scorer=scorer,
         )
 
     @staticmethod
@@ -174,6 +196,27 @@ class ScoringManager:
         raise ValueError(f"Could not extract numeric score from response: {response}")
 
     def evaluate(self, scorable: Scorable, context: dict = {}, llm_fn=None):
+
+
+        try:
+            score = self.scorer.score(context, scorable, self.dimension_names())        
+        except Exception as e:
+            self.logger.log(
+                "MgrScoreParseError",
+                {"scorable": scorable, "error": str(e)},
+            )
+            score = self.evaluate_llm(scorable, context, llm_fn)
+        log_key = (
+            "CorDimensionEvaluated" if format == "cor" else "DimensionEvaluated"
+        )
+        self.logger.log(
+            log_key,
+            {"ScoreCompleted": score},
+        )
+
+        return score
+
+    def evaluate_llm(self, scorable: Scorable, context: dict = {}, llm_fn=None):
         if llm_fn is None:
             raise ValueError("You must pass a call_llm function to evaluate")
 

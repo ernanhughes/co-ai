@@ -1,5 +1,6 @@
-scoring_profile: reasoning
+scoring_profile: compiler
 prompt_dir: prompts/compiler
+scorer: llm
 output_format: simple  # or: simple, json, etc.
 dimensions:
   - name: correctness

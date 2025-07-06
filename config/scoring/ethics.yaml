@@ -1,4 +1,6 @@
+scoring_profile: ethics
 prompt_dir: prompts/ethics
+scorer: llm
 dimensions:
   - name: harm_avoidance
     file: harm_avoidance

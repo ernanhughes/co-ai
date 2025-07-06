@@ -15,41 +15,41 @@ class ScoringMixin:
         super().__init__(*args, **kwargs)
         self._scorers = {}  # Caches ScoreEvaluator instances per stage
 
-    def get_scorer(self, stage: str) -> ScoringManager:
+    def get_scorer(self, scoring_profile: str) -> ScoringManager:
         """
         Lazily loads and returns a ScoreEvaluator for the given stage.
         Config path is read from e.g., cfg['review_score_config'].
         """
-        if stage not in self._scorers:
-            config_key = f"{stage}_score_config"
-            config_path = self.cfg.get(config_key, f"config/scoring/{stage}.yaml")
-            self._scorers[stage] = ScoringManager.from_file(
+        if scoring_profile not in self._scorers:
+            config_key = f"{scoring_profile}_score_config"
+            config_path = self.cfg.get(config_key, f"config/scoring/{scoring_profile}.yaml")
+            self._scorers[scoring_profile] = ScoringManager.from_file(
                 filepath=config_path,
                 prompt_loader=self.prompt_loader,
                 cfg=self.cfg,
                 logger=self.logger,
                 memory=self.memory
             )
-        return self._scorers[stage]
+        return self._scorers[scoring_profile]
 
-    def get_dimensions(self, stage: str) -> ScoringManager:
+    def get_dimensions(self, scoing_profile: str) -> ScoringManager:
         """
         Lazily loads and returns a ScoreEvaluator for the given stage.
         Config path is read from e.g., cfg['review_score_config'].
         """
-        if stage not in self._scorers:
-            config_key = f"{stage}_score_config"
-            config_path = self.cfg.get(config_key, f"config/scoring/{stage}.yaml")
-            self._scorers[stage] = ScoringManager.from_file(
+        if scoing_profile not in self._scorers:
+            config_key = f"{scoing_profile}_score_config"
+            config_path = self.cfg.get(config_key, f"config/scoring/{scoing_profile}.yaml")
+            self._scorers[scoing_profile] = ScoringManager.from_file(
                 filepath=config_path,
                 prompt_loader=self.prompt_loader,
                 cfg=self.cfg,
                 logger=self.logger,
                 memory=self.memory
             )
-        return self._scorers[stage]
+        return self._scorers[scoing_profile]
     
-    def get_dimensions(self, stage: str) -> list:
+    def get_dimensions(self, scoring_profile: str) -> list:
         """
         Get the list of dimensions for a given scoring stage.
         
@@ -59,7 +59,7 @@ class ScoringMixin:
         Returns:
             list: List of dimension names for the specified stage.
         """
-        scorer = self.get_scorer(stage)
+        scorer = self.get_scorer(scoring_profile)
         return scorer.get_dimensions()
 
     def score_item(
