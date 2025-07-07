@@ -12,7 +12,7 @@ from stephanie.utils.model_utils import get_model_path
 from stephanie.scoring.document_pair_builder import DocumentPreferencePairBuilder
 
 
-class SVMTrainerAgent(BaseAgent):
+class DocumentSVMTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_type = "svm"
@@ -42,6 +42,7 @@ class SVMTrainerAgent(BaseAgent):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         for dim, pairs in training_pairs.items():
+            self._initialize_dimension(dim)
             if not pairs:
                 continue
 
