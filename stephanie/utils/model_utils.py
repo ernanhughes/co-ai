@@ -11,6 +11,7 @@ def discover_saved_dimensions(model_type: str, target_type: str, model_dir: str 
     """
     path = os.path.join(model_dir, model_type, target_type)
     if not os.path.exists(path):
+        print(f"Model path {path} does not exist.")
         return []
 
     dimension_names = []

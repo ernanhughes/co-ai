@@ -2,14 +2,18 @@
 import torch
 from torch import nn
 
-class EBTModel(nn.Module):
-    def __init__(self, input_dim=2048, hidden_dim=256):
+class DocumentEBTScorer(nn.Module):
+    def __init__(self, embedding_dim=1024):
         super().__init__()
         self.head = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
+            nn.Linear(embedding_dim * 2, 256),
             nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
+            nn.Linear(256, 1),
         )
+        self.scale_factor = nn.Parameter(torch.tensor(10.0))  # Learnable scale
 
-    def forward(self, x):
-        return self.head(x).squeeze(-1)
+  
+    def forward(self, ctx_emb, doc_emb):
+        combined = torch.cat([ctx_emb, doc_emb], dim=-1)
+        raw = self.head(combined).squeeze(-1)
+        return raw * self.scale_factor

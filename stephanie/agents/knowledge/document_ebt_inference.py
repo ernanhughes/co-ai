@@ -4,7 +4,7 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
 from stephanie.utils.model_utils import get_model_path, discover_saved_dimensions
-from stephanie.scoring.model.ebt_model import EBTModel
+from stephanie.scoring.model.ebt_model import DocumentEBTScorer
 from stephanie.utils.file_utils import load_json
 
 class DocumentEBTInferenceAgent(BaseAgent):
@@ -48,7 +48,7 @@ class DocumentEBTInferenceAgent(BaseAgent):
         self.logger.log("AllEBTModelsLoaded", {"dimensions": self.dimensions})
 
     def _load_model(self, path):
-        model = EBTModel().to(self.device)
+        model = DocumentEBTScorer().to(self.device)
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model
@@ -71,17 +71,27 @@ class DocumentEBTInferenceAgent(BaseAgent):
             doc_emb = torch.tensor(
                 self.memory.embedding.get_or_create(scorable.text)
             ).to(self.device)
-            combined = torch.cat([ctx_emb, doc_emb], dim=-1).unsqueeze(0)
 
             dimension_scores = {}
             for dim, model in self.models.items():
                 with torch.no_grad():
-                    raw_score = float(model(combined).squeeze().cpu())
-                # Rescale normalized score
-                meta = self.model_meta.get(dim, {"min": 40, "max":100})
-                real_score = raw_score * (meta["max"] - meta["min"]) + meta["min"]
-                print(f"Raw score for {dim}: {raw_score}, Rescaled: {real_score}")
-                dimension_scores[dim] = round(real_score, 4)
+                    raw_energy = model(ctx_emb, doc_emb).squeeze().cpu().item()
+                    meta = self.model_meta.get(dim, {"min": 40, "max": 100})
+                    # Normalize energy to [0, 1]
+                    normalized_score = torch.sigmoid(torch.tensor(raw_energy)).item()
+                    # Then scale to desired range
+                    real_score = normalized_score * (meta["max"] - meta["min"]) + meta["min"]
+                    dimension_scores[dim] = round(real_score, 4)
+                    self.logger.log(
+                        "EBTScoreComputed",
+                        {
+                            "document_id": doc_id,
+                            "dimension": dim,
+                            "raw_energy": round(raw_energy, 4),
+                            "normalized_score": normalized_score,
+                            "real_score": real_score,
+                        },
+                    )
 
             results.append({"scorable": scorable.to_dict(), "scores": dimension_scores})
 

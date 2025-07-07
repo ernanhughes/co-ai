@@ -8,43 +8,35 @@ from stephanie.evaluator.text_encoder import TextEncoder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor
 from stephanie.utils.model_utils import get_model_path
 from stephanie.utils.file_utils import save_json
+from stephanie.scoring.model.ebt_model import DocumentEBTScorer
 
 
 class DocumentEBTDataset(Dataset):
-    def __init__(self, contrast_pairs, min_score=0, max_score=100):
+    def __init__(self, contrast_pairs, min_score=None, max_score=None):
         self.data = []
-        self.min_score = min_score
-        self.max_score = max_score
+
+        # Compute min/max from data if not provided
+        all_scores = []
+        for pair in contrast_pairs:
+            all_scores.extend([pair["value_a"], pair["value_b"]])
+        self.min_score = min(all_scores) if min_score is None else min_score
+        self.max_score = max(all_scores) if max_score is None else max_score
 
         for pair in contrast_pairs:
-            context = pair.get("title", "")
-            norm_a = (pair["value_a"] - min_score) / (max_score - min_score)
-            norm_b = (pair["value_b"] - min_score) / (max_score - min_score)
-
-            self.data.append((context, pair["output_a"], norm_a))
-            self.data.append((context, pair["output_b"], norm_b))
+            norm_a = (pair["value_a"] - self.min_score) / (self.max_score - self.min_score)
+            norm_b = (pair["value_b"] - self.min_score) / (self.max_score - self.min_score)
+            self.data.append((pair["title"], pair["output_a"], norm_a))
+            self.data.append((pair["title"], pair["output_b"], norm_b))
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, i):
         return self.data[i]
-
-
-class DocumentEBTScorer(nn.Module):
-    def __init__(self, embedding_dim=1024):
-        super().__init__()
-        self.head = nn.Sequential(
-            nn.Linear(embedding_dim * 2, 256),
-            nn.ReLU(),
-            nn.Linear(256, 1),
-        )
-
-    def forward(self, ctx_emb: torch.Tensor, doc_emb: torch.Tensor) -> torch.Tensor:
-        combined = torch.cat([ctx_emb, doc_emb], dim=-1)
-        return self.head(combined).squeeze(-1)
-
-
+    
+    def get_normalization(self):
+        return {"min": self.min_score, "max": self.max_score}
+    
 class DocumentEBTTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
@@ -89,7 +81,7 @@ class DocumentEBTTrainerAgent(BaseAgent):
             optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
             loss_fn = nn.MSELoss()
 
-            for epoch in range(5):
+            for epoch in range(10):
                 model.train()
                 total_loss = 0.0
                 for ctx_enc, cand_enc, labels in dl:
@@ -105,14 +97,16 @@ class DocumentEBTTrainerAgent(BaseAgent):
                 avg_loss = total_loss / len(dl)
                 self.logger.log("DocumentEBTEpoch", {"dimension": dim, "epoch": epoch + 1, "avg_loss": round(avg_loss, 5)})
 
-            model_path = get_model_path(self.model_type, self.target_type, dim)
+            model_path = f"{get_model_path(self.model_type, self.target_type, dim)}.pt"
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            print(model.state_dict().keys())
             torch.save(model.state_dict(), model_path)
             self.logger.log("DocumentEBTModelSaved", {"dimension": dim, "path": model_path})
 
             # Save normalization metadata
             meta_path = model_path.replace(".pt", ".meta.json")
-            save_json({"min": 0, "max": 100}, meta_path)
+            normalization = ds.get_normalization()
+            save_json(normalization, meta_path)
 
         context[self.output_key] = training_pairs
         return context
