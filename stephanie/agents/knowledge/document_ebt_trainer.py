@@ -1,29 +1,34 @@
 import os
-
 import torch
+from torch.utils.data import Dataset, DataLoader
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.evaluator.text_encoder import TextEncoder
-from stephanie.scoring.document_pair_builder import \
-    DocumentPreferencePairBuilder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor
+from stephanie.utils.model_utils import get_model_path
+from stephanie.utils.file_utils import save_json
 
 
 class DocumentEBTDataset(Dataset):
-    def __init__(self, contrast_pairs):
+    def __init__(self, contrast_pairs, min_score=0, max_score=100):
         self.data = []
+        self.min_score = min_score
+        self.max_score = max_score
+
         for pair in contrast_pairs:
             context = pair.get("title", "")
-            self.data.append((context, pair["output_a"], -pair["value_a"]))  # Lower is better
-            self.data.append((context, pair["output_b"], -pair["value_b"]))
+            norm_a = (pair["value_a"] - min_score) / (max_score - min_score)
+            norm_b = (pair["value_b"] - min_score) / (max_score - min_score)
+
+            self.data.append((context, pair["output_a"], norm_a))
+            self.data.append((context, pair["output_b"], norm_b))
 
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, idx):
-        return self.data[idx]
+    def __getitem__(self, i):
+        return self.data[i]
 
 
 class DocumentEBTScorer(nn.Module):
@@ -43,17 +48,28 @@ class DocumentEBTScorer(nn.Module):
 class DocumentEBTTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
-        self.model_save_path = cfg.get("model_save_path", "models")
-        self.model_prefix = cfg.get("model_prefix", "document_ebt_")
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model_type = "ebt"
+        self.target_type = "document"
+        self.encoder = TextEncoder().to(
+            torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
+        self.value_predictor = DocumentValuePredictor().to(
+            torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
-        builder = DocumentPreferencePairBuilder(db=self.memory.session, logger=self.logger)
+        from stephanie.scoring.document_pair_builder import (
+            DocumentPreferencePairBuilder,
+        )
+
+        builder = DocumentPreferencePairBuilder(
+            db=self.memory.session, logger=self.logger
+        )
         training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)
 
-        os.makedirs(self.model_save_path, exist_ok=True)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         for dim, pairs in training_pairs.items():
             if not pairs:
@@ -61,10 +77,15 @@ class DocumentEBTTrainerAgent(BaseAgent):
 
             self.logger.log("DocumentEBTTrainingStart", {"dimension": dim, "num_pairs": len(pairs)})
 
-            ds = DocumentEBTDataset(pairs)
-            dl = DataLoader(ds, batch_size=8, shuffle=True, collate_fn=self.collate_ebt_batch)
+            ds = DocumentEBTDataset(pairs, min_score=50, max_score=100)
+            dl = DataLoader(
+                ds,
+                batch_size=8,
+                shuffle=True,
+                collate_fn=lambda b: collate_ebt_batch(b, self.memory.embedding, device)
+            )
 
-            model = DocumentEBTScorer().to(self.device)
+            model = DocumentEBTScorer().to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
             loss_fn = nn.MSELoss()
 
@@ -82,27 +103,29 @@ class DocumentEBTTrainerAgent(BaseAgent):
                     total_loss += loss.item()
 
                 avg_loss = total_loss / len(dl)
-                self.logger.log("DocumentEBTEpoch", {
-                    "dimension": dim,
-                    "epoch": epoch + 1,
-                    "avg_loss": round(avg_loss, 5)
-                })
+                self.logger.log("DocumentEBTEpoch", {"dimension": dim, "epoch": epoch + 1, "avg_loss": round(avg_loss, 5)})
 
-            path = os.path.join(self.model_save_path, f"{self.model_prefix}{dim}.pt")
-            torch.save(model.state_dict(), path)
-            self.logger.log("DocumentEBTModelSaved", {"dimension": dim, "path": path})
+            model_path = get_model_path(self.model_type, self.target_type, dim)
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            torch.save(model.state_dict(), model_path)
+            self.logger.log("DocumentEBTModelSaved", {"dimension": dim, "path": model_path})
+
+            # Save normalization metadata
+            meta_path = model_path.replace(".pt", ".meta.json")
+            save_json({"min": 0, "max": 100}, meta_path)
 
         context[self.output_key] = training_pairs
         return context
 
-    def collate_ebt_batch(self, batch):
-        ctxs, docs, targets = zip(*batch)
 
-        ctx_embs = [torch.tensor(self.memory.embedding.get_or_create(c)).to(self.device) for c in ctxs]
-        doc_embs = [torch.tensor(self.memory.embedding.get_or_create(d)).to(self.device) for d in docs]
-        labels = torch.tensor(targets, dtype=torch.float32).to(self.device)
+def collate_ebt_batch(batch, embedding_store, device):
+    ctxs, docs, targets = zip(*batch)
 
-        ctx_tensor = torch.stack(ctx_embs)
-        doc_tensor = torch.stack(doc_embs)
+    ctx_embs = [torch.tensor(embedding_store.get_or_create(c)).to(device) for c in ctxs]
+    doc_embs = [torch.tensor(embedding_store.get_or_create(d)).to(device) for d in docs]
+    labels = torch.tensor(targets, dtype=torch.float32).to(device)
 
-        return ctx_tensor, doc_tensor, labels
+    ctx_tensor = torch.stack(ctx_embs)
+    doc_tensor = torch.stack(doc_embs)
+
+    return ctx_tensor, doc_tensor, labels

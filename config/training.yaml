@@ -61,13 +61,13 @@ pipeline:
      - name: document_trainer
        description: "Build document pairs for training and evaluation" 
        cls: stephanie.agents.knowledge.document_trainer.DocumentTrainerAgent 
-       enabled: true
+       enabled: false
        iterations: 1
 
      - name: document_ebt_trainer
        description: "Train a model to predict document values based on EBT" 
        cls: stephanie.agents.knowledge.document_ebt_trainer.DocumentEBTTrainerAgent 
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: knowledge_loader
@@ -91,6 +91,18 @@ pipeline:
      - name: document_mrq_inference
        description: "Infer MRQ scores for documents" 
        cls: stephanie.agents.knowledge.document_mrq_inference.DocumentMRQInferenceAgent 
+       enabled: false
+       iterations: 
+       
+     - name: document_mrq_inference
+       description: "Infer MRQ scores for documents" 
+       cls: stephanie.agents.knowledge.document_mrq_inference.DocumentMRQInferenceAgent 
+       enabled: false
+       iterations: 
+       
+     - name: document_ebt_inference
+       description: "Infer EBT scores for documents" 
+       cls: stephanie.agents.knowledge.document_ebt_inference.DocumentEBTInferenceAgent 
        enabled: true
        iterations: 
        
