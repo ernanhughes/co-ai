@@ -1,4 +1,4 @@
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL, HYPOTHESES, PIPELINE, PIPELINE_RUN_ID
 from stephanie.parsers import extract_hypotheses
 

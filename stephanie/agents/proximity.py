@@ -3,15 +3,15 @@ import itertools
 
 import numpy as np
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import \
     ScoringMixin  # Adjust path if needed
 from stephanie.constants import (DATABASE_MATCHES, GOAL, GOAL_TEXT,
                                  PIPELINE_RUN_ID, TEXT)
 from stephanie.models import EvaluationORM
-from stephanie.models.evaluation import TargetType
 from stephanie.scoring.proximity_scorer import ProximityScorer
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import TargetType
 from stephanie.utils import compute_similarity_matrix
 
 

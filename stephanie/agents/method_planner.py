@@ -1,7 +1,7 @@
 # stephanie/agents/method_planner.py
 import re
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL, HYPOTHESES, PIPELINE
 from stephanie.models.method_plan import MethodPlanORM
 

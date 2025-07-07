@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, Table, JSON
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, Table, Text
+from sqlalchemy.orm import relationship
+
 from stephanie.models.base import Base
 
 # Association table for many-to-many relationship

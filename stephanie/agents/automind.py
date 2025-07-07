@@ -1,5 +1,5 @@
 from stephanie.agents.ats.solution_node import SolutionNode
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.judge import JudgeAgent
 from stephanie.components.coding_strategy import SelfAdaptiveCoder
 from stephanie.components.search_policy import TreeSearchPolicy

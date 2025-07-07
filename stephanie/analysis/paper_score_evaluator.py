@@ -1,10 +1,10 @@
 # stephanie/scoring/paper_score_evaluator.py
 from textwrap import wrap
 
+from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.scoring_manager import ScoringManager
-from stephanie.scoring.scorable import Scorable
-from stephanie.models.evaluation import TargetType
 
 
 class PaperScoreEvaluator(ScoringManager):

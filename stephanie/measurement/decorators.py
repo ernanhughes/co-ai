@@ -1,6 +1,8 @@
 # stephanie/measurement/decorators.py
 from functools import wraps
+
 from stephanie.measurement.registry import measurement_registry
+
 
 def measure(entity_type: str, metric_name: str):
     """Decorator to register measurement functions"""

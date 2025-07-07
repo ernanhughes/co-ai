@@ -1,14 +1,14 @@
 # stephanie/agents/cartridge_agent.py
 
-from stephanie.agents.world.base_agent import BaseAgent
-from stephanie.builders.cartridge_builder import CartridgeBuilder
-from stephanie.builders.triplet_extractor import TripletExtractor
-from stephanie.builders.theorem_extractor import TheoremExtractor
-from stephanie.analysis.domain_classifier import DomainClassifier
-from stephanie.models.theorem import CartridgeORM
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
+from stephanie.analysis.domain_classifier import DomainClassifier
+from stephanie.builders.cartridge_builder import CartridgeBuilder
+from stephanie.builders.theorem_extractor import TheoremExtractor
+from stephanie.builders.triplet_extractor import TripletExtractor
+from stephanie.models.theorem import CartridgeORM
+from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.scoring_engine import ScoringEngine
-from stephanie.models.evaluation import TargetType
 
 
 class CartridgeAgent(ScoringMixin, BaseAgent):

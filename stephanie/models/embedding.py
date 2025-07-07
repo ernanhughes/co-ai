@@ -1,10 +1,11 @@
 # models/embedding.py
 
-from sqlalchemy import Column, Integer, Text, DateTime
-from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import Column, DateTime, Integer, Text
+from sqlalchemy.sql import func
 
 from stephanie.models.base import Base
+
 
 class EmbeddingORM(Base):
     __tablename__ = 'embeddings'

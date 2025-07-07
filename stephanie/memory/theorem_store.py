@@ -1,6 +1,9 @@
-from sqlalchemy.orm import Session
-from stephanie.models.theorem import TheoremORM
 from typing import Optional
+
+from sqlalchemy.orm import Session
+
+from stephanie.models.theorem import TheoremORM
+
 
 class TheoremStore:
     def __init__(self, session: Session, logger=None):

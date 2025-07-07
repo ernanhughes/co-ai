@@ -4,6 +4,7 @@ import re
 from string import Template
 
 from stephanie.scoring.base_scorer import BaseScorer
+from stephanie.scoring.scorable import Scorable
 
 
 class LLMScorer(BaseScorer):
@@ -22,7 +23,7 @@ class LLMScorer(BaseScorer):
     def name(self) -> str:
         return "llm"
 
-    def score(self, goal, hypothesis, dimensions):
+    def score(self, goal, scorable: Scorable, dimensions: list[str], llm_fn=None) -> dict:
         """
         Returns dict of dimension -> {score, rationale, weight} + final_score.
         Accepts either:
@@ -35,8 +36,8 @@ class LLMScorer(BaseScorer):
             if isinstance(dim, str):
                 dim = {"name": dim, "prompt_template": self._default_prompt(dim)}
 
-            prompt = self._render_prompt(dim, goal, hypothesis)
-            response = self.call_llm(prompt)
+            prompt = self._render_prompt(dim, goal, scorable)
+            response = llm_fn(prompt, {"goal": goal})
 
             try:
                 parser = dim.get("parser_fn") or self._get_parser(dim)
@@ -44,18 +45,24 @@ class LLMScorer(BaseScorer):
             except Exception as e:
                 score = 0.0
                 if self.logger:
-                    self.logger.log("LLMScoreParseError", {
-                        "dimension": dim["name"],
-                        "response": response,
-                        "error": str(e)
-                    })
+                    self.logger.log(
+                        "LLMScoreParseError",
+                        {
+                            "dimension": dim["name"],
+                            "response": response,
+                            "error": str(e),
+                        },
+                    )
 
             if self.logger:
-                self.logger.log("LLMJudgeScorerDimension", {
-                    "dimension": dim["name"],
-                    "score": score,
-                    "rationale": response,
-                })
+                self.logger.log(
+                    "LLMJudgeScorerDimension",
+                    {
+                        "dimension": dim["name"],
+                        "score": score,
+                        "rationale": response,
+                    },
+                )
 
             results[dim["name"]] = {
                 "score": score,
@@ -66,13 +73,15 @@ class LLMScorer(BaseScorer):
         results["final_score"] = self._aggregate(results)
         return results
 
-    def _render_prompt(self, dim: dict, goal: dict, hypothesis: dict) -> str:
+    def _render_prompt(self, dim: dict, goal: dict, scorable: Scorable) -> str:
         context = {
             "goal": goal.get("goal_text", ""),
-            "hypothesis": hypothesis.get("text", "")
+            "hypothesis": scorable.text,
         }
         if self.prompt_loader and dim.get("file"):
-            return self.prompt_loader.from_file(file_name=dim["file"], config=self.cfg, context=context)
+            return self.prompt_loader.from_file(
+                file_name=dim["file"], config=self.cfg, context=context
+            )
         else:
             return Template(dim["prompt_template"]).substitute(context)
 
@@ -97,16 +106,22 @@ class LLMScorer(BaseScorer):
     def extract_score_from_last_line(response: str) -> float:
         lines = response.strip().splitlines()
         for line in reversed(lines):
-            match = re.search(r"score[:\-]?\s*(\d+(\.\d+)?)", line.strip(), re.IGNORECASE)
+            match = re.search(
+                r"score[:\-]?\s*(\d+(\.\d+)?)", line.strip(), re.IGNORECASE
+            )
             if match:
                 return float(match.group(1))
         return 0.0
 
     @staticmethod
     def parse_numeric_cor(response: str) -> float:
-        match = re.search(r"<answer>\s*\[\[(\d+(?:\.\d+)?)\]\]\s*</answer>", response, re.IGNORECASE)
+        match = re.search(
+            r"<answer>\s*\[\[(\d+(?:\.\d+)?)\]\]\s*</answer>", response, re.IGNORECASE
+        )
         if not match:
-            raise ValueError(f"Could not extract numeric score from CoR-style answer: {response}")
+            raise ValueError(
+                f"Could not extract numeric score from CoR-style answer: {response}"
+            )
         return float(match.group(1))
 
     def _get_parser(self, dim: dict):

@@ -1,8 +1,11 @@
 # stephanie/models/measurement.py
-from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, JSON
-from sqlalchemy.orm import relationship
 from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, Text
+from sqlalchemy.orm import relationship
+
 from stephanie.models.base import Base
+
 
 class MeasurementORM(Base):
     __tablename__ = 'measurements'

@@ -1,6 +1,6 @@
 from dataclasses import asdict
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.memory_aware_mixin import MemoryAwareMixin
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.rules.symbolic_node import SymbolicNode

@@ -1,6 +1,7 @@
 # stephanie/builders/theorem_extractor.py
 from stephanie.models.theorem import TheoremORM
 
+
 class TheoremExtractor:
     def __init__(self, cfg, memory, prompt_loader, logger, call_llm):
         self.cfg = cfg

@@ -1,25 +1,13 @@
 # models/score.py
 from datetime import datetime, timezone
-from enum import Enum as PyEnum
 
 from sqlalchemy import (JSON, Column, DateTime, Enum, ForeignKey, Integer,
                         String, Text)
 from sqlalchemy.orm import relationship
 
 from stephanie.models.base import Base
+from stephanie.scoring.scorable_factory import TargetType
 
-
-class TargetType(PyEnum):
-    DOCUMENT = "document"
-    HYPOTHESIS = "hypothesis"
-    CARTRIDGE = "cartridge"
-    TRIPLE = "triple"
-    CHUNK = "chunk"
-    PROMPT = "prompt"
-    RESPONSE = "response"
-    TRAINING = "training"
-    THEOREM = "theorem"
-    SYMBOLIC_RULE = "symbolic_rule"
 
 class EvaluationORM(Base):
     __tablename__ = "evaluations"

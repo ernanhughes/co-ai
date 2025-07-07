@@ -1,4 +1,4 @@
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.compiler.final_prompt_builder import FinalPromptBuilder
 from stephanie.agents.compiler.node_executor import NodeExecutor
 from stephanie.agents.compiler.reasoning_trace import ReasoningTree

@@ -1,6 +1,6 @@
 import re
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.analysis.domain_classifier import DomainClassifier
 from stephanie.utils.document_section_parser import DocumentSectionParser
 

@@ -40,19 +40,19 @@ KNOWLEDGE_OPS = {
     "CartridgeProcessingStarted": "💾▶️",      # Cartridge processing started
     "CartridgeDocumentProcessingStarted": "💾📄▶️",  # Document processing started
     "CartridgeBuilt": "💾✅",                  # Cartridge built
-    "TripletsExtractionCompleted": "🔗✅",        # Triplets extracted
+    "TripletsExtractionCompleted": "🏁",        # Triplets extracted
     "DatabaseHypothesesMatched": "📊✅",         # Hypotheses matched in DB
     "TripletsInserted": "🔗💾",                # Triplets inserted
     "TheoremExtracted": "📜✅",                  # Theorem extracted
-    "TheoremsExtractionCompleted": "📜✅",          # Theorems extracted
+    "TheoremsExtractionCompleted": "🏁",          # Theorems extracted
     "DocumentProfiled": "📄📋",                # Document profiled
     "MaxSectionsReached": "📄⏭️",              # Max sections reached
     "ItemScored": "📊✅",                  # Item scored
     "CartridgeScored": "💾📊",                # Cartridge scored
     "DomainAssignmentSkipped": "🏷️⏭️",            # Domain assignment skipped
-    "CartridgeProcessingCompleted": "💾✅",        # Cartridge processing completed
+    "CartridgeProcessingCompleted": "🏁",        # Cartridge processing completed
     "DocumentAlreadyProfiled": "📄✅",          # Document already profiled
-    "StoreRegistered": "💾✅",                  # Store registered
+    "StoreRegistered": "🛒",                  # Store registered
 }
 
 # =================
@@ -61,17 +61,17 @@ KNOWLEDGE_OPS = {
 PIPELINE_FLOW = {
     "PipelineStart": "🚦▶️",                  # Pipeline started
     "PipelineStageStart": "⏩",               # Stage started
-    "PipelineStageEnd": "⏹️",                # Stage completed
+    "PipelineStageEnd": "🔚",                # Stage completed
     "PipelineStageSkipped": "⏭️",            # Stage skipped
     "PipelineIterationStart": "🔄▶️",          # Iteration started
-    "PipelineIterationEnd": "🔄⏹️",           # Iteration completed
+    "PipelineIterationEnd": "🔄🔚",           # Iteration completed
     "PipelineSuccess": "✅",                  # Pipeline succeeded
     "PipelineError": "❌",                    # Pipeline error
     "PipelineRunInserted": "🔁💾",            # Pipeline run saved
     "AgentRunStarted": "🤖▶️",                # Agent run started
     "AgentRunCompleted": "🤖⏹️",             # Agent run completed
     "AgentRanSuccessfully": "🤖✅",           # Agent succeeded
-    "PipelineJudgeAgentEnd": "⚖️⏹️",         # Judge agent completed
+    "PipelineJudgeAgentEnd": "⚖️🔚",         # Judge agent completed
 }
 
 # =====================

@@ -2,7 +2,7 @@
 
 import re
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL
 from stephanie.tools import WebSearchTool
 from stephanie.utils.file_utils import write_text_to_file

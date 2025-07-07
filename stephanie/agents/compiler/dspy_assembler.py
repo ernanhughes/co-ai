@@ -2,13 +2,13 @@ import dspy
 from dspy import (BootstrapFewShot, ChainOfThought, Example, InputField,
                   OutputField, Signature)
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.memory_aware_mixin import MemoryAwareMixin
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.constants import GOAL
-from stephanie.models.evaluation import TargetType
 from stephanie.scoring.mrq_scorer import MRQScorer
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import TargetType
 
 
 # DSPy signature for merging multiple high-quality prompts into a coherent prompt

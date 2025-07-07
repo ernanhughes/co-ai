@@ -59,8 +59,7 @@ class MRQScorer(BaseScorer):
         Predicts scores for given dimensions using MR.Q and applies tuning if available.
         """
         results = []
-        for dim in dimensions:
-            dimension_name = dim["name"]
+        for dimension_name in dimensions:
             score = self._estimate_score(goal, scorable, dimension_name)
             rationale = f"MRQ estimated score for {dimension_name}."
             self.logger.log(

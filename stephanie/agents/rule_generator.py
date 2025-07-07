@@ -1,7 +1,7 @@
 import statistics
 from collections import defaultdict
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import PIPELINE_RUN_ID
 from stephanie.models import (EvaluationORM, PipelineRunORM,
                               RuleApplicationORM, SymbolicRuleORM)

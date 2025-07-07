@@ -18,7 +18,7 @@ from stephanie.engine.state_tracker import StateTracker
 from stephanie.engine.training_controller import TrainingController
 from stephanie.logs.json_logger import JSONLogger
 from stephanie.memory import MemoryTool
-from stephanie.registry import AgentRegistry
+from stephanie.registry.agent_registry import AgentRegistry
 from stephanie.registry.registry import register
 from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
@@ -227,7 +227,7 @@ class Supervisor:
 
             self.logger.log("PipelineStageStart", {STAGE: stage.name})
 
-            for i in range(stage.iterations): 
+            for i in range(stage.iterations or 1): 
                 self.logger.log(
                     "PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1}
                 )

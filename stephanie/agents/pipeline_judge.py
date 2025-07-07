@@ -5,13 +5,13 @@ from datetime import datetime
 
 from tabulate import tabulate
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.analysis.rule_analytics import RuleAnalytics
 from stephanie.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from stephanie.constants import PIPELINE_RUN_ID
-from stephanie.models.evaluation import TargetType
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import TargetType
 
 
 class PipelineJudgeAgent(ScoringMixin, BaseAgent):

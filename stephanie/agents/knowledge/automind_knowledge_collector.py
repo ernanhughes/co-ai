@@ -29,7 +29,7 @@ Dependencies:
 
 from typing import Dict, List
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.tools.cos_sim_tool import get_top_k_similar
 
 LABEL_HIERARCHY = {

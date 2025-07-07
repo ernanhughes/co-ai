@@ -5,7 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import func
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from stephanie.constants import PIPELINE_RUN_ID

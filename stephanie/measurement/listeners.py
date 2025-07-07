@@ -1,8 +1,10 @@
 # stephanie/measurement/listeners.py
 from sqlalchemy import event
-from stephanie.models.theorem import CartridgeORM
+
 from stephanie.measurement.registry import measurement_registry
 from stephanie.models.measurement import MeasurementORM
+from stephanie.models.theorem import CartridgeORM
+
 
 def after_insert_listener(mapper, connection, target):
     """Automatically generate measurements after entity creation"""

@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 
 from dspy import Predict
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.prompts.prompt_loader import PromptLoader
 
 

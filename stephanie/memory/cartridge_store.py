@@ -1,8 +1,10 @@
 # stephanie/memory/cartridge_store.py
 
-from sqlalchemy.orm import Session
-from stephanie.models.theorem import CartridgeORM
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.orm import Session
+
+from stephanie.models.theorem import CartridgeORM
+
 
 class CartridgeStore:
     def __init__(self, session: Session, logger=None):

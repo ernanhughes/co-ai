@@ -1,7 +1,8 @@
 # stephanie/models/cartridge_triple.py
 
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
+
 from stephanie.models.base import Base
 
 

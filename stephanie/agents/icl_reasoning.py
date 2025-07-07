@@ -1,13 +1,15 @@
-from stephanie.agents.world.base_agent import BaseAgent
-from stephanie.models.cartridge_triple import CartridgeTripleORM
 from sklearn.metrics.pairwise import cosine_similarity
-from sqlalchemy import func, case
-from stephanie.models.theorem import TheoremORM
-from stephanie.models.theorem import CartridgeORM
-from stephanie.models.cartridge_domain import CartridgeDomainORM
+from sqlalchemy import case, func
+
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.analysis.domain_classifier import DomainClassifier
-from stephanie.models.evaluation import EvaluationORM, TargetType
+from stephanie.models.cartridge_domain import CartridgeDomainORM
+from stephanie.models.cartridge_triple import CartridgeTripleORM
+from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.score import ScoreORM
+from stephanie.models.theorem import CartridgeORM, TheoremORM
+from stephanie.scoring.scorable_factory import TargetType
+
 
 class ICLReasoningAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

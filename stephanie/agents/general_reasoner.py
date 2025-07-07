@@ -1,9 +1,9 @@
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.analysis.rubric_classifier import RubricClassifierMixin
 from stephanie.constants import GOAL, GOAL_TEXT
-from stephanie.models.evaluation import TargetType
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import TargetType
 
 
 class GeneralReasonerAgent(ScoringMixin, RubricClassifierMixin, BaseAgent):

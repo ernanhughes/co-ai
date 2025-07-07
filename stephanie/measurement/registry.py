@@ -1,5 +1,6 @@
 # stephanie/measurement/registry.py
-from typing import Dict, Callable
+from typing import Callable, Dict
+
 
 class MeasurementStrategy:
     def __init__(self):

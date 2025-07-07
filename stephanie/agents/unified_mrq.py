@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.evaluator.mrq_trainer import MRQTrainer
 from stephanie.models.unified_mrq import UnifiedMRQModelORM
 from stephanie.utils.similarity_utils import compute_similarity_matrix

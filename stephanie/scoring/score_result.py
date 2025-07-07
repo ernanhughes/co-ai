@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
-from stephanie.models.evaluation import TargetType
+
+from stephanie.scoring.scorable_factory import TargetType
 
 
 @dataclass

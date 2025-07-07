@@ -3,8 +3,8 @@ from datetime import datetime
 
 from evolution_selector import EvolutionarySelector
 from slave_system import ResearchSlave
-from stephanie.agents.evolution.instruction_engine import InstructionEngine
 
+from stephanie.agents.evolution.instruction_engine import InstructionEngine
 from stephanie.reports.report_generator import ReportGenerator
 
 

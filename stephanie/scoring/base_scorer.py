@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
+
 from stephanie.scoring.scorable import Scorable
 
 

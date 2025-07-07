@@ -1,10 +1,11 @@
 # stephanie/scoring/scoring_engine.py
 
-from stephanie.models.evaluation import TargetType
+from stephanie.scoring.base_scorer import BaseScorer
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.scoring_manager import ScoringManager
-from stephanie.scoring.base_scorer import BaseScorer
+
 
 class ScoringEngine:
     def __init__(self, cfg, memory, prompt_loader, logger, call_llm):
@@ -50,7 +51,7 @@ class ScoringEngine:
                 )
             else:
                 score_result = scorer.score(context.get("goal"), scorable, scoring_manager.dimensions)
-                self.logger.log("HypothesisScored", score_result.to_dict())
+                self.logger.log(f"{target_type.value}Scored", score_result.to_dict())
 
             self.logger.log("ItemScored", score_result.to_dict())
             return score_result.to_dict()

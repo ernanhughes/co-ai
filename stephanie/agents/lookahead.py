@@ -1,7 +1,7 @@
 # stephanie/agents/lookahead.py
 import re
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL, PIPELINE
 from stephanie.models import LookaheadORM
 

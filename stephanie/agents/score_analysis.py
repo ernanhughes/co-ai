@@ -1,7 +1,7 @@
 # stephanie/agents/score_analysis_agent.py
 import pandas as pd
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.score_analyzer import ScoreAnalyzer
 
 

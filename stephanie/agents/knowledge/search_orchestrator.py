@@ -1,4 +1,4 @@
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.knowledge.automind_knowledge_collector import \
     AutoMindKnowledgeCollector
 from stephanie.constants import GOAL

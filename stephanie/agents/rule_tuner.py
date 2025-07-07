@@ -3,7 +3,7 @@ from collections import defaultdict
 from sqlalchemy.orm import joinedload
 from tabulate import tabulate
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.analysis.rule_effect_analyzer import RuleEffectAnalyzer
 from stephanie.constants import GOAL, PIPELINE_RUN_ID
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore

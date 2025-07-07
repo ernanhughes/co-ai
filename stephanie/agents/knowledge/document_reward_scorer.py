@@ -1,8 +1,9 @@
 # stephanie/agents/knowledge/document_reward_scorer.py
 
-from stephanie.agents.world.base_agent import BaseAgent
-from stephanie.models.evaluation import EvaluationORM, TargetType
+from stephanie.agents.base_agent import BaseAgent
+from stephanie.models.evaluation import EvaluationORM
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.svm_scorer import SVMScorer
 

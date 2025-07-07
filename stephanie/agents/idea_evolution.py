@@ -3,7 +3,7 @@ import itertools
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import EVOLVED, GOAL, HYPOTHESES, RANKING
 from stephanie.parsers import extract_hypotheses
 

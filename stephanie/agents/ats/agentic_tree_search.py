@@ -5,7 +5,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 
 from stephanie.agents.ats.solution_node import SolutionNode
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 
 
 class AgenticTreeSearch:

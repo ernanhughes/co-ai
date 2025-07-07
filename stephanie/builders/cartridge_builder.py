@@ -1,6 +1,7 @@
 # stephanie/builders/cartridge_builder.py
 
 from datetime import datetime
+
 from stephanie.models.theorem import CartridgeORM
 
 

@@ -3,7 +3,7 @@ import os
 
 import torch
 
-from stephanie.agents.world.base_agent import BaseAgent
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.evaluator.text_encoder import TextEncoder
 from stephanie.scoring.document_mrq_trainer import DocumentMRQTrainer
 from stephanie.scoring.document_pair_builder import \
