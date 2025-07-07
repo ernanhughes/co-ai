@@ -21,6 +21,7 @@ SYSTEM_INIT = {
 # KNOWLEDGE STORAGE
 # =================
 KNOWLEDGE_OPS = {
+    "TripletsRetrievedByDomain": "🔗🏷️",          # Triplets retrieved by domain
     "DomainAssigned": "🏷️✅",                # Domain assigned
     "MRQTunedScore": "🧠📊",               # MRQ tuned score
     "CartridgeCreated": "💾📦",                # Cartridge created

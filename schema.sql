@@ -802,3 +802,26 @@ CREATE TABLE IF NOT EXISTS theorem_cartridges (
 
 CREATE INDEX idx_theorem_cartridges_theorem_id ON theorem_cartridges(theorem_id);
 CREATE INDEX idx_theorem_cartridges_cartridge_id ON theorem_cartridges(cartridge_id);
+
+-- Create measurements table
+CREATE TABLE measurements (
+    id SERIAL PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id INTEGER NOT NULL,
+    metric_name TEXT NOT NULL,
+    value JSONB NOT NULL,  -- Storing metrics as JSONB for efficient querying
+    context JSONB,         -- Optional context metadata
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index for common lookup patterns
+CREATE INDEX idx_measurements_entity_metric 
+ON measurements (entity_type, entity_id, metric_name);
+
+-- Index for time-based queries
+CREATE INDEX idx_measurements_created_at 
+ON measurements (created_at);
+
+-- Optional: GIN index for searching within JSONB values
+CREATE INDEX idx_measurements_value_gin 
+ON measurements USING GIN (value);
