@@ -4,10 +4,8 @@ import torch
 from torch import nn
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.agents.mrq.mrq_scorer import MRQScorer  # Assumed
-from stephanie.memory.embedding_store import EmbeddingStore
 from stephanie.scoring.document_ebt_trainer import DocumentEBTScorer
-
+from stephanie.scoring.d
 
 class DocumentEBTInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

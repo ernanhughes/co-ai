@@ -7,7 +7,7 @@ def get_event_icon(event_type: str) -> str:
 # SYSTEM & INITIALIZATION
 # ========================
 SYSTEM_INIT = {
-    "AgentInitialized": "🤖",                 # Agent initialization
+    "AgentInitialized": "ᯓ★",                 # Agent initialization
     "AgentInit": "🤖",                        # Agent startup
     "ContextLoaded": "📂",                    # Context loaded
     "ContextSaved": "💾",                     # Context saved
@@ -91,7 +91,6 @@ SCORING = {
     "MRQDimensionEvaluated": "📏🧠",          # Dimension evaluated
     "CorDimensionEvaluated": "📐✅",          # COR dimension evaluated
     "MRQScoringComplete": "📊✅",             # MRQ scoring complete
-    "MRQTunedScore": "🧠📊",               # MRQ tuned score
 
 }
 
@@ -198,8 +197,8 @@ DEBUGGING = {
 # ERROR & WARNING STATES
 # ======================
 ERROR_STATES = {
-    "PipelineError": "⚠️",                  # Pipeline error
-    "DocumentLoadFailed": "❌📄",           # Document load failed
+    "PipelineError": "💀",                  # Pipeline error
+    "DocumentLoadFailed": "⚠️📄",           # Document load failed
     "LiteratureQueryFailed": "❌📚",        # Literature query failed
     "HypothesisStoreFailed": "❌💾",        # Hypothesis store failed
     "PromptLoadFailed": "❌📝",            # Prompt load failed

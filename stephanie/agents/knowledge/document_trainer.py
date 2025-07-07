@@ -64,7 +64,7 @@ class DocumentTrainerAgent(BaseAgent):
         assert len(all_contrast_pairs) > 0, "No contrast pairs found"
 
 
-        trained_models, regression_tuners = trainer.train_multidimensional_model( all_contrast_pairs, cfg=config)
+        trained_encoders, trained_models, regression_tuners = trainer.train_multidimensional_model(all_contrast_pairs, cfg=config)
         self.logger.log("DocumentTrainingComplete", {
             "dimensions": list(trained_models.keys()), 
             "total_models": len(trained_models) 
@@ -73,16 +73,30 @@ class DocumentTrainerAgent(BaseAgent):
         os.makedirs(self.model_save_path, exist_ok=True)
 
         for dim, state_dict in trained_models.items():
-            model_path = os.path.join(self.model_save_path, f"{self.model_prefix}{dim}.pt")
-            torch.save(state_dict, model_path)
-            self.logger.log("ModelSaved", {"dimension": dim, "path": model_path})
+            dim_dir = os.path.join(self.model_save_path, dim)
+            os.makedirs(dim_dir, exist_ok=True)
 
-            # Save corresponding tuner
+            # Save predictor (value predictor)
+            predictor_path = os.path.join(dim_dir, "predictor.pt")
+            torch.save(state_dict, predictor_path)
+            self.logger.log("ModelSaved", {"dimension": dim, "path": predictor_path})
+
+            # Save encoder
+            encoder_path = os.path.join(dim_dir, "encoder.pt")
+            torch.save(trainer.encoder.state_dict(), encoder_path)
+            self.logger.log("EncoderSaved", {"dimension": dim, "path": encoder_path})
+
+            # Save tuner
             tuner = regression_tuners.get(dim)
             if tuner:
-                tuner_path = os.path.join(self.model_save_path, f"{self.model_prefix}{dim}_tuner.json")
-                tuner.save(tuner_path) 
+                tuner_path = os.path.join(dim_dir, "tuner.json")
+                tuner.save(tuner_path)
                 self.logger.log("TunerSaved", {"dimension": dim, "path": tuner_path})
+
+            # Save metadata (min/max score)
+            meta_path = os.path.join(dim_dir, "meta.json")
+            
+            self.logger.log("MetaSaved", {"dimension": dim, "path": meta_path})
 
         context[self.output_key] = training_pairs
         self.logger.log("DocumentPairBuilderComplete", {

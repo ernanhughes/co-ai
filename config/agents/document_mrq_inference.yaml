@@ -4,6 +4,12 @@ document_mrq_inference:
   save_prompt: true
   save_context: true
   skip_if_completed: false
+
+  scoring:
+    model_dir: ${hydra:runtime.cwd}/models/documents
+    model_prefix: "document_rm_"
+
+
   model:
     name: ollama/qwen3
     api_base: http://localhost:11434

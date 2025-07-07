@@ -61,7 +61,7 @@ pipeline:
      - name: document_trainer
        description: "Build document pairs for training and evaluation" 
        cls: stephanie.agents.knowledge.document_trainer.DocumentTrainerAgent 
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: document_ebt_trainer
@@ -73,7 +73,7 @@ pipeline:
      - name: knowledge_loader
        description: "Load knowledge from the scored papers into the system"
        cls: stephanie.agents.knowledge.knowledge_loader.KnowledgeLoaderAgent
-       enabled: true
+       enabled: false
        iterations: 1
 
      - name: document_embedding_backfill

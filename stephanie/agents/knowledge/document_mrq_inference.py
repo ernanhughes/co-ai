@@ -8,6 +8,7 @@ from stephanie.scoring.scorable_factory import TargetType
 class DocumentMRQInferenceAgent(ScoringMixin, BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
+        
         self.scorer = MRQScorer(cfg, memory=memory, logger=logger)
         self.scorer.load_models()
 
