@@ -8,7 +8,7 @@ from stephanie.evaluator.text_encoder import TextEncoder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor
 from stephanie.utils.model_utils import get_model_path
 from stephanie.utils.file_utils import save_json
-from stephanie.scoring.model.ebt_model import DocumentEBTScorer
+from stephanie.scoring.model.ebt_model import EBTModel
 
 
 class DocumentEBTDataset(Dataset):
@@ -77,7 +77,7 @@ class DocumentEBTTrainerAgent(BaseAgent):
                 collate_fn=lambda b: collate_ebt_batch(b, self.memory.embedding, device)
             )
 
-            model = DocumentEBTScorer().to(device)
+            model = EBTModel().to(device)
             optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
             loss_fn = nn.MSELoss()
 
@@ -99,7 +99,6 @@ class DocumentEBTTrainerAgent(BaseAgent):
 
             model_path = f"{get_model_path(self.model_type, self.target_type, dim)}.pt"
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
-            print(model.state_dict().keys())
             torch.save(model.state_dict(), model_path)
             self.logger.log("DocumentEBTModelSaved", {"dimension": dim, "path": model_path})
 

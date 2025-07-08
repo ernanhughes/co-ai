@@ -4,7 +4,7 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
 from stephanie.utils.model_utils import get_model_path, discover_saved_dimensions
-from stephanie.scoring.model.ebt_model import DocumentEBTScorer
+from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.utils.file_utils import load_json
 
 class DocumentEBTInferenceAgent(BaseAgent):
@@ -48,7 +48,7 @@ class DocumentEBTInferenceAgent(BaseAgent):
         self.logger.log("AllEBTModelsLoaded", {"dimensions": self.dimensions})
 
     def _load_model(self, path):
-        model = DocumentEBTScorer().to(self.device)
+        model = EBTModel().to(self.device)
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model

@@ -2,7 +2,7 @@
 import torch
 from torch import nn
 
-class DocumentEBTScorer(nn.Module):
+class EBTModel(nn.Module):
     def __init__(self, embedding_dim=1024):
         super().__init__()
         self.head = nn.Sequential(
