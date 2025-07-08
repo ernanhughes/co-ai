@@ -1,9 +1,11 @@
 import torch
 import os
+from sklearn.model_selection import train_test_split
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.model.mrq_model import MRQModel
 from stephanie.evaluator.text_encoder import TextEncoder
 from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
 from stephanie.utils.model_utils import get_model_path, discover_saved_dimensions
@@ -17,6 +19,7 @@ class DocumentMRQInferenceAgent(BaseAgent):
         self.dimensions = cfg.get("dimensions", [])
         self.models = {}
         self.model_meta = {}
+        self.tuners = {}  # Added tuners dict
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         if not self.dimensions:
@@ -39,6 +42,8 @@ class DocumentMRQInferenceAgent(BaseAgent):
             encoder_path = f"{model_path}_encoder.pt"
             predictor_path = f"{model_path}.pt"
             meta_path = f"{model_path}.meta.json"
+            tuner_path = model_path + ".tuner.json"
+
 
             self.logger.log("LoadingModelPaths", {
                 "dimension": dim,
@@ -56,13 +61,21 @@ class DocumentMRQInferenceAgent(BaseAgent):
             else:
                 self.model_meta[dim] = {"min": 0, "max": 100}
 
+            if os.path.exists(tuner_path):
+                tuner = RegressionTuner(dimension=dim)
+                tuner.load(tuner_path)
+                self.tuners[dim] = tuner
+
         self.logger.log("AllMRQModelsLoaded", {"dimensions": self.dimensions})
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
         results = []
 
-        for doc in context.get(self.input_key, []):
+        all_docs = context.get(self.input_key, [])
+        train_docs, val_docs = train_test_split(all_docs, test_size=0.2, random_state=42)
+
+        for doc in val_docs:
             doc_id = doc.get("id")
             self.logger.log("MRQScoringStarted", {"document_id": doc_id})
 
@@ -73,12 +86,13 @@ class DocumentMRQInferenceAgent(BaseAgent):
             dimension_scores = {}
             for dim, model in self.models.items():
                 q_value = model.predict(goal_text, scorable.text, self.memory.embedding)
-                meta = self.model_meta.get(dim, {})
-                min_val = meta.get("min", 0)
-                max_val = meta.get("max", 100)
-
-                normalized = torch.sigmoid(torch.tensor(q_value)).item()
-                scaled_score = normalized * (max_val - min_val) + min_val
+                
+                if dim in self.tuners:
+                    scaled_score = self.tuners[dim].transform(q_value)
+                else:
+                    meta = self.model_meta.get(dim, {"min": 0, "max": 100})
+                    normalized = torch.sigmoid(torch.tensor(q_value)).item()
+                    scaled_score = normalized * (meta["max"] - meta["min"]) + meta["min"]
 
                 dimension_scores[dim] = round(scaled_score, 4)
 
@@ -86,7 +100,6 @@ class DocumentMRQInferenceAgent(BaseAgent):
                     "document_id": doc_id,
                     "dimension": dim,
                     "q_value": round(q_value, 4),
-                    "normalized_score": normalized,
                     "final_score": scaled_score,
                 })
 

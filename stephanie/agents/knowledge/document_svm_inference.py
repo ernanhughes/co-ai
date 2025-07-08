@@ -88,6 +88,7 @@ class DocumentSVMInferenceAgent(BaseAgent):
 
             self.logger.log("SVMScoringFinished", {
                 "document_id": doc_id,
+                "scores": dimension_scores,
                 "dimensions_scored": list(dimension_scores.keys())
             })
 
