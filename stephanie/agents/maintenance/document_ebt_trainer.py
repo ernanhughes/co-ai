@@ -6,10 +6,10 @@ from torch import nn
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.evaluator.text_encoder import TextEncoder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor
-from stephanie.utils.model_utils import get_model_path
+from stephanie.utils.model_utils import get_model_path, save_model_with_version
 from stephanie.utils.file_utils import save_json
 from stephanie.scoring.model.ebt_model import EBTModel
-
+from stephanie.agents.maintenance.model_evolution_manager import ModelEvolutionManager
 
 class DocumentEBTDataset(Dataset):
     def __init__(self, contrast_pairs, min_score=None, max_score=None):
@@ -51,6 +51,7 @@ class DocumentEBTTrainerAgent(BaseAgent):
         self.value_predictor = DocumentValuePredictor().to(
             torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
+        self.evolution_manager = ModelEvolutionManager(self.cfg, self.memory, self.logger)
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
@@ -119,6 +120,47 @@ class DocumentEBTTrainerAgent(BaseAgent):
 
         context[self.output_key] = training_pairs
         return context
+
+    def _save_and_promote_model(self, model, model_type, target_type, dimension):
+        # Generate new version ID
+        version = self._generate_version(model_type, target_type, dimension)
+        
+        # Save model with version
+        version_path = save_model_with_version(
+            model.state_dict(), model_type, target_type, dimension, version
+        )
+        
+        # Log in DB
+        model_id = self.evolution_manager.log_model_version(
+            model_type=model_type,
+            target_type=target_type,
+            dimension=dimension,
+            version=version,
+            performance=self._get_validation_metrics()  # e.g., accuracy, loss
+        )
+        
+        # Get current best model
+        current = self.evolution_manager.get_best_model(model_type, target_type, dimension)
+        
+        # Compare performance and promote if better
+        if self.evolution_manager.check_model_performance(
+            new_perf=self._get_validation_metrics(),
+            old_perf=current["performance"] if current else {}
+        ):
+            self.evolution_manager.promote_model_version(model_id)
+            self.logger.log("ModelPromoted", {
+                "model_type": model_type,
+                "dimension": dimension,
+                "version": version,
+                "path": version_path
+            })
+        else:
+            self.logger.log("ModelNotPromoted", {
+                "model_type": model_type,
+                "dimension": dimension,
+                "new_version": version,
+                "current_version": current["version"] if current else None
+            })
 
 
 def collate_ebt_batch(batch, embedding_store, device):

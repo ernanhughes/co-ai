@@ -1,6 +1,7 @@
 
 import os
-import re
+import torch
+import json
 
 def get_model_path(model_type: str, target_type: str, dimension: str, version: str = "v1"):
     return f"models/{model_type}/{target_type}/{dimension}_{version}"
@@ -39,3 +40,36 @@ def get_svm_file_paths(model_type, target_type, dim):
         "tuner": base + ".tuner.json",
         "meta": base + ".meta.json"
     }
+
+def get_model_version_path(model_type: str, target_type: str, dimension: str, version: str):
+    """Get model path with versioning support"""
+    base_path = f"models/{model_type}/{target_type}/{dimension}"
+    return os.path.join(base_path, version)
+
+def save_model_with_version(
+    model_state: dict, 
+    model_type: str, 
+    target_type: str, 
+    dimension: str,
+    version: str
+):
+    """Save a model with versioned metadata"""
+    version_path = get_model_version_path(model_type, target_type, dimension, version)
+    os.makedirs(version_path, exist_ok=True)
+    
+    # Save model state
+    torch.save(model_state, os.path.join(version_path, "model.pt"))
+    
+    # Save metadata
+    metadata = {
+        "model_type": model_type,
+        "target_type": target_type,
+        "dimension": dimension,
+        "version": version,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    with open(os.path.join(version_path, "metadata.json"), "w") as f:
+        json.dump(metadata, f)
+        
+    return version_path

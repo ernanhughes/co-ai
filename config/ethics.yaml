@@ -79,7 +79,7 @@ pipeline:
        iterations: 1
      - name: document_mrq_trainer
        description: "Build document pairs for training and evaluation" 
-       cls: stephanie.agents.knowledge.document_mrq_trainer.DocumentMRQTrainerAgent 
+       cls: stephanie.agents.maintenance.document_mrq_trainer.DocumentMRQTrainerAgent 
        enabled: false
        iterations: 1
      - name: document_reward_scorer

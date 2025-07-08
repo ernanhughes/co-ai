@@ -62,19 +62,19 @@ pipeline:
   stages:
      - name: document_mrq_trainer
        description: "Build document pairs for training and evaluation" 
-       cls: stephanie.agents.knowledge.document_mrq_trainer.DocumentMRQTrainerAgent 
+       cls: stephanie.agents.maintenance.document_mrq_trainer.DocumentMRQTrainerAgent 
        enabled: false
        iterations: 1
 
      - name: document_svm_trainer
        description: "Train a model to predict document values using SVM" 
-       cls: stephanie.agents.knowledge.document_svm_trainer.DocumentSVMTrainerAgent 
+       cls: stephanie.agents.maintenance.document_svm_trainer.DocumentSVMTrainerAgent 
        enabled: false
        iterations: 1  
 
      - name: document_ebt_trainer
        description: "Train a model to predict document values based on EBT" 
-       cls: stephanie.agents.knowledge.document_ebt_trainer.DocumentEBTTrainerAgent 
+       cls: stephanie.agents.maintenance.document_ebt_trainer.DocumentEBTTrainerAgent 
        enabled: true
        iterations: 1
 
