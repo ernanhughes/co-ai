@@ -804,7 +804,7 @@ CREATE INDEX idx_theorem_cartridges_theorem_id ON theorem_cartridges(theorem_id)
 CREATE INDEX idx_theorem_cartridges_cartridge_id ON theorem_cartridges(cartridge_id);
 
 -- Create measurements table
-CREATE TABLE measurements (
+CREATE TABLE IF NOT EXISTS  measurements (
     id SERIAL PRIMARY KEY,
     entity_type TEXT NOT NULL,
     entity_id INTEGER NOT NULL,
@@ -825,3 +825,40 @@ ON measurements (created_at);
 -- Optional: GIN index for searching within JSONB values
 CREATE INDEX idx_measurements_value_gin 
 ON measurements USING GIN (value);
+
+
+CREATE TABLE IF NOT EXISTS model_versions (
+    id SERIAL PRIMARY KEY,
+    model_type TEXT NOT NULL,          -- e.g., "mrq", "svm", "ebt"
+    target_type TEXT NOT NULL,        -- e.g., "document", "cartridge"
+    dimension TEXT NOT NULL,           -- e.g., "ethics", "clarity"
+    version TEXT NOT NULL,             -- e.g., "v1", "v2", "auto_20240315"
+    trained_on JSONB,                 -- IDs of training examples used
+    performance JSONB,                -- e.g., {"loss": 0.12, "accuracy": 0.89}
+    created_at TIMESTAMP DEFAULT NOW(),
+    active BOOLEAN DEFAULT TRUE,       -- current active version for inference
+    extra_data JSONB,                     -- extra info (e.g., training config)
+    model_path TEXT,
+    encoder_path TEXT,
+    tuner_path TEXT,
+    scaler_path TEXT,
+    meta_path TEXT,
+    description TEXT,
+    source TEXT DEFAULT 'user'          -- e.g., 'user', 'auto', 'llm'
+);
+
+
+CREATE TABLE IF NOT EXISTS scoring_history (
+    id SERIAL PRIMARY KEY,
+    model_version_id INTEGER REFERENCES model_versions(id),
+    goal_id INTEGER,                  -- optional: link to goal context
+    target_id INTEGER NOT NULL,       -- e.g., document_id, cartridge_id
+    target_type TEXT NOT NULL,         -- e.g., "document", "cartridge"
+    dimension TEXT NOT NULL,            -- e.g., "relevance"
+    raw_score FLOAT,                  -- uncalibrated model output
+    transformed_score FLOAT,          -- post-processed score (e.g., tuned)
+    uncertainty_score FLOAT,          -- confidence measure (e.g., energy)
+    method TEXT NOT NULL,             -- e.g., "ebt", "mrq", "llm"
+    source TEXT,                      -- e.g., "gpt-4", "human"
+    created_at TIMESTAMP DEFAULT NOW()
+);

@@ -5,7 +5,7 @@ from joblib import load
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
-from stephanie.utils.model_utils import get_model_path, discover_saved_dimensions, get_svm_file_paths
+from stephanie.utils.model_utils import discover_saved_dimensions, get_svm_file_paths
 from stephanie.utils.file_utils import load_json
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 
