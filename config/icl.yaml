@@ -6,7 +6,7 @@ defaults:
   - agents/cartridge
   - agents/document_loader
   - agents/document_profiler
-  - agents/document_trainer
+  - agents/document_mrq_trainer
   - agents/document_reward_scorer
   - agents/icl_reasoning
   - agents/knowledge_loader
@@ -79,9 +79,9 @@ pipeline:
        cls: stephanie.agents.knowledge.knowledge_loader.KnowledgeLoaderAgent
        enabled: false
        iterations: 1
-     - name: document_trainer
+     - name: document_mrq_trainer
        description: "Build document pairs for training and evaluation" 
-       cls: stephanie.agents.knowledge.document_trainer.DocumentTrainerAgent 
+       cls: stephanie.agents.knowledge.document_mrq_trainer.DocumentMRQTrainerAgent 
        enabled: false
        iterations: 1
      - name: document_reward_scorer

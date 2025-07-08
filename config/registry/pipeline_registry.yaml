@@ -54,9 +54,9 @@ pipeline_variants:
         cls: stephanie.agents.knowledge.knowledge_loader.KnowledgeLoaderAgent
         enabled: true
         iterations: 1
-      - name: document_trainer
+      - name: document_mrq_trainer
         description: "Build document pairs for training and evaluation" 
-        cls: stephanie.agents.knowledge.document_trainer.DocumentTrainerAgent 
+        cls: stephanie.agents.knowledge.document_mrq_trainer.DocumentMRQTrainerAgent 
         enabled: true
         iterations: 1
       - name: document_reward_scorer

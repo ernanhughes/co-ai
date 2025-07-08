@@ -137,14 +137,18 @@ class DocumentMRQTrainer:
             if not samples:
                 continue
 
+            # Create fresh encoder and predictor for this dimension
+            encoder = TextEncoder().to(self.device)
+            predictor = DocumentValuePredictor(512, 1024).to(self.device)
+
             tuner = RegressionTuner(dimension=dim, logger=self.logger)
             regression_tuners[dim] = tuner
 
             dataloader = self.prepare_training_data(samples)
             self.train(dataloader, cfg or {})
 
-            trained_models[dim] = self.value_predictor.state_dict()
-            trained_encoders[dim] = self.encoder.state_dict()
+            trained_models[dim] = predictor.state_dict()
+            trained_encoders[dim] = encoder.state_dict()
 
             # Train regression tuner
             for pair in samples:

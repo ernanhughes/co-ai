@@ -15,6 +15,8 @@ from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 import re 
+from stephanie.scoring.model.mrq_model import MRQModel
+
 
 class MRQScorer(BaseScorer):
     def __init__(self, cfg: dict, memory, logger, dimensions=None):
@@ -85,18 +87,12 @@ class MRQScorer(BaseScorer):
         if dimension not in self.models:
             self._initialize_dimension(dimension)
 
-        prompt_emb = torch.tensor(
-            self.memory.embedding.get_or_create(goal.get("goal_text")),
-            device=self.device,
-        ).unsqueeze(0)
-        response_emb = torch.tensor(
-            self.memory.embedding.get_or_create(scorable.text),
-            device=self.device,
-        ).unsqueeze(0)
+        raw_score = self.models[dimension].predict(
+            goal.get("goal_text"),
+            scorable.text,
+            embedding_store=self.memory.embedding,
+        )
 
-        encoder, predictor = self.models[dimension]
-        zsa = encoder(prompt_emb, response_emb)
-        raw_score = predictor(zsa).item()
         norm_score = self.normalize_score(raw_score, dimension)
 
         # Optionally apply tuner
@@ -120,7 +116,7 @@ class MRQScorer(BaseScorer):
         self.trainers[dimension] = MRQTrainer(
             memory=self.memory, logger=self.logger, value_predictor=self.value_predictor, encoder=self.encoder, device=self.device
         )
-        self.models[dimension] = (self.encoder, self.value_predictor)
+        self.models[dimension] = MRQModel(self.encoder, self.value_predictor, device=self.device)
         self.min_score_by_dim[dimension] = 0.0
         self.max_score_by_dim[dimension] = 100.0
         self.logger.log("MRQModelInitializing", {"dimension": dimension})
