@@ -21,6 +21,14 @@ SYSTEM_INIT = {
 # KNOWLEDGE STORAGE
 # =================
 KNOWLEDGE_OPS = {
+    "DocumentEBTTrainingStart": "🧪▶️ I",        # Training started for a dimension
+    "DocumentEBTEpoch": "📊🔁",                # Epoch completed during training
+    "DocumentEBTModelSaved": "💾✅",           # Model saved after training
+    "DocumentEBTInferenceAgentInitialized": "🧠🚦",  # Inference agent initialized
+    "LoadingEBTModel": "📥📦",                 # Loading EBT model from disk
+    "EBTScoringStarted": "📝⚙️",               # Scoring started for a document
+    "EBTScoreComputed": "📈📍",                # Score computed for a dimension
+    "EBTScoringFinished": "🏁📘",               # Scoring completed for a document
     "TripletsRetrievedByDomain": "🔗🏷️",          # Triplets retrieved by domain
     "DomainAssigned": "🏷️✅",                # Domain assigned
     "MRQTunedScore": "🧠📊",               # MRQ tuned score
@@ -91,8 +99,18 @@ SCORING = {
     "MRQDimensionEvaluated": "📏🧠",          # Dimension evaluated
     "CorDimensionEvaluated": "📐✅",          # COR dimension evaluated
     "MRQScoringComplete": "📊✅",             # MRQ scoring complete
-
-}
+    "MRQScoreComputed": "🧠📊",            # MRQ score computed
+    "ReportGenerated": "📄✅",               # Report generated
+    "MRQScoringFinished": "📊🏁",            # MRQ scoring finished
+    "MRQScoringStarted": "📊▶️",             # MRQ scoring started
+    "AllMRQModelsLoaded": "📊✅",          # All MRQ models loaded
+    "LoadingModelPaths": "📂🔄",          # Model paths loading
+    "DocumentMRQInferenceAgentInitialized": "📊🤖",  # Document MRQ inference agent initialized
+    "KnowledgeDBLoaded": "📚✅",            # Knowledge database loaded
+    "DocumentModelSaved": "📄💾",            # Document model saved
+    "ModelSaved": "💾✅",                     # Model saved
+    "EncoderSaved": "📄💾",                  # Encoder saved
+} 
 
 # =====================
 # REASONING & ANALYSIS
