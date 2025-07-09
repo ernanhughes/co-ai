@@ -9,6 +9,61 @@ class ModelEvolutionManager(BaseAgent):
         self.model_dir = cfg.get("model_dir", "models")
         self.min_improvement = cfg.get("min_improvement", 0.05)  # 5% improvement threshold
 
+    async def run(self, context: dict) -> dict:
+        goal_text = context.get("goal", {}).get("goal_text", None)
+
+        # Retrieve distinct scoring contexts from history
+        query = """
+        SELECT DISTINCT model_type, target_type, dimension
+        FROM scoring_history
+        """
+        results = self.memory.db.execute(query).fetchall()
+
+        summary = []
+
+        for row in results:
+            model_type = row.model_type
+            target_type = row.target_type
+            dimension = row.dimension
+
+            # Get current best model
+            current = self.get_best_model(model_type, target_type, dimension)
+
+            # Simulate training — replace with actual model training logic
+            new_version = f"auto_{self._generate_version(model_type, target_type, dimension)}"
+            validation_metrics = {
+                "validation_loss": 0.20,  # placeholder
+                "accuracy": 0.87           # placeholder
+            }
+
+            # Log the new model version
+            model_id = self.log_model_version(
+                model_type=model_type,
+                target_type=target_type,
+                dimension=dimension,
+                version=new_version,
+                performance=validation_metrics
+            )
+
+            # Compare and promote if better
+            if self.check_model_performance(validation_metrics, current["performance"] if current else {}):
+                self.promote_model_version(model_id)
+                status = "promoted"
+            else:
+                status = "not promoted"
+
+            summary.append({
+                "model_type": model_type,
+                "target_type": target_type,
+                "dimension": dimension,
+                "new_version": new_version,
+                "status": status
+            })
+
+        self.logger.log("ModelEvolutionRun", {"summary": summary})
+        return {"status": "completed", "summary": summary}
+
+
     def get_best_model(self, model_type: str, target_type: str, dimension: str):
         """Returns the current best model version for a dimension"""
         query = """

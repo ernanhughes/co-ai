@@ -86,6 +86,8 @@ PIPELINE_FLOW = {
 # SCORING & EVALUATION
 # =====================
 SCORING = {
+    "DocumentScoresAlreadyExist": "📄✅",         # Document scores already exist
+    "LLMJudgeScorerDimension": "📝📊",            # LLM judge scoring dimension
     "DocumentScored": "📊✅",                 # Document scored
     "HypothesisScored": "💡📊",               # Hypothesis scored
     "ScoreComputed": "🧮✅",                  # Score computed

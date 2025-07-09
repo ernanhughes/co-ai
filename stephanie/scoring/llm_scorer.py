@@ -5,6 +5,8 @@ from string import Template
 
 from stephanie.scoring.base_scorer import BaseScorer
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.score_result import ScoreResult
+from stephanie.scoring.score_bundle import ScoreBundle
 
 
 class LLMScorer(BaseScorer):
@@ -13,34 +15,34 @@ class LLMScorer(BaseScorer):
     Uses structured templates and flexible response parsers.
     """
 
-    def __init__(self, cfg, memory, logger, prompt_loader=None):
+    def __init__(self, cfg, memory, logger, prompt_loader=None, llm_fn=None):
         self.cfg = cfg
         self.memory = memory
         self.logger = logger
         self.prompt_loader = prompt_loader
+        self.llm_fn = llm_fn 
 
     @property
     def name(self) -> str:
         return "llm"
 
-    def score(self, goal, scorable: Scorable, dimensions: list[str], llm_fn=None) -> dict:
+
+    def score(self, goal, scorable: Scorable, dimensions: list[dict]) -> ScoreBundle:
         """
-        Returns dict of dimension -> {score, rationale, weight} + final_score.
+        Scores a Scorable across multiple dimensions using an LLM.
+        Returns a ScoreBundle object.
         Accepts either:
         - A list of dimension names (strings)
         - A list of dimension dicts: {name, prompt_template, weight, parser, etc.}
         """
-        results = {}
+        results = []
 
         for dim in dimensions:
-            if isinstance(dim, str):
-                dim = {"name": dim, "prompt_template": self._default_prompt(dim)}
-
             prompt = self._render_prompt(dim, goal, scorable)
-            response = llm_fn(prompt, {"goal": goal})
+            response = self.llm_fn(prompt, {"goal": goal})
 
             try:
-                parser = dim.get("parser_fn") or self._get_parser(dim)
+                parser = dim.get("parser") or self._get_parser(dim)
                 score = parser(response)
             except Exception as e:
                 score = 0.0
@@ -64,19 +66,23 @@ class LLMScorer(BaseScorer):
                     },
                 )
 
-            results[dim["name"]] = {
-                "score": score,
-                "rationale": response,
-                "weight": dim.get("weight", 1.0),
-            }
+            results.append(
+                ScoreResult(
+                    dimension=dim["name"],
+                    score=score,
+                    rationale=response,
+                    weight=dim.get("weight", 1.0),
+                    source="llm",
+                    target_type=scorable.target_type,
+                )
+            )
 
-        results["final_score"] = self._aggregate(results)
-        return results
+        return ScoreBundle(results={r.dimension: r for r in results})
 
     def _render_prompt(self, dim: dict, goal: dict, scorable: Scorable) -> str:
         context = {
-            "goal": goal.get("goal_text", ""),
-            "hypothesis": scorable.text,
+            "goal": goal,
+            "scorable": scorable,
         }
         if self.prompt_loader and dim.get("file"):
             return self.prompt_loader.from_file(
@@ -87,8 +93,8 @@ class LLMScorer(BaseScorer):
 
     def _default_prompt(self, dimension):
         return (
-            "Evaluate the following hypothesis based on $dimension:\n\n"
-            "Goal: $goal\nHypothesis: $hypothesis\n\n"
+            "Evaluate the following document based on $dimension:\n\n"
+            "Goal: $goal\nHypothesis: $scorable\n\n"
             "Respond with a score and rationale."
         ).replace("$dimension", dimension)
 

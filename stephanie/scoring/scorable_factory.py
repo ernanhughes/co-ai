@@ -1,5 +1,3 @@
-# stephanie/scoring/scorable_factory.py
-
 from enum import Enum as PyEnum
 
 from stephanie.models.prompt import PromptORM
@@ -12,7 +10,7 @@ from stephanie.scoring.scorable import Scorable
 # Enum defining all the supported types of scoreable targets
 class TargetType(PyEnum):
     DOCUMENT = "document"
-    HYPOTHESIS = "hypothesis" 
+    HYPOTHESIS = "hypothesis"
     CARTRIDGE = "cartridge"
     TRIPLE = "triple"
     CHUNK = "chunk"
@@ -24,10 +22,10 @@ class TargetType(PyEnum):
     SYMBOLIC_RULE = "symbolic_rule"
     CUSTOM = "custom"
 
+
 class ScorableFactory:
     """
-    A factory class that converts various ORM model types into a unified `Scorable` abstraction.
-    This allows the scoring system to treat many different content types the same way.
+    Factory for turning various content types into unified Scorable objects.
     """
 
     @staticmethod
@@ -39,15 +37,41 @@ class ScorableFactory:
         if isinstance(obj, PromptORM):
             return ScorableFactory.from_prompt_pair(obj, mode)
         elif isinstance(obj, CartridgeORM):
-            return Scorable(id=obj.id, text=obj.markdown_content, target_type=TargetType.CARTRIDGE)
+            return Scorable(
+                id=obj.id,
+                text=obj.markdown_content,
+                target_type=TargetType.CARTRIDGE
+            )
         elif isinstance(obj, CartridgeTripleORM):
             # For a triple, we concatenate subject, relation, and object as a textual representation
-            return Scorable(id=obj.id, text=f"{obj.subject} {obj.relation} {obj.object}", target_type=TargetType.TRIPLE)
+            return Scorable(
+                id=obj.id,
+                text=f"{obj.subject} {obj.relation} {obj.object}",
+                target_type=TargetType.TRIPLE
+            )
         elif isinstance(obj, TheoremORM):
-            return Scorable(id=obj.id, text=obj.statement, target_type=TargetType.THEOREM)
+            return Scorable(
+                id=obj.id,
+                text=obj.statement,
+                target_type=TargetType.THEOREM
+            )
         elif isinstance(obj, DocumentORM):
-            # Try summary first, fallback to content or title if missing
-            return Scorable(id=obj.id, text=obj.summary or obj.content or obj.title, target_type=TargetType.DOCUMENT)
+            title = obj.title or ""
+            summary = obj.summary or ""
+            content = obj.content or ""
+
+            if title and summary:
+                text = f"#Title\n{title}\n\n## Summary\n{summary}"
+            elif content:
+                text = content
+            else:
+                text = title or summary  # fallback if only one exists
+
+            return Scorable(
+                id=obj.id,
+                text=text,
+                target_type=TargetType.DOCUMENT
+            )
         else:
             raise ValueError(f"Unsupported ORM type for scoring: {type(obj)}")
 
@@ -76,26 +100,28 @@ class ScorableFactory:
         return Scorable(id=obj.id, text=text, target_type=target_type)
 
     @staticmethod
-    def from_dict(data: dict) -> Scorable:
+    def from_dict(data: dict, target_type: TargetType) -> Scorable:
         """
-        Creates a Scorable from a raw dictionary. Useful for loading from JSON or manual input.
-        Example input:
-            {
-                "id": 123,
-                "text": "This is a hypothesis about climate change.",
-                "target_type": "hypothesis"
-            }
-        Tries to map the string 'target_type' to a known TargetType, otherwise defaults to CUSTOM.
+        Converts a plain dictionary into a Scorable, using optional fields like
+        title, summary, and content for DOCUMENT types.
         """
-        target_type_str = data.get("target_type", "Custom")
-
-        try:
-            target_type = TargetType(target_type_str)
-        except ValueError:
-            target_type = TargetType.CUSTOM
+        if target_type == TargetType.DOCUMENT:
+            title = data.get("title", "")
+            summary = data.get("summary", "")
+            content = data.get("content", "")
+            if title and summary:
+                text = f"#Title\n{title}\n\n## Summary\n{summary}"
+            elif content:
+                text = content
+            else:
+                text = title or summary
+        elif target_type == TargetType.TRIPLE:
+            text=f'{data.get("subject")} {data.get("relation")} {data.get("object")}',
+        else:
+            text = data.get("text", "")
 
         return Scorable(
             id=data.get("id"),
-            text=data.get("text", ""),
+            text=text,
             target_type=target_type
         )

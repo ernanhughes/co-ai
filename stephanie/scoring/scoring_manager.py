@@ -102,7 +102,7 @@ class ScoringManager:
         return [d["name"] for d in self.dimensions]
 
     @classmethod
-    def from_file(cls, filepath: str, prompt_loader, cfg, logger, memory, scoring_profile=None):
+    def from_file(cls, filepath: str, prompt_loader, cfg, logger, memory, scoring_profile=None, llm_fn=None):
         with open(Path(filepath), "r") as f:
             data = yaml.safe_load(f)
 
@@ -141,7 +141,7 @@ class ScoringManager:
             scorer.load_models()   
         else:
             # Default to LLM scoring profile
-            scorer = LLMScorer(cfg, memory, logger)
+            scorer = LLMScorer(cfg, memory, logger, prompt_loader=prompt_loader, llm_fn=llm_fn)
 
         return cls(
             dimensions=dimensions,
