@@ -58,6 +58,12 @@ class BaseAgent(ABC):
     def init_llm(self, cfg=None):
         config = cfg or self.cfg
         model_cfg = config.get(MODEL, {})
+        if not model_cfg:
+            return {
+                NAME: None,
+                API_BASE: None,
+                API_KEY: None,
+            }
         required_keys = [NAME, API_BASE]
         for key in required_keys:
             if key not in model_cfg:

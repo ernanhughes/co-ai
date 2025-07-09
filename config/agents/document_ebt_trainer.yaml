@@ -1,15 +1,12 @@
 document_ebt_trainer:
   name: document_ebt_trainer
-  enabled: true
-  save_prompt: true
-  save_context: true
-  skip_if_completed: false
-  model:
-    name: ollama/qwen3
-    api_base: http://localhost:11434
-    api_key: null
-  input_keys: ["goal", "hypotheses"]
-  input_key: documents
-  output_key: document_ebt_trainer
-  prompt_mode: file
-  prompt_file: document_ebt_trainer.txt
+  model_path: "${hydra:runtime.cwd}/models"
+  model_type: "ebt"
+  target_type: "document"
+  dimensions: 
+    - "alignment"
+    - "clarity"
+    - "implementability"
+    - "novelty"
+    - "relevance"
+

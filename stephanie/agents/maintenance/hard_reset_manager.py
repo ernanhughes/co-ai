@@ -27,7 +27,7 @@ class HardResetManager(BaseAgent):
         WHERE created_at > NOW() - INTERVAL '1 day'
         GROUP BY dimension
         """
-        results = self.memory.db.execute(query).fetchall()
+        results = self.memory.session.execute(query).fetchall()
         return {r.dimension: r.avg_score for r in results}
 
     def _ethics_failure(self, scores: dict) -> bool:
@@ -120,7 +120,7 @@ class HardResetManager(BaseAgent):
         WHERE created_at > NOW() - INTERVAL '1 hour'
         GROUP BY dimension
         """
-        results = self.memory.db.execute(query).fetchall()
+        results = self.memory.session.execute(query).fetchall()
         
         for r in results:
             if r.volatility > self.reset_thresholds.get("volatility", 0.5):

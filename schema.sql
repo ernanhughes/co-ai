@@ -852,6 +852,8 @@ CREATE TABLE IF NOT EXISTS scoring_history (
     id SERIAL PRIMARY KEY,
     model_version_id INTEGER REFERENCES model_versions(id),
     goal_id INTEGER,                  -- optional: link to goal context
+    pipeline_run_id INTEGER REFERENCES pipeline_runs(id) ON DELETE SET NULL,
+    model_type(TEXT),
     target_id INTEGER NOT NULL,       -- e.g., document_id, cartridge_id
     target_type TEXT NOT NULL,         -- e.g., "document", "cartridge"
     dimension TEXT NOT NULL,            -- e.g., "relevance"

@@ -12,9 +12,10 @@ from stephanie.utils.file_utils import save_json
 class DocumentMRQTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
-        self.model_type = "mrq"
-        self.target_type = "document"
-        self.version = cfg.get("version", "v1")
+        self.model_path = cfg.get("model_path", "models")
+        self.model_type = cfg.get("model_type", "mrq")
+        self.target_type = cfg.get("target_type", "document")
+        self.model_version = cfg.get("model_version", "v1")
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
@@ -62,20 +63,31 @@ class DocumentMRQTrainerAgent(BaseAgent):
         )
 
         for dim, state_dict in trained_models.items():
-            base_path = get_model_path(self.model_type, self.target_type, dim, version=self.version)
-            model_dir = os.path.dirname(base_path)
-            os.makedirs(model_dir, exist_ok=True)
-
-            predictor_path = f"{base_path}.pt"
-            encoder_path = f"{base_path}_encoder.pt"
-            tuner_path = f"{base_path}.tuner.json"
-            meta_path = f"{base_path}.meta.json"
+            model_path = get_model_path(
+                self.model_path,
+                self.model_type,
+                self.target_type,
+                dim,
+                self.model_version,
+            )
+            os.makedirs(model_path, exist_ok=True)
+            predictor_path = f"{model_path}/{dim}.pt"
+            encoder_path = f"{model_path}/{dim}_encoder.pt"
+            tuner_path = f"{model_path}/{dim}_model.tuner.json"
+            meta_path = f"{model_path}/{dim}.meta.json"
 
             # Save predictor            
             torch.save(state_dict, predictor_path)
             self.logger.log("ModelSaved", {"dimension": dim, "path": predictor_path})
-            # Save encoder            
-            torch.save(trainer.encoder.state_dict(), encoder_path)
+            # Save encoder (use correct dimension-specific encoder)
+            dim_encoder = trained_encoders.get(dim)
+            if dim_encoder:
+                torch.save(dim_encoder, encoder_path)
+                self.logger.log("EncoderSaved", {"dimension": dim, "path": encoder_path})
+            else:
+                self.logger.log("EncoderMissing", {"dimension": dim})
+
+
             self.logger.log("EncoderSaved", {"dimension": dim, "path": encoder_path})
 
             # Save tuner

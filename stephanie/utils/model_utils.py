@@ -2,9 +2,13 @@
 import os
 import torch
 import json
+from datetime import datetime
 
-def get_model_path(model_type: str, target_type: str, dimension: str, version: str = "v1"):
-    return f"models/{model_type}/{target_type}/{dimension}_{version}"
+def get_model_version(session, model_type: str, target_type: str, dimension: str):
+    return "v1"
+
+def get_model_path(model_path, model_type: str, target_type: str, dimension: str, version: str = "v1"):
+    return f"{model_path}/{model_type}/{target_type}/{dimension}/{version}/"
 
 def discover_saved_dimensions(model_type: str, target_type: str, model_dir: str = "models") -> list:
     """
@@ -41,11 +45,6 @@ def get_svm_file_paths(model_type, target_type, dim):
         "meta": base + ".meta.json"
     }
 
-def get_model_version_path(model_type: str, target_type: str, dimension: str, version: str):
-    """Get model path with versioning support"""
-    base_path = f"models/{model_type}/{target_type}/{dimension}"
-    return os.path.join(base_path, version)
-
 def save_model_with_version(
     model_state: dict, 
     model_type: str, 
@@ -54,7 +53,7 @@ def save_model_with_version(
     version: str
 ):
     """Save a model with versioned metadata"""
-    version_path = get_model_version_path(model_type, target_type, dimension, version)
+    version_path = get_model_path(model_type, target_type, dimension, version)
     os.makedirs(version_path, exist_ok=True)
     
     # Save model state

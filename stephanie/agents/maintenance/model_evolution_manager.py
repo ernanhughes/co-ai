@@ -2,6 +2,7 @@
 
 from stephanie.agents.base_agent import BaseAgent
 import json
+from sqlalchemy import text
 
 class ModelEvolutionManager(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -17,7 +18,7 @@ class ModelEvolutionManager(BaseAgent):
         SELECT DISTINCT model_type, target_type, dimension
         FROM scoring_history
         """
-        results = self.memory.db.execute(query).fetchall()
+        results = self.memory.session.execute(query).fetchall()
 
         summary = []
 
@@ -76,16 +77,18 @@ class ModelEvolutionManager(BaseAgent):
         ORDER BY created_at DESC
         LIMIT 1
         """
-        result = self.memory.db.execute(query, {
+        result = self.memory.session.execute(text(query), {
             "model_type": model_type,
             "target_type": target_type,
             "dimension": dimension
         }).fetchone()
         
         if result:
+            print(f"Pefoorrmance {result.peformance}")
+            performance = result.performance or "{}" 
             return {
                 "version": result.version,
-                "performance": json.loads(result.performance) if result.performance else {}
+                "performance": json.loads(performance)
             }
         return None
 
@@ -98,7 +101,7 @@ class ModelEvolutionManager(BaseAgent):
             :model_type, :target_type, :dimension, :version, :performance, FALSE
         ) RETURNING id
         """
-        result = self.memory.db.execute(query, {
+        result = self.memory.session.execute(text(query), {
             "model_type": model_type,
             "target_type": target_type,
             "dimension": dimension,
@@ -124,14 +127,14 @@ class ModelEvolutionManager(BaseAgent):
           AND target_type = (SELECT target_type FROM model_versions WHERE id = :id)
           AND dimension = (SELECT dimension FROM model_versions WHERE id = :id)
         """
-        self.memory.db.execute(query, {"id": model_id})
+        self.memory.session.execute(text(query), {"id": model_id})
         
         query = """
         UPDATE model_versions 
         SET active = TRUE 
         WHERE id = :id
         """
-        self.memory.db.execute(query, {"id": model_id})
+        self.memory.session.execute(text(query), {"id": model_id})
         
         self.logger.log("ModelVersionPromoted", {"model_id": model_id})
 

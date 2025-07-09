@@ -7,6 +7,9 @@ def get_event_icon(event_type: str) -> str:
 # SYSTEM & INITIALIZATION
 # ========================
 SYSTEM_INIT = {
+    "SupervisorInit": "👨‍🏫",                  # Supervisor initialization
+    "DocumentLLMInferenceCompleted": "📄✅",         # Document LLM inference completed
+    "DocumentEmbeddingsBackfilled": "📄🌱",          # Document embeddings backfilled
     "AgentInitialized": "ᯓ★",                 # Agent initialization
     "AgentInit": "🤖",                        # Agent startup
     "ContextLoaded": "📂",                    # Context loaded

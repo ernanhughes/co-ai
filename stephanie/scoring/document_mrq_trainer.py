@@ -12,6 +12,7 @@ from stephanie.scoring.document_value_predictor import DocumentValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 
 
+
 class DocumentMRQTrainer:
     def __init__(
         self,

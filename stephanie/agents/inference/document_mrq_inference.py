@@ -16,6 +16,7 @@ class DocumentMRQInferenceAgent(BaseAgent):
         super().__init__(cfg, memory, logger)
         self.model_type = "mrq"
         self.target_type = "document"
+        self.version = cfg.get("version", "v1")
         self.dimensions = cfg.get("dimensions", [])
         self.models = {}
         self.model_meta = {}
@@ -38,11 +39,11 @@ class DocumentMRQInferenceAgent(BaseAgent):
         )
 
         for dim in self.dimensions:
-            model_path = f"{get_model_path(self.model_type, self.target_type, dim)}"
-            encoder_path = f"{model_path}_encoder.pt"
-            predictor_path = f"{model_path}.pt"
-            meta_path = f"{model_path}.meta.json"
-            tuner_path = model_path + ".tuner.json"
+            model_path = get_model_path(self.model_type, self.target_type, dim, version=self.version)
+            encoder_path = f"{model_path}/{dim}_encoder.pt"
+            predictor_path = f"{model_path}/{dim}.pt"
+            meta_path = f"{model_path}/{dim}.meta.json"
+            tuner_path = f"{model_path}/{dim}.tuner.json"
 
 
             self.logger.log("LoadingModelPaths", {
@@ -114,3 +115,5 @@ class DocumentMRQInferenceAgent(BaseAgent):
         context[self.output_key] = results
         self.logger.log("MRQInferenceCompleted", {"total_documents_scored": len(results)})
         return context
+
+

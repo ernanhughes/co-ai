@@ -15,12 +15,15 @@ from stephanie.scoring.document_pair_builder import DocumentPreferencePairBuilde
 class DocumentSVMTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
-        self.model_type = "svm"
-        self.target_type = "document"
-        self.dimensions = cfg.get("dimensions", [])
+        self.model_path = cfg.get("model_path", "models")
+        self.model_type = cfg.get("model_type", "svm")
+        self.target_type = cfg.get("target_type", "document")
+        self.model_version = cfg.get("model_version", "v1")
+
         self.models = {}  # dim -> (scaler, model)
         self.regression_tuners = {}
 
+        self.dimensions = cfg.get("dimensions", [])
         # Initialize tuners and models
         for dim in self.dimensions:
             self._initialize_dimension(dim)
@@ -84,18 +87,24 @@ class DocumentSVMTrainerAgent(BaseAgent):
             self.models[dim] = (scaler, model)
 
             # Save model files
-            model_dir = get_model_path(self.model_type, self.target_type, dim)
-            os.makedirs(os.path.dirname(model_dir), exist_ok=True)
+            model_path = get_model_path(
+                self.model_path,
+                self.model_type,
+                self.target_type,
+                dim,
+                self.model_version,
+            )
+            os.makedirs(model_path, exist_ok=True)
 
             # Save model state (we'll serialize separately)
-            model_path = f"{model_dir}.pt"
-            meta_path = model_path.replace(".pt", ".meta.json")
-            tuner_path = model_path.replace(".pt", ".tuner.json")
+            predicttor_path = f"{model_path}/{dim}.pt"
+            meta_path = f"{model_path}/{dim}.meta.json"
+            tuner_path = f"{model_path}/{dim}.tuner.json"
 
             # Since we're using scikit-learn, we'll use joblib or custom serialization
             from joblib import dump
-            scaler_path = model_path.replace(".pt", "_scaler.joblib")
-            model_path_joblib = model_path.replace(".pt", ".joblib")
+            scaler_path = f"{model_path}/{dim}._scaler.joblib"
+            model_path_joblib = f"{model_path}/{dim}.joblib"
             dump(scaler, scaler_path)
             dump(model, model_path_joblib)
 
@@ -113,7 +122,7 @@ class DocumentSVMTrainerAgent(BaseAgent):
 
             tuner.save(tuner_path)
 
-            self.logger.log("SVMModelSaved", {"dimension": dim, "path": model_dir})
+            self.logger.log("SVMModelSaved", {"dimension": dim, "path": model_path})
 
         context[self.output_key] = training_pairs
         return context
