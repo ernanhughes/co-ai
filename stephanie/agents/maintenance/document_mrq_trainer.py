@@ -2,7 +2,7 @@
 import os
 import torch
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.evaluator.text_encoder import TextEncoder
+from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.document_mrq_trainer import DocumentMRQTrainer
 from stephanie.scoring.document_pair_builder import DocumentPreferencePairBuilder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor

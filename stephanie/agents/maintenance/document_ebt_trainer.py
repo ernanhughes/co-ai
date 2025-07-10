@@ -7,12 +7,11 @@ from torch import nn
 from sqlalchemy import text
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.evaluator.text_encoder import TextEncoder
+from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor
 from stephanie.utils.model_utils import (
     get_model_path,
     save_model_with_version,
-    get_model_version,
 )
 from stephanie.utils.file_utils import save_json
 from stephanie.scoring.model.ebt_model import EBTModel

@@ -1,11 +1,10 @@
 # stephanie/scoring/training/document_trainer.py
-from collections import defaultdict
 from typing import List
 
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from stephanie.evaluator.text_encoder import TextEncoder
+from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor
 from stephanie.scoring.training.base_trainer import BaseTrainer
 

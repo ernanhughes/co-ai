@@ -3,7 +3,7 @@ import torch
 import os
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.mrq.model import MRQModel
-from stephanie.evaluator.text_encoder import TextEncoder
+from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.scoring.scorable import Scorable
