@@ -92,7 +92,6 @@ class WebSearchTool:
         title, clean_text = self.extract_main_text(html)
         return {"url": url, "title": title, "text": clean_text}
 
-
     def extract_main_text(self, html):
         doc = Document(html)
         title = doc.short_title()

@@ -40,13 +40,19 @@ class WorldviewDBLocator:
         existing = session.query(WorldviewORM).filter_by(name=name).first()
         description = f"Worldview for goal: {goal_text}"
         if not existing:
-            worldview = WorldviewORM(name=name, goal=goal_text, db_path=db_path, description=description)
+            worldview = WorldviewORM(
+                name=name,
+                goal=goal_text,
+                db_path=db_path,
+                description=description,
+            )
             session.add(worldview)
             session.commit()
 
     def create_worldview(self, goal_text: str, session) -> str:
         """
-        Creates and registers a new worldview SQLite database and adds metadata to main registry.
+        Creates and registers a new worldview SQLite database and
+        adds metadata to main registry.
         Returns path to SQLite DB.
         """
         db_path = self.get_db_path(goal_text)

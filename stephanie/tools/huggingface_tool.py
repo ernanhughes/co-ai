@@ -17,7 +17,9 @@ def _get_cache_path(paper_url: str) -> Path:
     return CACHE_DIR / f"{key}.pkl"
 
 
-def recommend_similar_papers(paper_url: str = "https://arxiv.org/pdf/2505.08827") -> list[dict]:
+def recommend_similar_papers(
+    paper_url: str = "https://arxiv.org/pdf/2505.08827",
+) -> list[dict]:
     cache_path = _get_cache_path(paper_url)
 
     # Return from cache if exists
@@ -29,16 +31,18 @@ def recommend_similar_papers(paper_url: str = "https://arxiv.org/pdf/2505.08827"
     try:
         client = Client("librarian-bots/recommend_similar_papers")
         result = client.predict(paper_url, None, False, api_name="/predict")
-        paper_ids = re.findall(r"https://huggingface\.co/papers/(\d+\.\d+)", result)
+        paper_ids = re.findall(
+            r"https://huggingface\.co/papers/(\d+\.\d+)", result
+        )
 
         hits = [
             {
-                "query":paper_url,
-                "source":"recommend_similar_papers",
-                "result_type":"url",
-                "url":f"https://arxiv.org/pdf/{pid}.pdf",
-                "title":pid,
-                "summary":"Not yet processed",
+                "query": paper_url,
+                "source": "recommend_similar_papers",
+                "result_type": "url",
+                "url": f"https://arxiv.org/pdf/{pid}.pdf",
+                "title": pid,
+                "summary": "Not yet processed",
             }
             for pid in paper_ids
         ]
@@ -53,7 +57,10 @@ def recommend_similar_papers(paper_url: str = "https://arxiv.org/pdf/2505.08827"
         print(f"Failed to get similar papers: {e}")
         return []
 
-def search_huggingface_datasets(queries: list[str], max_results: int = 5) -> list[dict]:
+
+def search_huggingface_datasets(
+    queries: list[str], max_results: int = 5
+) -> list[dict]:
     api = HfApi()
     results = []
 
@@ -61,14 +68,19 @@ def search_huggingface_datasets(queries: list[str], max_results: int = 5) -> lis
         try:
             matches = api.list_datasets(search=query, limit=max_results)
             for ds in matches:
-                results.append({
-                    "name": ds.id,
-                    "description": ds.cardData.get("description", "No description available") if ds.cardData else "No card data"
-                })
+                results.append(
+                    {
+                        "name": ds.id,
+                        "description": ds.cardData.get(
+                            "description", "No description available"
+                        )
+                        if ds.cardData
+                        else "No card data",
+                    }
+                )
         except Exception as e:
-            results.append({
-                "name": query,
-                "description": f"Error searching: {str(e)}"
-            })
+            results.append(
+                {"name": query, "description": f"Error searching: {str(e)}"}
+            )
 
     return results
