@@ -216,7 +216,9 @@ class MRQScorer(BaseScorer):
         Compares two outputs via MR.Q and returns the preferred one.
         """
         dim = self.dimensions[0]
-        encoder, predictor = self.models[dim]
+        model = self.models[dim]
+        encoder = model.encoder
+        predictor = model.predictor
 
         prompt_emb = torch.tensor(
             self.memory.embedding.get_or_create(prompt), device=self.device
@@ -403,7 +405,9 @@ class MRQScorer(BaseScorer):
             if dim not in self.models:
                 self._initialize_dimension(dim)
             
-            encoder, predictor = self.models[dim]
+            model = self.models[dim]
+            encoder = model.encoder
+            predictor = model.predictor
 
             try:
                 # Load encoder and predictor
@@ -446,7 +450,9 @@ class MRQScorer(BaseScorer):
                 self.logger.log("MRQLoadMissing", {"dimension": dim})
                 continue
 
-            encoder, predictor = self.models[dim]
+            model = self.models[dim]
+            encoder = model.encoder
+            predictor = model.predictor
 
             encoder.load_state_dict(torch.load(os.path.join(dim_dir, "encoder.pt")))
             predictor.load_state_dict(torch.load(os.path.join(dim_dir, "predictor.pt")))
