@@ -1,11 +1,11 @@
-# stephanie/scoring/document_pair_builder.py
+# stephanie/scoring/mrq/preference_pair_builder.py
 
 from collections import defaultdict
 
 from sqlalchemy.sql import text
 
 
-class DocumentPreferencePairBuilder:
+class PreferencePairBuilder:
     """
     Builds preference training pairs from scored documents per dimension.
     Designed for MR.Q or reward model training to rank research/document quality.
@@ -15,7 +15,7 @@ class DocumentPreferencePairBuilder:
         self.db = db
         self.logger = logger
 
-    def get_training_pairs_by_dimension(self, goal: str = None, limit: int = 10000) -> dict:
+    def get_training_pairs_by_dimension(self, goal: str = None, limit: int = 100) -> dict:
         """
         Returns a dictionary of document preference pairs grouped by dimension.
 

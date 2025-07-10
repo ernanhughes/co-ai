@@ -11,6 +11,7 @@ from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 
+from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 
 
 class DocumentMRQTrainer:
@@ -29,6 +30,7 @@ class DocumentMRQTrainer:
         self.encoder = encoder.to(device) if encoder else TextEncoder().to(device)
         self.value_predictor = value_predictor.to(device) if value_predictor else DocumentValuePredictor(512, 1024).to(device)
         self.regression_tuners = {}
+        self.engine = MRQTrainerEngine(memory, logger, device)
 
     def prepare_training_data(self, samples: List[dict]):
         inputs, labels = [], []
@@ -125,49 +127,7 @@ class DocumentMRQTrainer:
         })
 
     def train_multidimensional_model(self, contrast_pairs: List[dict], cfg=None):
-        by_dimension = defaultdict(list)
-        for pair in contrast_pairs:
-            dim = pair.get("dimension", "default")
-            by_dimension[dim].append(pair)
-
-        trained_models = {}
-        trained_encoders = {}
-        regression_tuners = {}
-
-        for dim, samples in by_dimension.items():
-            if not samples:
-                continue
-
-            # Create fresh encoder and predictor for this dimension
-            encoder = TextEncoder().to(self.device)
-            predictor = DocumentValuePredictor(512, 1024).to(self.device)
-
-            tuner = RegressionTuner(dimension=dim, logger=self.logger)
-            regression_tuners[dim] = tuner
-
-            dataloader = self.prepare_training_data(samples)
-            self.train(dataloader, cfg or {})
-
-            trained_models[dim] = predictor.state_dict()
-            trained_encoders[dim] = encoder.state_dict()
-
-            # Train regression tuner
-            for pair in samples:
-                for side in ["a", "b"]:
-                    llm_score = pair[f"value_{side}"]
-                    doc_text = pair[f"output_{side}"]
-                    context_text = pair.get("title", "")
-
-                    context_emb = torch.tensor(self.memory.embedding.get_or_create(context_text)).unsqueeze(0).to(self.device)
-                    doc_emb = torch.tensor(self.memory.embedding.get_or_create(doc_text)).unsqueeze(0).to(self.device)
-
-                    with torch.no_grad():
-                        zsa = self.encoder(context_emb, doc_emb)
-                        mrq_score = self.value_predictor(zsa).item()
-
-                    tuner.train_single(mrq_score, llm_score)
-
-        return trained_encoders, trained_models, regression_tuners
+        return self.engine.train_all(contrast_pairs, cfg or {})
     
     def align_to_best_llm_neighbour(self, goal, hypothesis, dimension):
         """

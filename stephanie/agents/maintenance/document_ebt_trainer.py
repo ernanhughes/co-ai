@@ -72,12 +72,12 @@ class DocumentEBTTrainerAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
-        from stephanie.scoring.document_pair_builder import (
-            DocumentPreferencePairBuilder,
+        from stephanie.scoring.mrq.preference_pair_builder import (
+            PreferencePairBuilder,
         )
 
         # Build contrastive training pairs grouped by scoring dimension
-        builder = DocumentPreferencePairBuilder(
+        builder = PreferencePairBuilder(
             db=self.memory.session, logger=self.logger
         )
         training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)

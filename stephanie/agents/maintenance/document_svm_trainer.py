@@ -9,7 +9,7 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import save_json
 from stephanie.utils.model_utils import get_model_path
-from stephanie.scoring.document_pair_builder import DocumentPreferencePairBuilder
+from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 
 
 class DocumentSVMTrainerAgent(BaseAgent):
@@ -36,7 +36,7 @@ class DocumentSVMTrainerAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
-        builder = DocumentPreferencePairBuilder(
+        builder = PreferencePairBuilder(
             db=self.memory.session,
             logger=self.logger
         )

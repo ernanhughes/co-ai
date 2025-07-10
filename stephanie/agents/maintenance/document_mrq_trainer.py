@@ -4,7 +4,7 @@ import torch
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.document_mrq_trainer import DocumentMRQTrainer
-from stephanie.scoring.document_pair_builder import DocumentPreferencePairBuilder
+from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.document_value_predictor import DocumentValuePredictor
 from stephanie.utils.model_utils import get_model_path
 from stephanie.utils.file_utils import save_json
@@ -20,7 +20,7 @@ class DocumentMRQTrainerAgent(BaseAgent):
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
-        builder = DocumentPreferencePairBuilder(db=self.memory.session, logger=self.logger)
+        builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
         training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)
 
         all_contrast_pairs = []

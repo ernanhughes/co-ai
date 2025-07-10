@@ -11,7 +11,7 @@ from stephanie.utils.model_utils import get_model_path, save_model_with_version
 from stephanie.utils.file_utils import save_json
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.agents.maintenance.model_evolution_manager import ModelEvolutionManager
-from stephanie.scoring.document_pair_builder import DocumentPreferencePairBuilder
+from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 
 class TrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -30,12 +30,12 @@ class TrainerAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
-        from stephanie.scoring.document_pair_builder import (
-            DocumentPreferencePairBuilder,
+        from stephanie.scoring.mrq.preference_pair_builder import (
+            PreferencePairBuilder,
         )
 
         # Build contrastive training pairs grouped by scoring dimension
-        builder = DocumentPreferencePairBuilder(
+        builder = PreferencePairBuilder(
             db=self.memory.session, logger=self.logger
         )
         training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)
