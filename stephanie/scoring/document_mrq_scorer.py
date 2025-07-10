@@ -5,7 +5,7 @@ import os
 import torch
 
 from stephanie.scoring.mrq.encoder import TextEncoder
-from stephanie.scoring.document_value_predictor import DocumentValuePredictor
+from stephanie.scoring.document_value_predictor import ValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 
 
@@ -32,7 +32,7 @@ class DocumentMRQScorer:
     def _initialize_dimensions(self):
         for dim in self.dimensions:
             encoder = TextEncoder().to(self.device)
-            predictor = DocumentValuePredictor(512, 1024).to(self.device)
+            predictor = ValuePredictor(512, 1024).to(self.device)
 
             # Load model weights
             model_path = os.path.join(self.model_dir, f"{self.model_prefix}{dim}.pt")

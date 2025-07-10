@@ -1,16 +1,17 @@
 # stephanie/agents/maintenance/document_mrq_trainer.py
+
 import os
 import torch
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.mrq.encoder import TextEncoder
-from stephanie.scoring.document_mrq_trainer import DocumentMRQTrainer
+from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
-from stephanie.scoring.document_value_predictor import DocumentValuePredictor
+from stephanie.scoring.document_value_predictor import ValuePredictor
 from stephanie.utils.model_utils import get_model_path
 from stephanie.utils.file_utils import save_json
 
 
-class DocumentMRQTrainerAgent(BaseAgent):
+class MRQTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")
@@ -20,32 +21,31 @@ class DocumentMRQTrainerAgent(BaseAgent):
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
+
         builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
-        training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)
+        training_pairs_by_dim = builder.get_training_pairs_by_dimension(goal=goal_text)
 
-        all_contrast_pairs = []
-
-        for dimension, pairs in training_pairs.items():
-            for item in pairs:
-                all_contrast_pairs.append({
-                    "title": item["title"],
-                    "output_a": item["output_a"],
-                    "output_b": item["output_b"],
-                    "value_a": item["value_a"],
-                    "value_b": item["value_b"],
-                    "dimension": dimension
-                })
+        contrast_pairs = [
+            {
+                "title": item["title"],
+                "output_a": item["output_a"],
+                "output_b": item["output_b"],
+                "value_a": item["value_a"],
+                "value_b": item["value_b"],
+                "dimension": dim
+            }
+            for dim, pairs in training_pairs_by_dim.items()
+            for item in pairs
+        ]
 
         self.logger.log("DocumentPairBuilderComplete", {
-            "dimensions": list(training_pairs.keys()),
-            "total_pairs": sum(len(p) for p in training_pairs.values())
+            "dimensions": list(training_pairs_by_dim.keys()),
+            "total_pairs": len(contrast_pairs)
         })
 
-        trainer = DocumentMRQTrainer(
+        trainer = MRQTrainerEngine(
             memory=self.memory,
             logger=self.logger,
-            encoder=TextEncoder(),
-            value_predictor=DocumentValuePredictor(),
             device="cuda" if torch.cuda.is_available() else "cpu"
         )
 
@@ -56,14 +56,13 @@ class DocumentMRQTrainerAgent(BaseAgent):
             "min_delta": 0.001
         }
 
-        assert isinstance(all_contrast_pairs, list), "Expected list for contrast pairs"
-        assert len(all_contrast_pairs) > 0, "No contrast pairs found"
+        assert contrast_pairs, "No contrast pairs found"
 
-        trained_encoders, trained_models, regression_tuners = trainer.train_multidimensional_model(
-            all_contrast_pairs, cfg=config
+        trained_encoders, trained_models, regression_tuners = trainer.train_all(
+            contrast_pairs, cfg=config
         )
 
-        for dim, state_dict in trained_models.items():
+        for dim in trained_models:
             model_path = get_model_path(
                 self.model_path,
                 self.model_type,
@@ -72,34 +71,39 @@ class DocumentMRQTrainerAgent(BaseAgent):
                 self.model_version,
             )
             os.makedirs(model_path, exist_ok=True)
-            predictor_path = f"{model_path}/{dim}.pt"
-            encoder_path = f"{model_path}/{dim}_encoder.pt"
-            tuner_path = f"{model_path}/{dim}_model.tuner.json"
-            meta_path = f"{model_path}/{dim}.meta.json"
 
-            # Save predictor            
-            torch.save(state_dict, predictor_path)
+            predictor_path = os.path.join(model_path, f"{dim}.pt")
+            encoder_path = os.path.join(model_path, f"{dim}_encoder.pt")
+            tuner_path = os.path.join(model_path, f"{dim}_model.tuner.json")
+            meta_path = os.path.join(model_path, f"{dim}.meta.json")
+
+            # Save model weights
+            torch.save(trained_models[dim], predictor_path)
             self.logger.log("ModelSaved", {"dimension": dim, "path": predictor_path})
-            # Save encoder (use correct dimension-specific encoder)
-            dim_encoder = trained_encoders.get(dim)
-            if dim_encoder:
-                torch.save(dim_encoder, encoder_path)
+
+            # Save encoder weights
+            encoder_state = trained_encoders.get(dim)
+            if encoder_state:
+                torch.save(encoder_state, encoder_path)
                 self.logger.log("EncoderSaved", {"dimension": dim, "path": encoder_path})
             else:
                 self.logger.log("EncoderMissing", {"dimension": dim})
 
-
-            self.logger.log("EncoderSaved", {"dimension": dim, "path": encoder_path})
-
-            # Save tuner
+            # Save regression tuner
             tuner = regression_tuners.get(dim)
             if tuner:
                 tuner.save(tuner_path)
 
             # Save normalization metadata
-            min_score = float(min(p["value_a"] for p in all_contrast_pairs if p["dimension"] == dim))
-            max_score = float(max(p["value_b"] for p in all_contrast_pairs if p["dimension"] == dim))
-            save_json({"min_score": min_score, "max_score": max_score}, meta_path)
+            values = [
+                (p["value_a"], p["value_b"])
+                for p in contrast_pairs if p["dimension"] == dim
+            ]
+            flat_values = [v for pair in values for v in pair]
+            save_json({
+                "min_score": float(min(flat_values)),
+                "max_score": float(max(flat_values))
+            }, meta_path)
 
             self.logger.log("DocumentModelSaved", {
                 "dimension": dim,
@@ -109,9 +113,5 @@ class DocumentMRQTrainerAgent(BaseAgent):
                 "meta": meta_path
             })
 
-        context[self.output_key] = training_pairs
-        self.logger.log("DocumentPairBuilderComplete", {
-            "dimensions": list(training_pairs.keys()),
-            "total_pairs": sum(len(p) for p in training_pairs.values())
-        })
+        context[self.output_key] = training_pairs_by_dim
         return context

@@ -8,7 +8,7 @@ from sqlalchemy import text
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.mrq.encoder import TextEncoder
-from stephanie.scoring.document_value_predictor import DocumentValuePredictor
+from stephanie.scoring.document_value_predictor import ValuePredictor
 from stephanie.utils.model_utils import (
     get_model_path,
     save_model_with_version,
@@ -62,7 +62,7 @@ class DocumentEBTTrainerAgent(BaseAgent):
         self.encoder = TextEncoder().to(
             torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
-        self.value_predictor = DocumentValuePredictor().to(
+        self.value_predictor = ValuePredictor().to(
             torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
         self.evolution_manager = ModelEvolutionManager(

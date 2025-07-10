@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from collections import defaultdict
 from stephanie.scoring.mrq.encoder import TextEncoder
-from stephanie.scoring.document_value_predictor import DocumentValuePredictor
+from stephanie.scoring.document_value_predictor import ValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 
 class MRQTrainerEngine:
@@ -18,7 +18,7 @@ class MRQTrainerEngine:
         return TextEncoder().to(self.device)
 
     def build_predictor(self):
-        return DocumentValuePredictor(512, 1024).to(self.device)
+        return ValuePredictor(512, 1024).to(self.device)
 
     def prepare_training_data(self, encoder, samples):
         inputs, labels = [], []
@@ -112,3 +112,17 @@ class MRQTrainerEngine:
             tuners[dim] = tuner
 
         return encoders, predictors, tuners
+
+    def get_closest_llm_scores(self, hypothesis_text: str, dimension: str, top_k: int = 5) -> list[float]:
+        query_emb = self.memory.embedding.get_or_create(hypothesis_text)
+        similar_items = self.memory.embedding.search_similar_prompts_with_scores(query_emb, top_k)
+
+        scores = []
+        for item in similar_items:
+            matched_text = item.get("text")
+            score_entry = self.memory.score.find_by_text_and_dimension(
+                matched_text, dimension=dimension, source="llm"
+            )
+            if score_entry:
+                scores.append(score_entry.score)
+        return scores

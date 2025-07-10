@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from stephanie.scoring.mrq.encoder import TextEncoder
-from stephanie.scoring.document_value_predictor import DocumentValuePredictor
+from stephanie.scoring.document_value_predictor import ValuePredictor
 from stephanie.scoring.training.base_trainer import BaseTrainer
 
 
@@ -14,7 +14,7 @@ class DocumentTrainer(BaseTrainer):
         return TextEncoder().to(self.device)
 
     def init_predictor(self):
-        return DocumentValuePredictor().to(self.device)
+        return ValuePredictor().to(self.device)
 
     def prepare_training_data(self, samples: List[dict]) -> DataLoader:
         inputs, labels = [], []
