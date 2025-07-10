@@ -1,8 +1,7 @@
 import torch
 import os
-from sklearn.model_selection import train_test_split
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.scoring.model.mrq_model import MRQModel
+from stephanie.scoring.mrq.model import MRQModel
 from stephanie.evaluator.text_encoder import TextEncoder
 from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
@@ -66,7 +65,7 @@ class DocumentMRQInferenceAgent(BaseAgent):
             )
             encoder = TextEncoder()
             predictor = HypothesisValuePredictor(512, 1024)
-            model = MRQModel(encoder, predictor, device=self.device)
+            model = MRQModel(encoder, predictor, self.memory.embedding, device=self.device)
             model.load_weights(encoder_path, predictor_path)
             self.models[dim] = model
 
@@ -100,7 +99,7 @@ class DocumentMRQInferenceAgent(BaseAgent):
             score_results = []  # For storing ScoreResult objects per dimension
 
             for dim, model in self.models.items():
-                q_value = model.predict(goal_text, scorable.text, self.memory.embedding)
+                q_value = model.predict(goal_text, scorable.text)
 
                 if dim in self.tuners:
                     scaled_score = self.tuners[dim].transform(q_value)
