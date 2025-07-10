@@ -1,7 +1,9 @@
 # stephanie/scoring/mrq/model_io.py
-import os
 import json
+import os
+
 import torch
+
 
 class MRQModelIO:
     def save_models(self):

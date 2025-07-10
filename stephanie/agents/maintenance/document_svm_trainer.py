@@ -1,15 +1,16 @@
 # stephanie/agents/maintenance/document_svm_trainer.py
 import os
-import torch
+
 import numpy as np
-from sklearn.svm import SVR
+import torch
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVR
 
 from stephanie.agents.base_agent import BaseAgent
+from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import save_json
 from stephanie.utils.model_utils import get_model_path
-from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 
 
 class DocumentSVMTrainerAgent(BaseAgent):

@@ -2,6 +2,7 @@
 import torch
 import torch.nn.functional as F
 
+
 class MRQTrainer:
     def __init__(self, mrq_model, optimizer):
         self.model = mrq_model

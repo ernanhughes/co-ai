@@ -1,6 +1,7 @@
 # stephanie\scoring\mrq\model.py
 import torch
 
+
 class MRQModel:
     def __init__(self, encoder, predictor, embedding_store, device="cpu"):
         self.encoder = encoder.to(device)

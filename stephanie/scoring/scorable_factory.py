@@ -1,12 +1,12 @@
 # stephanie/scoring/scorable_factory.py
 from enum import Enum as PyEnum
 
-from stephanie.models.prompt import PromptORM
-from stephanie.models.theorem import CartridgeORM
 from stephanie.models.cartridge_triple import CartridgeTripleORM
-from stephanie.models.theorem import TheoremORM
 from stephanie.models.document import DocumentORM
+from stephanie.models.prompt import PromptORM
+from stephanie.models.theorem import CartridgeORM, TheoremORM
 from stephanie.scoring.scorable import Scorable
+
 
 # Enum defining all the supported types of scoreable targets
 class TargetType(PyEnum):

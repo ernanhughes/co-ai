@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 
+
 class EBTModel(nn.Module):
     def __init__(self, embedding_dim=1024):
         super().__init__()

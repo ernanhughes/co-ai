@@ -1,15 +1,14 @@
 # stephanie/agents/inference/document_llm_inference.py
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.models.evaluation import EvaluationORM
-from stephanie.scoring.scorable import Scorable
-from stephanie.scoring.scorable_factory import TargetType
-from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.scoring.scorable_factory import ScorableFactory
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
-from stephanie.scoring.scoring_manager import ScoringManager
-from stephanie.scoring.scoring_engine import ScoringEngine
+from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.score import ScoreORM
+from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
+from stephanie.scoring.score_bundle import ScoreBundle
+from stephanie.scoring.scoring_engine import ScoringEngine
+from stephanie.scoring.scoring_manager import ScoringManager
 
 DEFAULT_DIMENSIONS = [
     "alignment",

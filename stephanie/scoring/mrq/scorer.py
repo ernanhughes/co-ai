@@ -1,9 +1,10 @@
 # stephanie/scoring/mrq/scorer.py
 
 from .core_scoring import MRQCoreScoring
-from .training import MRQTraining
-from .model_io import MRQModelIO
 from .initializer import initialize_dimension
+from .model_io import MRQModelIO
+from .training import MRQTraining
+
 
 class MRQScorer(MRQCoreScoring, MRQTraining, MRQModelIO):
     def __init__(self, cfg, memory, logger, dimensions=None):

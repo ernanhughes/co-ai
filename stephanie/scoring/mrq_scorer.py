@@ -1,22 +1,22 @@
 # stephanie/scoring/mrq_scorer.py
 import json
 import os
+import re
 
 import torch
 
 from stephanie.evaluator.hypothesis_value_predictor import \
     HypothesisValuePredictor
 from stephanie.evaluator.mrq_trainer import MRQTrainer
-from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.models.sharpening_prediction import SharpeningPredictionORM
 from stephanie.scoring.base_scorer import BaseScorer
+from stephanie.scoring.mrq.encoder import TextEncoder
+from stephanie.scoring.mrq.model import MRQModel
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-import re 
-from stephanie.scoring.mrq.model import MRQModel
 
 
 class MRQScorer(BaseScorer):

@@ -1,9 +1,11 @@
 # stephanie/utils/model_utils.py
 
-import os
-import torch
 import json
+import os
 from datetime import datetime
+
+import torch
+
 
 def get_model_version(session, model_type: str, target_type: str, dimension: str):
     return "v1"

@@ -22,10 +22,9 @@ from stephanie.registry.agent_registry import AgentRegistry
 from stephanie.registry.registry import register
 from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
-
+from stephanie.utils import timing
 from stephanie.utils.timing import time_function
 
-from stephanie.utils import timing
 
 class PipelineStage:
     def __init__(self, name: str, config: dict, stage_dict: dict):

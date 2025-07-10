@@ -1,6 +1,8 @@
 # stephanie/models/scoring_history.py
-from sqlalchemy import Column, Integer, String, Float, Boolean, Text, JSON, TIMESTAMP, ForeignKey
 from datetime import datetime
+
+from sqlalchemy import (JSON, TIMESTAMP, Boolean, Column, Float, ForeignKey,
+                        Integer, String, Text)
 
 from stephanie.models.base import Base
 

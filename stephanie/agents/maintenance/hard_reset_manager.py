@@ -1,9 +1,9 @@
 # stephanie/agents/maintenance/hard_reset_manager.py
 
+import json
 import os
 import shutil
 from datetime import datetime
-import json
 
 from stephanie.agents.base_agent import BaseAgent
 

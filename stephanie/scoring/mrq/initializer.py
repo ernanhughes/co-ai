@@ -1,9 +1,12 @@
 # stephanie/scoring/mrq/initializer.py
-from .model import MRQModel
-from .encoder import TextEncoder
-from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from stephanie.evaluator.hypothesis_value_predictor import \
+    HypothesisValuePredictor
 from stephanie.evaluator.mrq_trainer import MRQTrainer
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
+
+from .encoder import TextEncoder
+from .model import MRQModel
+
 
 def initialize_dimension(self, dimension):
     if not self.value_predictor:

@@ -6,9 +6,9 @@ defaults:
   - agents/document_profiler
   - agents/paper_score
   - agents/knowledge_loader
-  - agents/document_mrq_trainer
+  - agents/mrq_trainer
   - agents/document_mrq_inference
-  - agents/document_mrq_trainer
+  - agents/mrq_trainer
   - agents/document_ebt_trainer
   - agents/document_ebt_inference
   - agents/document_reward_scorer
@@ -61,9 +61,9 @@ pipeline:
   tag: "search_arxiv"
   description: "Search Arxiv for papers related to a goal"
   stages:
-     - name: document_mrq_trainer
+     - name: mrq_trainer
        description: "Build document pairs for training and evaluation" 
-       cls: stephanie.agents.maintenance.document_mrq_trainer.MRQTrainerAgent 
+       cls: stephanie.agents.maintenance.mrq_trainer.MRQTrainerAgent 
        enabled: true
        iterations: 1
 

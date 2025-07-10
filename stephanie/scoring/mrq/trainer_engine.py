@@ -1,12 +1,15 @@
 # stephanie/scoring/mrq/trainer_engine.py
 
+from collections import defaultdict
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-from collections import defaultdict
-from stephanie.scoring.mrq.encoder import TextEncoder
+
 from stephanie.scoring.document_value_predictor import ValuePredictor
+from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
+
 
 class MRQTrainerEngine:
     def __init__(self, memory, logger, device="cpu"):

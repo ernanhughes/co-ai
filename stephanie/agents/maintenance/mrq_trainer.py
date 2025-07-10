@@ -1,14 +1,14 @@
-# stephanie/agents/maintenance/document_mrq_trainer.py
+# stephanie/agents/maintenance/mrq_trainer.py
 
 import os
+
 import torch
+
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.scoring.mrq.encoder import TextEncoder
-from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
-from stephanie.scoring.document_value_predictor import ValuePredictor
-from stephanie.utils.model_utils import get_model_path
+from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 from stephanie.utils.file_utils import save_json
+from stephanie.utils.model_utils import get_model_path
 
 
 class MRQTrainerAgent(BaseAgent):

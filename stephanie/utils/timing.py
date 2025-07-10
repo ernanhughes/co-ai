@@ -1,11 +1,11 @@
 # stephanie/utils/timing.py
+import asyncio
+import functools
+import inspect
 import time
 from functools import wraps
 from typing import Any, Callable
-import inspect
-import functools
-import time
-import asyncio
+
 
 def time_function(logger=None):
     def decorator(func):

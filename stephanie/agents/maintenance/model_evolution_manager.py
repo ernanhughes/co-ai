@@ -1,8 +1,11 @@
 # stephanie/agents/maintenance/model_evolution_manager.py
 
-from stephanie.agents.base_agent import BaseAgent
 import json
+
 from sqlalchemy import text
+
+from stephanie.agents.base_agent import BaseAgent
+
 
 class ModelEvolutionManager(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
