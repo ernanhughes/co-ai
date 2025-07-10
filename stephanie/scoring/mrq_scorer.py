@@ -15,7 +15,7 @@ from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 import re 
-from stephanie.scoring.model.mrq_model import MRQModel
+from stephanie.scoring.mrq.model import MRQModel
 
 
 class MRQScorer(BaseScorer):
@@ -116,7 +116,7 @@ class MRQScorer(BaseScorer):
         self.trainers[dimension] = MRQTrainer(
             memory=self.memory, logger=self.logger, value_predictor=self.value_predictor, encoder=self.encoder, device=self.device
         )
-        self.models[dimension] = MRQModel(self.encoder, self.value_predictor, device=self.device)
+        self.models[dimension] = MRQModel(self.encoder, self.value_predictor, self.memory.embedding, device=self.device)
         self.min_score_by_dim[dimension] = 0.0
         self.max_score_by_dim[dimension] = 100.0
         self.logger.log("MRQModelInitializing", {"dimension": dimension})
