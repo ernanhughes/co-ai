@@ -1,9 +1,15 @@
 # stephanie/agents/compiler/prompt_tuning.py
-import re
 from abc import ABC, abstractmethod
 
 import dspy
-from dspy import BootstrapFewShot, Example, InputField, OutputField, Predict, Signature
+from dspy import (
+    BootstrapFewShot,
+    Example,
+    InputField,
+    OutputField,
+    Predict,
+    Signature,
+)
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL
@@ -13,11 +19,15 @@ from stephanie.scoring.mrq.mrq_scorer import MRQScorer
 # DSPy signature for prompt refinement: defines input/output fields for tuning
 class PromptTuningSignature(Signature):
     goal = InputField(desc="Scientific research goal or question")
-    input_prompt = InputField(desc="Original prompt used to generate hypotheses")
+    input_prompt = InputField(
+        desc="Original prompt used to generate hypotheses"
+    )
     hypotheses = InputField(desc="Best hypothesis generated")
     review = InputField(desc="Expert review of the hypothesis")
     score = InputField(desc="Numeric score evaluating the hypothesis quality")
-    refined_prompt = OutputField(desc="Improved version of the original prompt")
+    refined_prompt = OutputField(
+        desc="Improved version of the original prompt"
+    )
 
 
 # Simple evaluation result class to return from evaluator
@@ -83,10 +93,14 @@ class PromptTuningAgent(BaseAgent):
         goal = self.extract_goal_text(context.get(GOAL))
         step_outputs = context.get("step_outputs", [])
         if not step_outputs:
-            self.logger.log("PromptTuningSkipped", {"reason": "no_steps_found"})
+            self.logger.log(
+                "PromptTuningSkipped", {"reason": "no_steps_found"}
+            )
             return context
 
-        self.logger.log("StepPromptTuningStart", {"step_count": len(step_outputs)})
+        self.logger.log(
+            "StepPromptTuningStart", {"step_count": len(step_outputs)}
+        )
 
         tuned_steps = []
         for i, step in enumerate(step_outputs):
@@ -112,11 +126,15 @@ class PromptTuningAgent(BaseAgent):
                     hypotheses=original_output,
                     review="",  # or step.get("review", "")
                     score=original_score,
-                ).with_inputs("goal", "input_prompt", "hypotheses", "review", "score")
+                ).with_inputs(
+                    "goal", "input_prompt", "hypotheses", "review", "score"
+                )
 
                 # Generate refined prompt candidates
                 program = Predict(PromptTuningSignature)
-                tuned_program = BootstrapFewShot(metric=lambda e, p, _: 1.0).compile(
+                tuned_program = BootstrapFewShot(
+                    metric=lambda e, p, _: 1.0
+                ).compile(
                     student=program,
                     trainset=[example],  # one-shot tuning
                 )
@@ -129,7 +147,8 @@ class PromptTuningAgent(BaseAgent):
                     score=original_score,
                 )
                 self.logger.log(
-                    "TunedProgramResult", {"step_index": i, "result": str(result)}
+                    "TunedProgramResult",
+                    {"step_index": i, "result": str(result)},
                 )
                 print(f"Refined prompt: {result}")
                 refined_prompt = result.refined_prompt.strip()
@@ -200,7 +219,9 @@ class PromptTuningAgent(BaseAgent):
                 )
 
         context["step_outputs"] = tuned_steps
-        self.logger.log("StepPromptTuningCompleted", {"count": len(tuned_steps)})
+        self.logger.log(
+            "StepPromptTuningCompleted", {"count": len(tuned_steps)}
+        )
 
         return context
 
@@ -230,7 +251,8 @@ class PromptTuningAgent(BaseAgent):
                 )
 
                 self.logger.log(
-                    "TunedProgramResult", {"step_index": i, "result": str(result)}
+                    "TunedProgramResult",
+                    {"step_index": i, "result": str(result)},
                 )
                 print(f"Refined prompt: {result}")
 
@@ -240,7 +262,9 @@ class PromptTuningAgent(BaseAgent):
                     or not hasattr(result, "refined_prompt")
                     or result.refined_prompt is None
                 ):
-                    raise ValueError("Refined prompt not returned from DSPy program.")
+                    raise ValueError(
+                        "Refined prompt not returned from DSPy program."
+                    )
 
                 refined_prompt = result.refined_prompt.strip()
 
@@ -260,7 +284,9 @@ class PromptTuningAgent(BaseAgent):
 
                 # Update context with prompt history
                 self.add_to_prompt_history(
-                    context, refined_prompt, {"original": example["prompt_text"]}
+                    context,
+                    refined_prompt,
+                    {"original": example["prompt_text"]},
                 )
 
                 self.logger.log(
@@ -274,7 +300,9 @@ class PromptTuningAgent(BaseAgent):
                     {
                         "step_index": i,
                         "error": str(e),
-                        "step_snippet": str(example.get("prompt_text", ""))[:100],
+                        "step_snippet": str(example.get("prompt_text", ""))[
+                            :100
+                        ],
                     },
                 )
                 print(f"❌ Exception: {type(e).__name__}: {e}")
@@ -294,7 +322,9 @@ class PromptTuningAgent(BaseAgent):
         try:
             # Extract both prompts
             prompt_a = example.input_prompt.strip()
-            prompt_b = pred.refined_prompt.strip() if pred.refined_prompt else ""
+            prompt_b = (
+                pred.refined_prompt.strip() if pred.refined_prompt else ""
+            )
 
             if not prompt_b:
                 self.logger.log(
@@ -331,7 +361,8 @@ class PromptTuningAgent(BaseAgent):
 
             except Exception as e:
                 self.logger.log(
-                    "MRQPredictionFailed", {"error": str(e), "fallback": "llm_scoring"}
+                    "MRQPredictionFailed",
+                    {"error": str(e), "fallback": "llm_scoring"},
                 )
 
                 # Fallback: Call LLM to generate output and score it
@@ -369,7 +400,9 @@ class PromptTuningAgent(BaseAgent):
                     "weighted_score_b": weighted_score_b,
                     "winner": "B"
                     if weighted_score_b > weighted_score_a
-                    else ("A" if weighted_score_b < weighted_score_a else "Tie"),
+                    else (
+                        "A" if weighted_score_b < weighted_score_a else "Tie"
+                    ),
                 },
             )
 

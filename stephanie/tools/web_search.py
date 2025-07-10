@@ -1,12 +1,8 @@
 # stephanie/tools/web_search.py
-import asyncio
-
 import httpx
 import requests
 from bs4 import BeautifulSoup
 from readability import Document
-
-from stephanie.utils.file_utils import write_text_to_file
 
 
 class WebSearchTool:
@@ -18,7 +14,9 @@ class WebSearchTool:
         self.language = cfg.get("language", "en")
         self.logger = logger
 
-    async def search(self, query: str, max_results: int = 15) -> list[str] | None:
+    async def search(
+        self, query: str, max_results: int = 15
+    ) -> list[str] | None:
         max_results = max_results or self.max_results
 
         params = {
@@ -84,7 +82,9 @@ class WebSearchTool:
             return response.text
         except requests.RequestException as e:
             if self.logger:
-                self.logger.log("FetchHTMLFailed", {"url": url, "error": str(e)})
+                self.logger.log(
+                    "FetchHTMLFailed", {"url": url, "error": str(e)}
+                )
             return None  # or return ""
 
     def fetch_and_parse_readable(self, url: str):

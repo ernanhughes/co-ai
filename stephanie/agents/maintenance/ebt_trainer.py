@@ -1,4 +1,4 @@
-# stephanie/agents/maintenance/document_ebt_trainer.py
+# stephanie/agents/maintenance/ebt_trainer.py
 import os
 import sys
 
@@ -16,7 +16,7 @@ from stephanie.utils.file_utils import save_json
 from stephanie.utils.model_utils import get_model_path, save_model_with_version
 
 
-class DocumentEBTDataset(Dataset):
+class EBTDataset(Dataset):
     def __init__(self, contrast_pairs, min_score=None, max_score=None):
         self.data = []
 
@@ -49,7 +49,7 @@ class DocumentEBTDataset(Dataset):
         return {"min": self.min_score, "max": self.max_score}
 
 
-class DocumentEBTTrainerAgent(BaseAgent):
+class EBTTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")
@@ -88,7 +88,7 @@ class DocumentEBTTrainerAgent(BaseAgent):
             )
 
             # Construct dataset and dataloader; normalize scores between 50–100
-            ds = DocumentEBTDataset(pairs, min_score=1, max_score=100)
+            ds = EBTDataset(pairs, min_score=1, max_score=100)
             dl = DataLoader(
                 ds,
                 batch_size=8,
