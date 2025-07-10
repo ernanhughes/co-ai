@@ -1,4 +1,4 @@
-# stephanie/agents/knowledge/document_reward_scorer.py
+# stephanie/agents/inference/document_llm_inference.py
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.models.evaluation import EvaluationORM

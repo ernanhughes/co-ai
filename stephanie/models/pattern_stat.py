@@ -1,3 +1,4 @@
+# stephanie/models/pattern_stat.py
 # models/pattern_stat.py
 from datetime import datetime, timezone
 

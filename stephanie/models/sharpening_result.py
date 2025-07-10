@@ -1,3 +1,4 @@
+# stephanie/models/sharpening_result.py
 from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Float, String, Text

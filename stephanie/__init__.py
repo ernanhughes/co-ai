@@ -1,3 +1,4 @@
+# stephanie/__init__.py
 """
 AI Co-Scientist Package
 

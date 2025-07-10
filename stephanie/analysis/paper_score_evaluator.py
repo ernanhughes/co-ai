@@ -1,4 +1,4 @@
-# stephanie/scoring/paper_score_evaluator.py
+# stephanie/analysis/paper_score_evaluator.py
 from textwrap import wrap
 
 from stephanie.scoring.scorable import Scorable

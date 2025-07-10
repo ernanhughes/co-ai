@@ -1,4 +1,4 @@
-# stephanie/agents/survey.py
+# stephanie/agents/knowledge/survey.py
 import re
 
 from stephanie.agents.base_agent import BaseAgent

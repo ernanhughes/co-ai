@@ -1,3 +1,4 @@
+# stephanie/models/hypothesis_document_section.py
 from sqlalchemy import Column, ForeignKey, Integer
 
 from stephanie.models.base import Base

@@ -1,3 +1,4 @@
+# stephanie/components/lats_component.py
 import math
 import random
 import uuid

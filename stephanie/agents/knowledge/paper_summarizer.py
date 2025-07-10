@@ -1,4 +1,4 @@
-# stephanie/agents/paper_summarizer.py
+# stephanie/agents/knowledge/paper_summarizer.py
 import re
 from typing import Any, Dict, Optional
 

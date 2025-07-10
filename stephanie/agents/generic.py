@@ -1,4 +1,4 @@
-# stephanie/agents/generic_agent.py
+# stephanie/agents/generic.py
 import re
 
 from stephanie.agents.base_agent import BaseAgent

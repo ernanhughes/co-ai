@@ -1,3 +1,4 @@
+# stephanie/memory/embedding_store.py
 import hashlib
 
 from stephanie.memory import BaseStore

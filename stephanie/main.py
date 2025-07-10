@@ -1,4 +1,4 @@
-# main.py
+# stephanie/main.py
 import asyncio
 import json
 import logging

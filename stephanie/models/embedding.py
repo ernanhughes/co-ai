@@ -1,3 +1,4 @@
+# stephanie/models/embedding.py
 # models/embedding.py
 
 from pgvector.sqlalchemy import Vector

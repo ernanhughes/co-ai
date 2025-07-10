@@ -1,4 +1,4 @@
-# stephanie/agents/debate.py
+# stephanie/agents/knowledge/debate.py
 from stephanie.agents.base_agent import BaseAgent
 
 

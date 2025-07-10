@@ -1,3 +1,4 @@
+# stephanie/agents/master_pupil/master.py
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.utils.timing import time_function
 

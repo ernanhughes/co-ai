@@ -1,4 +1,4 @@
-# stephanie/agents/document/document_loader.py
+# stephanie/agents/knowledge/document_loader.py
 """
 Document Loader Agent Module
 

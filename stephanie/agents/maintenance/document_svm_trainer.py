@@ -1,4 +1,4 @@
-# stephanie/agents/knowledge/document_svm_trainer.py
+# stephanie/agents/maintenance/document_svm_trainer.py
 import os
 import torch
 import numpy as np

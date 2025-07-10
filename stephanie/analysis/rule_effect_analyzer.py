@@ -1,3 +1,4 @@
+# stephanie/analysis/rule_effect_analyzer.py
 import json
 import math
 from collections import defaultdict

@@ -1,4 +1,4 @@
-# stephanie/memory/base_store.py
+# stephanie/memory/base.py
 from abc import ABC, abstractmethod
 
 

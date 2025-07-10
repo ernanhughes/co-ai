@@ -1,4 +1,4 @@
-# stephanie/agents/knowledge_loader.py
+# stephanie/agents/knowledge/knowledge_loader.py
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 

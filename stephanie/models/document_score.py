@@ -1,3 +1,4 @@
+# stephanie/models/document_score.py
 # models/document_score.py
 
 from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text

@@ -1,4 +1,4 @@
-# stephanie/db/orm/score_dimension.py
+# stephanie/models/score_dimension.py
 from sqlalchemy import JSON, Column, Float, Integer, String, Text
 
 from stephanie.models.base import Base

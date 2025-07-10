@@ -1,4 +1,4 @@
-# stephanie/training/document_mrq_trainer.py
+# stephanie/scoring/document_mrq_trainer.py
 
 from collections import defaultdict
 from typing import List

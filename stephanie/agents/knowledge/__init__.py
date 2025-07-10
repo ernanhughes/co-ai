@@ -1,3 +1,4 @@
+# stephanie/agents/knowledge/__init__.py
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL
 

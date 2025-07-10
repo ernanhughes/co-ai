@@ -1,3 +1,4 @@
+# stephanie/reports/report_generator.py
 class ReportGenerator:
     def generate(self, cartridge):
         """Generate comprehensive research report"""

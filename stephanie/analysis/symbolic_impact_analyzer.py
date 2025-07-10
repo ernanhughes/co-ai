@@ -1,3 +1,4 @@
+# stephanie/analysis/symbolic_impact_analyzer.py
 from stephanie.utils.graph_tools import compare_graphs
 
 

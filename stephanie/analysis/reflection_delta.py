@@ -1,4 +1,4 @@
-# stephanie/analyzer/reflection_delta.py
+# stephanie/analysis/reflection_delta.py
 from datetime import datetime, timezone
 from statistics import mean
 

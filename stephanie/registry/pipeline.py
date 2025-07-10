@@ -1,4 +1,4 @@
-# File: stephanie/pipeline/registry.py
+# stephanie/registry/pipeline.py
 
 import copy
 from pathlib import Path

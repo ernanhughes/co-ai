@@ -1,3 +1,4 @@
+# stephanie/components/coding_strategy.py
 # --- components/coding_strategy.py ---
 
 class SelfAdaptiveCoder:

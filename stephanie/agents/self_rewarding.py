@@ -1,4 +1,4 @@
-# File: stephanie/agents/self_rewarding_agent.py
+# stephanie/agents/self_rewarding.py
 
 from dataclasses import dataclass
 from typing import Dict, List, Optional

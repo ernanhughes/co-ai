@@ -1,3 +1,4 @@
+# stephanie/models/document_section.py
 # models/document_section.py
 
 from sqlalchemy import ARRAY, JSON, Column, ForeignKey, Integer, String, Text

@@ -1,3 +1,4 @@
+# stephanie/agents/symbolic_optimizer.py
 from collections import defaultdict
 
 from stephanie.agents import BaseAgent

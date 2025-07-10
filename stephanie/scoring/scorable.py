@@ -1,3 +1,4 @@
+# stephanie/scoring/scorable.py
 class Scorable:
     def __init__(self, text: str, id: str = "", target_type: str = "custom"):
         self._id = id

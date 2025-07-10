@@ -1,4 +1,4 @@
-# stephanie/mixins/paper_scoring_mixin.py
+# stephanie/agents/mixins/paper_scoring_mixin.py
 
 from stephanie.analysis.paper_score_evaluator import PaperScoreEvaluator
 

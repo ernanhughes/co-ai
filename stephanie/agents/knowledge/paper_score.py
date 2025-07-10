@@ -1,4 +1,4 @@
-# stephanie/agents/knowledge/paper_scoring_adapter.py
+# stephanie/agents/knowledge/paper_score.py
 
 from collections import defaultdict
 

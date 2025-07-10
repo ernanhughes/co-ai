@@ -1,3 +1,4 @@
+# stephanie/models/mrq_memory_entry.py
 # models/mrq_memory_entry.py
 from datetime import datetime, timezone
 

@@ -1,3 +1,4 @@
+# stephanie/tools/__init__.py
 """Tools for inspecting or visualizing pipeline outputs"""
 from .arxiv_tool import search_arxiv
 from .embedding_tool import get_embedding

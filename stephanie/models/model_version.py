@@ -1,3 +1,4 @@
+# stephanie/models/model_version.py
 from sqlalchemy import Column, Integer, String, Float, Boolean, Text, JSON, TIMESTAMP, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime

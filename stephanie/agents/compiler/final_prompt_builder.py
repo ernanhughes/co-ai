@@ -1,4 +1,4 @@
-# stephanie/compiler/final_prompt_builder.py
+# stephanie/agents/compiler/final_prompt_builder.py
 from stephanie.agents.compiler.reasoning_trace import ReasoningNode
 
 

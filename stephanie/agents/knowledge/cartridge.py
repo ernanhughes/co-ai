@@ -1,4 +1,4 @@
-# stephanie/agents/cartridge_agent.py
+# stephanie/agents/knowledge/cartridge.py
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin

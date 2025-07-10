@@ -1,3 +1,4 @@
+# stephanie/memory/idea_store.py
 # stores/idea_store.py
 from stephanie.memory import BaseStore
 from stephanie.models.idea import IdeaORM

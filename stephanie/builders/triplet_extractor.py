@@ -1,4 +1,4 @@
-# stephanie/agents/builders/triplet_extractor.py
+# stephanie/builders/triplet_extractor.py
 
 import re
 

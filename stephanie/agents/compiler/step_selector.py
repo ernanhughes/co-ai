@@ -1,4 +1,4 @@
-# stephanie/compiler/step_selector.py
+# stephanie/agents/compiler/step_selector.py
 from operator import attrgetter
 
 from stephanie.agents.compiler.reasoning_trace import (ReasoningNode,

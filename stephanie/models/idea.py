@@ -1,3 +1,4 @@
+# stephanie/models/idea.py
 # models/idea.py
 from datetime import datetime
 

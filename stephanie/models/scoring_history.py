@@ -1,3 +1,4 @@
+# stephanie/models/scoring_history.py
 from sqlalchemy import Column, Integer, String, Float, Boolean, Text, JSON, TIMESTAMP, ForeignKey
 from datetime import datetime
 

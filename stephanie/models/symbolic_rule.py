@@ -1,3 +1,4 @@
+# stephanie/models/symbolic_rule.py
 import hashlib
 import json
 from datetime import datetime

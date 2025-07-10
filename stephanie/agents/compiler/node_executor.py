@@ -1,3 +1,4 @@
+# stephanie/agents/compiler/node_executor.py
 from stephanie.agents.compiler.reasoning_trace import ReasoningNode
 from stephanie.agents.pipeline.pipeline_runner import PipelineRunnerAgent
 

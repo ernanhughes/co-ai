@@ -1,3 +1,4 @@
+# stephanie/agents/rule_generator.py
 import statistics
 from collections import defaultdict
 

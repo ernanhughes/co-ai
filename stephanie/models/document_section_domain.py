@@ -1,3 +1,4 @@
+# stephanie/models/document_section_domain.py
 from sqlalchemy import Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 

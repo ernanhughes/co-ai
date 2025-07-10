@@ -1,4 +1,4 @@
-# stephanie/agents/literature.py
+# stephanie/agents/knowledge/literature.py
 
 import re
 

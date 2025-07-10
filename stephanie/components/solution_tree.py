@@ -1,3 +1,4 @@
+# stephanie/components/solution_tree.py
 # --- components/solution_tree.py ---
 
 class SolutionNode:

@@ -1,3 +1,4 @@
+# stephanie/agents/world/worldview_generation.py
 class ToolPermissions:
     def __init__(self, enable_web=False, enable_arxiv=False, enable_huggingface=False):
         self.enable_web = enable_web
