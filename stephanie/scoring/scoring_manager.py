@@ -286,7 +286,7 @@ class ScoringManager:
 
     @staticmethod
     def save_score_to_memory(
-        bundle, scorable, context, cfg, memory, logger, source="ScoreEvaluator"
+        bundle, scorable, context, cfg, memory, logger, source="ScoreEvaluator", model_name=None
     ):
         goal = context.get("goal")
         pipeline_run_id = context.get("pipeline_run_id")
@@ -298,13 +298,16 @@ class ScoringManager:
             "final_score": round(weighted_score, 2),
         }
 
+        if not model_name:
+            model_name = cfg.get("model", {}).get("name", "UnknownModel")
+
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
             target_type=scorable.target_type,
             target_id=scorable.id,
             agent_name=cfg.get("name"),
-            model_name=cfg.get("model", {}).get("name"),
+            model_name=model_name,
             evaluator_name=cfg.get("evaluator", "ScoreEvaluator"),
             strategy=cfg.get("strategy"),
             reasoning_strategy=cfg.get("reasoning_strategy"),
@@ -320,6 +323,7 @@ class ScoringManager:
                 evaluation_id=eval_orm.id,
                 dimension=score_result.dimension,
                 score=score_result.score,
+                source=score_result.source,
                 weight=score_result.weight,
                 rationale=score_result.rationale,
                 prompt_hash=score_result.prompt_hash

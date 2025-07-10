@@ -82,7 +82,7 @@ pipeline:
      - name: knowledge_loader
        description: "Load knowledge from the scored papers into the system"
        cls: stephanie.agents.knowledge.knowledge_loader.KnowledgeLoaderAgent
-       enabled: true
+       enabled: false
        iterations: 1
 
      - name: document_embedding_backfill
@@ -100,25 +100,25 @@ pipeline:
      - name: document_llm_inference
        description: "Infer LLM scores for documents" 
        cls: stephanie.agents.inference.document_llm_inference.DocumentLLMInferenceAgent 
-       enabled: true
+       enabled: false
        iterations: 1
 
      - name: document_mrq_inference
        description: "Infer MRQ scores for documents" 
-       cls: stephanie.agents.knowledge.document_mrq_inference.DocumentMRQInferenceAgent 
-       enabled: false
+       cls: stephanie.agents.inference.document_mrq_inference.DocumentMRQInferenceAgent 
+       enabled: true
        iterations: 
        
      - name: document_svm_inference
        description: "Infer SVM scores for documents" 
-       cls: stephanie.agents.knowledge.document_svm_inference.DocumentSVMInferenceAgent
-       enabled: false
+       cls: stephanie.agents.inference.document_svm_inference.DocumentSVMInferenceAgent
+       enabled: true
        iterations: 
        
      - name: document_ebt_inference
        description: "Infer EBT scores for documents" 
-       cls: stephanie.agents.knowledge.document_ebt_inference.DocumentEBTInferenceAgent 
-       enabled: false
+       cls: stephanie.agents.inference.document_ebt_inference.DocumentEBTInferenceAgent 
+       enabled: true
        iterations: 
        
      - name: document_reward_scorer

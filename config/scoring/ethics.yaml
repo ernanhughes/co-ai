@@ -1,5 +1,6 @@
 scoring_profile: ethics
-So it's just another scar Switch on scorer: llm
+description: "Ethics scoring profile for evaluating documents based on ethical dimensions"
+scorer: llm
 dimensions:
   - name: harm_avoidance
     file: harm_avoidance

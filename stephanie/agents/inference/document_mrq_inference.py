@@ -10,13 +10,18 @@ from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
 from stephanie.utils.model_utils import get_model_path, discover_saved_dimensions
 from stephanie.utils.file_utils import load_json
+from stephanie.scoring.scoring_manager import ScoringManager
+from stephanie.scoring.score_result import ScoreResult
+from stephanie.scoring.score_bundle import ScoreBundle
+
 
 class DocumentMRQInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
-        self.model_type = "mrq"
-        self.target_type = "document"
-        self.version = cfg.get("version", "v1")
+        self.model_path = cfg.get("model_path", "models")
+        self.model_type = cfg.get("model_type", "mrq")
+        self.target_type = cfg.get("target_type", "document")
+        self.model_version = cfg.get("model_version", "v1")
         self.dimensions = cfg.get("dimensions", [])
         self.models = {}
         self.model_meta = {}
@@ -39,18 +44,26 @@ class DocumentMRQInferenceAgent(BaseAgent):
         )
 
         for dim in self.dimensions:
-            model_path = get_model_path(self.model_type, self.target_type, dim, version=self.version)
+            model_path = get_model_path(
+                self.model_path,
+                self.model_type,
+                self.target_type,
+                dim,
+                version=self.model_version,
+            )
             encoder_path = f"{model_path}/{dim}_encoder.pt"
             predictor_path = f"{model_path}/{dim}.pt"
             meta_path = f"{model_path}/{dim}.meta.json"
-            tuner_path = f"{model_path}/{dim}.tuner.json"
+            tuner_path = f"{model_path}/{dim}_model.tuner.json"
 
-
-            self.logger.log("LoadingModelPaths", {
-                "dimension": dim,
-                "encoder_path": encoder_path,
-                "predictor_path": predictor_path
-            })
+            self.logger.log(
+                "LoadingModelPaths",
+                {
+                    "dimension": dim,
+                    "encoder_path": encoder_path,
+                    "predictor_path": predictor_path,
+                },
+            )
             encoder = TextEncoder()
             predictor = HypothesisValuePredictor(512, 1024)
             model = MRQModel(encoder, predictor, device=self.device)
@@ -73,10 +86,9 @@ class DocumentMRQInferenceAgent(BaseAgent):
         goal_text = context.get("goal", {}).get("goal_text")
         results = []
 
-        all_docs = context.get(self.input_key, [])
-        train_docs, val_docs = train_test_split(all_docs, test_size=0.2, random_state=42)
+        docs = context.get(self.input_key, [])
 
-        for doc in val_docs:
+        for doc in docs:
             doc_id = doc.get("id")
             self.logger.log("MRQScoringStarted", {"document_id": doc_id})
 
@@ -85,35 +97,81 @@ class DocumentMRQInferenceAgent(BaseAgent):
             )
 
             dimension_scores = {}
+            score_results = []  # For storing ScoreResult objects per dimension
+
             for dim, model in self.models.items():
                 q_value = model.predict(goal_text, scorable.text, self.memory.embedding)
-                
+
                 if dim in self.tuners:
                     scaled_score = self.tuners[dim].transform(q_value)
                 else:
                     meta = self.model_meta.get(dim, {"min": 0, "max": 100})
                     normalized = torch.sigmoid(torch.tensor(q_value)).item()
-                    scaled_score = normalized * (meta["max"] - meta["min"]) + meta["min"]
+                    scaled_score = (
+                        normalized * (meta["max"] - meta["min"]) + meta["min"]
+                    )
 
-                dimension_scores[dim] = round(scaled_score, 4)
+                final_score = round(scaled_score, 4)
+                dimension_scores[dim] = final_score
 
-                self.logger.log("MRQScoreComputed", {
+                # Create ScoreResult
+                score_results.append(
+                    ScoreResult(
+                        dimension=dim,
+                        score=final_score,
+                        rationale=f"Q={round(q_value, 4)}",  # Optional
+                        weight=1.0,
+                        source="mrq",
+                        target_type=scorable.target_type,
+                    )
+                )
+
+                self.logger.log(
+                    "MRQScoreComputed",
+                    {
+                        "document_id": doc_id,
+                        "dimension": dim,
+                        "q_value": round(q_value, 4),
+                        "final_score": final_score,
+                    },
+                )
+
+            # Create ScoreBundle
+            score_bundle = ScoreBundle(results={r.dimension: r for r in score_results})
+
+            model_name =  f"{self.target_type}_{self.model_type}_{self.model_version}"
+            # Save score bundle to memory via ScoringManager
+            ScoringManager.save_score_to_memory(
+                score_bundle,
+                scorable,
+                context,
+                self.cfg,
+                self.memory,
+                self.logger,
+                source="mrq",
+                model_name=model_name,
+            )
+
+            # Store results for this document in output
+            results.append(
+                {
+                    "scorable": scorable.to_dict(),
+                    "scores": dimension_scores,
+                    "score_bundle": score_bundle.to_dict(),
+                }
+            )
+
+            self.logger.log(
+                "MRQScoringFinished",
+                {
                     "document_id": doc_id,
-                    "dimension": dim,
-                    "q_value": round(q_value, 4),
-                    "final_score": scaled_score,
-                })
-
-            results.append({"scorable": scorable.to_dict(), "scores": dimension_scores})
-
-            self.logger.log("MRQScoringFinished", {
-                "document_id": doc_id,
-                "scores": dimension_scores,
-                "dimensions_scored": list(dimension_scores.keys()),
-            })
+                    "scores": dimension_scores,
+                    "dimensions_scored": list(dimension_scores.keys()),
+                },
+            )
 
         context[self.output_key] = results
-        self.logger.log("MRQInferenceCompleted", {"total_documents_scored": len(results)})
+        self.logger.log(
+            "MRQInferenceCompleted", {"total_documents_scored": len(results)}
+        )
         return context
-
-

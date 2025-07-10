@@ -2,6 +2,7 @@ document_svm_inference:
   name: document_svm_inference
   model_path: "${hydra:runtime.cwd}/models"
   model_type: "svm"
+  evaluator: "svm"
   target_type: "document"
   dimensions: 
     - "alignment"
@@ -9,3 +10,5 @@ document_svm_inference:
     - "implementability"
     - "novelty"
     - "relevance"
+  input_key: "documents"
+  output_key: "document_svm_inference"

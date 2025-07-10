@@ -2,6 +2,7 @@ document_mrq_inference:
   name: document_mrq_inference
   model_path: "${hydra:runtime.cwd}/models"
   model_type: "mrq"
+  evaluator: "mrq"
   target_type: "document"
   dimensions: 
     - "alignment"
@@ -9,3 +10,5 @@ document_mrq_inference:
     - "implementability"
     - "novelty"
     - "relevance"
+  input_key: "documents"
+  output_key: "document_mrq_inference"

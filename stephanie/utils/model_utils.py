@@ -36,13 +36,13 @@ def discover_saved_dimensions(model_type: str, target_type: str, model_dir: str 
 
     return sorted(dimension_names)
 
-def get_svm_file_paths(model_type, target_type, dim):
-    base = get_model_path(model_type, target_type, dim)
+def get_svm_file_paths(model_path, model_type, target_type, dim, model_version="v1"):
+    base = get_model_path(model_path, model_type, target_type, dim, model_version)
     return {
-        "model": base + ".joblib",
-        "scaler": base + "_scaler.joblib",
-        "tuner": base + ".tuner.json",
-        "meta": base + ".meta.json"
+        "model": base + f"{dim}.joblib",
+        "scaler": base + f"{dim}_scaler.joblib",
+        "tuner": base + f"{dim}.tuner.json",
+        "meta": base + f"{dim}.meta.json"
     }
 
 def save_model_with_version(

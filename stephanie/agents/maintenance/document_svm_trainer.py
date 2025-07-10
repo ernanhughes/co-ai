@@ -103,7 +103,7 @@ class DocumentSVMTrainerAgent(BaseAgent):
 
             # Since we're using scikit-learn, we'll use joblib or custom serialization
             from joblib import dump
-            scaler_path = f"{model_path}/{dim}._scaler.joblib"
+            scaler_path = f"{model_path}/{dim}_scaler.joblib"
             model_path_joblib = f"{model_path}/{dim}.joblib"
             dump(scaler, scaler_path)
             dump(model, model_path_joblib)
