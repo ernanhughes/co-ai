@@ -31,16 +31,13 @@ class DocumentSVMTrainerAgent(BaseAgent):
 
     def _initialize_dimension(self, dim):
         """Initialize SVM model, scaler, and tuner for each dimension"""
-        self.models[dim] = (StandardScaler(), SVR(kernel='linear'))
+        self.models[dim] = (StandardScaler(), SVR(kernel="linear"))
         self.regression_tuners[dim] = RegressionTuner(dimension=dim, logger=self.logger)
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
-        builder = PreferencePairBuilder(
-            db=self.memory.session,
-            logger=self.logger
-        )
+        builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
         training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -50,7 +47,9 @@ class DocumentSVMTrainerAgent(BaseAgent):
             if not pairs:
                 continue
 
-            self.logger.log("SVMTrainingStart", {"dimension": dim, "num_pairs": len(pairs)})
+            self.logger.log(
+                "SVMTrainingStart", {"dimension": dim, "num_pairs": len(pairs)}
+            )
 
             X, y = [], []
 
@@ -104,16 +103,14 @@ class DocumentSVMTrainerAgent(BaseAgent):
 
             # Since we're using scikit-learn, we'll use joblib or custom serialization
             from joblib import dump
+
             scaler_path = f"{model_path}/{dim}_scaler.joblib"
             model_path_joblib = f"{model_path}/{dim}.joblib"
             dump(scaler, scaler_path)
             dump(model, model_path_joblib)
 
             # Save normalization meta
-            meta = {
-                "min_score": float(np.min(y)),
-                "max_score": float(np.max(y))
-            }
+            meta = {"min_score": float(np.min(y)), "max_score": float(np.max(y))}
             save_json(meta, meta_path)
 
             # Train regression tuner using same data

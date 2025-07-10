@@ -14,7 +14,6 @@ class EmbeddingStore(BaseStore):
         self.name = "embedding"
         self._cache = SimpleLRUCache(max_size=cache_size)
 
-
     def __repr__(self):
         return f"<{self.name} connected={self.db is not None} cfg={self.cfg}>"
 
@@ -30,7 +29,10 @@ class EmbeddingStore(BaseStore):
 
         try:
             with self.conn.cursor() as cur:
-                cur.execute("SELECT embedding FROM embeddings WHERE text_hash  = %s", (text_hash,))
+                cur.execute(
+                    "SELECT embedding FROM embeddings WHERE text_hash  = %s",
+                    (text_hash,),
+                )
                 row = cur.fetchone()
                 if row:
                     return row[0]  # Force conversion to list of floats
@@ -58,7 +60,6 @@ class EmbeddingStore(BaseStore):
         self._cache.set(text_hash, embedding)
         return embedding
 
-
     def search_related(self, query: str, top_k: int = 5):
         try:
             embedding = get_embedding(query, self.cfg)
@@ -75,16 +76,15 @@ class EmbeddingStore(BaseStore):
                         ORDER BY h.embedding <-> %s
                         LIMIT %s;
                     """,
-                    (embedding, top_k)
+                    (embedding, top_k),
                 )
                 results = cur.fetchall()
 
             if self.logger:
-                self.logger.log("HypothesesSearched", {
-                    "query": query,
-                    "top_k": top_k,
-                    "result_count": len(results)
-                })
+                self.logger.log(
+                    "HypothesesSearched",
+                    {"query": query, "top_k": top_k, "result_count": len(results)},
+                )
 
             return results
         except Exception as e:
@@ -137,7 +137,7 @@ class EmbeddingStore(BaseStore):
                         "pipeline_run_id": row[1],
                         "score": float(row[2]) if row[2] is not None else 0.0,
                         "dimension": row[3],
-                        "source": row[4]
+                        "source": row[4],
                     }
                 )
 
@@ -186,8 +186,9 @@ class EmbeddingStore(BaseStore):
                             (embedding_id, prompt_id),
                         )
 
-
-    def search_similar_documents_with_scores(self, document: str, top_k: int = 5) -> list:
+    def search_similar_documents_with_scores(
+        self, document: str, top_k: int = 5
+    ) -> list:
         """
         Embedding-based search for similar prompts and their scores.
         Returns:
@@ -228,7 +229,7 @@ class EmbeddingStore(BaseStore):
                         "pipeline_run_id": row[1],
                         "score": float(row[2]) if row[2] is not None else 0.0,
                         "dimension": row[3],
-                        "source": row[4]
+                        "source": row[4],
                     }
                 )
 
@@ -246,7 +247,9 @@ class EmbeddingStore(BaseStore):
 
         except Exception as e:
             if self.logger:
-                self.logger.log("PromptSearchFailed", {"query": document, "error": str(e)})
+                self.logger.log(
+                    "PromptSearchFailed", {"query": document, "error": str(e)}
+                )
             else:
                 print(f"[PromptSearchFailed] {e}")
             return []
@@ -264,7 +267,9 @@ class EmbeddingStore(BaseStore):
         if cached:
             try:
                 with self.conn.cursor() as cur:
-                    cur.execute("SELECT id FROM embeddings WHERE text_hash = %s", (text_hash,))
+                    cur.execute(
+                        "SELECT id FROM embeddings WHERE text_hash = %s", (text_hash,)
+                    )
                     row = cur.fetchone()
                     return row[0] if row else None
             except Exception as e:
@@ -275,7 +280,9 @@ class EmbeddingStore(BaseStore):
             # No cache, still check DB
             try:
                 with self.conn.cursor() as cur:
-                    cur.execute("SELECT id FROM embeddings WHERE text_hash = %s", (text_hash,))
+                    cur.execute(
+                        "SELECT id FROM embeddings WHERE text_hash = %s", (text_hash,)
+                    )
                     row = cur.fetchone()
                     return row[0] if row else None
             except Exception as e:
@@ -302,7 +309,7 @@ class EmbeddingStore(BaseStore):
                     ORDER BY e.embedding <-> %s::vector
                     LIMIT %s;
                     """,
-                    (embedding, embedding, top_k)
+                    (embedding, embedding, top_k),
                 )
                 results = cur.fetchall()
 
@@ -322,7 +329,9 @@ class EmbeddingStore(BaseStore):
 
         except Exception as e:
             if self.logger:
-                self.logger.log("DocumentSearchFailed", {"error": str(e), "query": query})
+                self.logger.log(
+                    "DocumentSearchFailed", {"error": str(e), "query": query}
+                )
             else:
                 print(f"[VectorMemory] Document search failed: {e}")
             return []

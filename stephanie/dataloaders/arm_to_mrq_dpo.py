@@ -10,14 +10,14 @@ REASONING_FORMATS = {
     "direct": "<Direct>",
     "short_cot": "<Short_CoT>",
     "code": "<Code>",
-    "long_cot": "<Long_CoT>"
+    "long_cot": "<Long_CoT>",
 }
 
 FORMAT_END_TAGS = {
     "direct": "</Direct>",
     "short_cot": "</Short_CoT>",
     "code": "</Code>",
-    "long_cot": "</Long_CoT>"
+    "long_cot": "</Long_CoT>",
 }
 
 
@@ -311,7 +311,7 @@ class ARMDataLoader:
             return "code"
         elif "<long_cot>" in text:
             return "long_cot"
-        
+
         # Direct Answer
         if text.startswith("the answer is") or text.startswith("answer:"):
             return "direct"
@@ -325,7 +325,9 @@ class ARMDataLoader:
             return "long_cot"
 
         # Code
-        elif any(kw in text for kw in ["def", "return", "solve()", "print(", "for ", "if "]):
+        elif any(
+            kw in text for kw in ["def", "return", "solve()", "print(", "for ", "if "]
+        ):
             return "code"
 
         else:

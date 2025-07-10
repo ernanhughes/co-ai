@@ -24,10 +24,14 @@ class LLMCompiler:
             return rendered
         except Exception as e:
             if self.logger:
-                self.logger.log("PromptRenderError", {"error": str(e), "template": program.template})
+                self.logger.log(
+                    "PromptRenderError", {"error": str(e), "template": program.template}
+                )
             raise
 
-    def execute(self, program: PromptProgramORM, context: dict = {}) -> PromptProgramORM:
+    def execute(
+        self, program: PromptProgramORM, context: dict = {}
+    ) -> PromptProgramORM:
         try:
             # Step 1: Render prompt
             prompt = self.render_prompt(program)
@@ -44,11 +48,16 @@ class LLMCompiler:
                 program.rationale = score_result.reason
 
             if self.logger:
-                self.logger.log("PromptProgramExecuted", {
-                    "program_id": program.id,
-                    "score": program.score,
-                    "rationale_snippet": program.rationale[:100] if program.rationale else None,
-                })
+                self.logger.log(
+                    "PromptProgramExecuted",
+                    {
+                        "program_id": program.id,
+                        "score": program.score,
+                        "rationale_snippet": program.rationale[:100]
+                        if program.rationale
+                        else None,
+                    },
+                )
 
             return program
 

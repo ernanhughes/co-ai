@@ -31,9 +31,7 @@ def recommend_similar_papers(
     try:
         client = Client("librarian-bots/recommend_similar_papers")
         result = client.predict(paper_url, None, False, api_name="/predict")
-        paper_ids = re.findall(
-            r"https://huggingface\.co/papers/(\d+\.\d+)", result
-        )
+        paper_ids = re.findall(r"https://huggingface\.co/papers/(\d+\.\d+)", result)
 
         hits = [
             {
@@ -58,9 +56,7 @@ def recommend_similar_papers(
         return []
 
 
-def search_huggingface_datasets(
-    queries: list[str], max_results: int = 5
-) -> list[dict]:
+def search_huggingface_datasets(queries: list[str], max_results: int = 5) -> list[dict]:
     api = HfApi()
     results = []
 
@@ -79,8 +75,6 @@ def search_huggingface_datasets(
                     }
                 )
         except Exception as e:
-            results.append(
-                {"name": query, "description": f"Error searching: {str(e)}"}
-            )
+            results.append({"name": query, "description": f"Error searching: {str(e)}"})
 
     return results

@@ -52,12 +52,18 @@ class MRQModelIO:
             try:
                 encoder_path = os.path.join(dim_dir, "encoder.pt")
                 predictor_path = os.path.join(dim_dir, "predictor.pt")
-                if not os.path.exists(encoder_path) or not os.path.exists(predictor_path):
+                if not os.path.exists(encoder_path) or not os.path.exists(
+                    predictor_path
+                ):
                     self.logger.log("MRQModelFilesMissing", {"dimension": dim})
                     continue
 
-                encoder.load_state_dict(torch.load(encoder_path, map_location=self.device))
-                predictor.load_state_dict(torch.load(predictor_path, map_location=self.device))
+                encoder.load_state_dict(
+                    torch.load(encoder_path, map_location=self.device)
+                )
+                predictor.load_state_dict(
+                    torch.load(predictor_path, map_location=self.device)
+                )
 
                 tuner_path = os.path.join(dim_dir, "tuner.json")
                 if os.path.exists(tuner_path):
@@ -73,10 +79,9 @@ class MRQModelIO:
                 self.logger.log("MRQModelLoaded", {"dimension": dim})
 
             except Exception as e:
-                self.logger.log("MRQModelLoadError", {
-                    "dimension": dim,
-                    "error": str(e)
-                })
+                self.logger.log(
+                    "MRQModelLoadError", {"dimension": dim, "error": str(e)}
+                )
 
     def load_models_with_path(self):
         base_dir = self.cfg.get("scoring", {}).get("model_dir", "models/mrq/")
@@ -109,7 +114,10 @@ class MRQModelIO:
             os.makedirs(dim_dir, exist_ok=True)
             meta_path = os.path.join(dim_dir, "meta.json")
             with open(meta_path, "w") as f:
-                json.dump({
-                    "min_score": self.min_score_by_dim.get(dim, 0.0),
-                    "max_score": self.max_score_by_dim.get(dim, 1.0),
-                }, f)
+                json.dump(
+                    {
+                        "min_score": self.min_score_by_dim.get(dim, 0.0),
+                        "max_score": self.max_score_by_dim.get(dim, 1.0),
+                    },
+                    f,
+                )

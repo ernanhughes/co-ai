@@ -32,29 +32,27 @@ class MRQTrainerAgent(BaseAgent):
                 "output_b": item["output_b"],
                 "value_a": item["value_a"],
                 "value_b": item["value_b"],
-                "dimension": dim
+                "dimension": dim,
             }
             for dim, pairs in training_pairs_by_dim.items()
             for item in pairs
         ]
 
-        self.logger.log("DocumentPairBuilderComplete", {
-            "dimensions": list(training_pairs_by_dim.keys()),
-            "total_pairs": len(contrast_pairs)
-        })
+        self.logger.log(
+            "DocumentPairBuilderComplete",
+            {
+                "dimensions": list(training_pairs_by_dim.keys()),
+                "total_pairs": len(contrast_pairs),
+            },
+        )
 
         trainer = MRQTrainerEngine(
             memory=self.memory,
             logger=self.logger,
-            device="cuda" if torch.cuda.is_available() else "cpu"
+            device="cuda" if torch.cuda.is_available() else "cpu",
         )
 
-        config = {
-            "epochs": 10,
-            "lr": 1e-4,
-            "patience": 2,
-            "min_delta": 0.001
-        }
+        config = {"epochs": 10, "lr": 1e-4, "patience": 2, "min_delta": 0.001}
 
         assert contrast_pairs, "No contrast pairs found"
 
@@ -85,7 +83,9 @@ class MRQTrainerAgent(BaseAgent):
             encoder_state = trained_encoders.get(dim)
             if encoder_state:
                 torch.save(encoder_state, encoder_path)
-                self.logger.log("EncoderSaved", {"dimension": dim, "path": encoder_path})
+                self.logger.log(
+                    "EncoderSaved", {"dimension": dim, "path": encoder_path}
+                )
             else:
                 self.logger.log("EncoderMissing", {"dimension": dim})
 
@@ -97,21 +97,28 @@ class MRQTrainerAgent(BaseAgent):
             # Save normalization metadata
             values = [
                 (p["value_a"], p["value_b"])
-                for p in contrast_pairs if p["dimension"] == dim
+                for p in contrast_pairs
+                if p["dimension"] == dim
             ]
             flat_values = [v for pair in values for v in pair]
-            save_json({
-                "min_score": float(min(flat_values)),
-                "max_score": float(max(flat_values))
-            }, meta_path)
+            save_json(
+                {
+                    "min_score": float(min(flat_values)),
+                    "max_score": float(max(flat_values)),
+                },
+                meta_path,
+            )
 
-            self.logger.log("DocumentModelSaved", {
-                "dimension": dim,
-                "model": predictor_path,
-                "encoder": encoder_path,
-                "tuner": tuner_path,
-                "meta": meta_path
-            })
+            self.logger.log(
+                "DocumentModelSaved",
+                {
+                    "dimension": dim,
+                    "model": predictor_path,
+                    "encoder": encoder_path,
+                    "tuner": tuner_path,
+                    "meta": meta_path,
+                },
+            )
 
         context[self.output_key] = training_pairs_by_dim
         return context

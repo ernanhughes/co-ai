@@ -4,10 +4,8 @@ import itertools
 import numpy as np
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.agents.mixins.scoring_mixin import \
-    ScoringMixin  # Adjust path if needed
-from stephanie.constants import (DATABASE_MATCHES, GOAL, GOAL_TEXT,
-                                 PIPELINE_RUN_ID, TEXT)
+from stephanie.agents.mixins.scoring_mixin import ScoringMixin  # Adjust path if needed
+from stephanie.constants import DATABASE_MATCHES, GOAL, GOAL_TEXT, PIPELINE_RUN_ID, TEXT
 from stephanie.models import EvaluationORM
 from stephanie.scoring.proximity_scorer import ProximityScorer
 from stephanie.scoring.scorable import Scorable
@@ -49,7 +47,9 @@ class ProximityAgent(ScoringMixin, BaseAgent):
             self.logger.log("NoHypothesesForProximity", {"reason": "empty_input"})
             return context
 
-        similarities = compute_similarity_matrix(all_hypotheses, self.memory, self.logger)
+        similarities = compute_similarity_matrix(
+            all_hypotheses, self.memory, self.logger
+        )
         self.logger.log(
             "ProximityGraphComputed",
             {
@@ -163,7 +163,7 @@ class ProximityAgent(ScoringMixin, BaseAgent):
                 model_name=self.model_name,
                 evaluator_name=self.name,
                 extra_data={"summary": summary_output},
-                scores=structured_scores, 
+                scores=structured_scores,
                 pipeline_run_id=context.get(PIPELINE_RUN_ID),
             )
             self.memory.evaluations.insert(score_obj)

@@ -39,7 +39,9 @@ class MRQTrainerEngine:
                 zsa_a = encoder(context_tensor, a_tensor)
                 zsa_b = encoder(context_tensor, b_tensor)
 
-            diff = zsa_a - zsa_b if item["value_a"] >= item["value_b"] else zsa_b - zsa_a
+            diff = (
+                zsa_a - zsa_b if item["value_a"] >= item["value_b"] else zsa_b - zsa_a
+            )
             inputs.append(diff.squeeze(0).detach())
             labels.append(torch.tensor([1.0], device=self.device))
 
@@ -69,7 +71,9 @@ class MRQTrainerEngine:
                 total_loss += loss.item()
 
             avg_loss = total_loss / len(dataloader)
-            self.logger.log("MRQTrainerEpoch", {"epoch": epoch+1, "avg_loss": avg_loss})
+            self.logger.log(
+                "MRQTrainerEpoch", {"epoch": epoch + 1, "avg_loss": avg_loss}
+            )
 
             if best_loss - avg_loss > min_delta:
                 best_loss = avg_loss
@@ -101,8 +105,16 @@ class MRQTrainerEngine:
                     doc_text = s[f"output_{side}"]
                     context_text = s.get("title", "")
 
-                    context_emb = torch.tensor(self.memory.embedding.get_or_create(context_text)).unsqueeze(0).to(self.device)
-                    doc_emb = torch.tensor(self.memory.embedding.get_or_create(doc_text)).unsqueeze(0).to(self.device)
+                    context_emb = (
+                        torch.tensor(self.memory.embedding.get_or_create(context_text))
+                        .unsqueeze(0)
+                        .to(self.device)
+                    )
+                    doc_emb = (
+                        torch.tensor(self.memory.embedding.get_or_create(doc_text))
+                        .unsqueeze(0)
+                        .to(self.device)
+                    )
 
                     with torch.no_grad():
                         zsa = encoder(context_emb, doc_emb)
@@ -116,9 +128,13 @@ class MRQTrainerEngine:
 
         return encoders, predictors, tuners
 
-    def get_closest_llm_scores(self, hypothesis_text: str, dimension: str, top_k: int = 5) -> list[float]:
+    def get_closest_llm_scores(
+        self, hypothesis_text: str, dimension: str, top_k: int = 5
+    ) -> list[float]:
         query_emb = self.memory.embedding.get_or_create(hypothesis_text)
-        similar_items = self.memory.embedding.search_similar_prompts_with_scores(query_emb, top_k)
+        similar_items = self.memory.embedding.search_similar_prompts_with_scores(
+            query_emb, top_k
+        )
 
         scores = []
         for item in similar_items:

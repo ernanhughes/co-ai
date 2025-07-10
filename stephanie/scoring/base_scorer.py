@@ -22,10 +22,10 @@ class BaseScorer(ABC):
             - rationale (str)
             - weight (float, optional)
     """
+
     @abstractmethod
     def score(self, goal: dict, scorable: Scorable, dimensions: list[str]) -> dict:
         raise NotImplementedError("Subclasses must implement the score method.")
-    
 
     def _build_feature_vector(self, goal: dict, scorable: Scorable):
         emb_goal = self.memory.embedding.get_or_create(goal["goal_text"])
@@ -38,4 +38,3 @@ class BaseScorer(ABC):
         vec = np.concatenate([emb_goal, emb_hyp])
 
         return vec
-

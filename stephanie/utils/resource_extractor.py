@@ -34,9 +34,7 @@ def extract_resources(target_dir: str = None):
         dest.mkdir(exist_ok=True)
 
         # Walk through resource tree
-        for root, _, files in os.walk(
-            pkg_resources.resource_filename(__name__, src)
-        ):
+        for root, _, files in os.walk(pkg_resources.resource_filename(__name__, src)):
             rel_root = Path(root).relative_to(
                 pkg_resources.resource_filename(__name__, "")
             )

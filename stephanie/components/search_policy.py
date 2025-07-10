@@ -28,7 +28,9 @@ class TreeSearchPolicy:
 
         if self.use_prediction and predictor:
             # Rank by predicted future value
-            ranked = sorted(valid, key=lambda n: predictor.predict(tree.goal, n.plan), reverse=True)
+            ranked = sorted(
+                valid, key=lambda n: predictor.predict(tree.goal, n.plan), reverse=True
+            )
             return ranked[0], "improve"
 
         if random.random() < self.p_greedy:

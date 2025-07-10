@@ -31,7 +31,7 @@ class SharpeningPredictionORM(Base):
     value_b = Column(Float, nullable=False)
 
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    
+
     # Relationships
     goal = relationship("GoalORM", back_populates="sharpening_predictions")
 
@@ -55,7 +55,7 @@ class SharpeningPredictionORM(Base):
             "predicted": self.predicted,
             "value_a": self.value_a,
             "value_b": self.value_b,
-            "created_at": self.created_at.isoformat() if self.created_at else None
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
         if include_relationships:

@@ -6,13 +6,15 @@ from stephanie.scoring.score_result import ScoreResult
 
 class ScoreBundle:
     def __init__(self, results: dict[str, ScoreResult]):
-        from stephanie.scoring.calculations.weighted_average import \
-            WeightedAverageCalculator
+        from stephanie.scoring.calculations.weighted_average import (
+            WeightedAverageCalculator,
+        )
+
         self.results = results
         self.calculator = WeightedAverageCalculator()
 
     def aggregate(self):
-        result = self.calculator.calculate(self) 
+        result = self.calculator.calculate(self)
         print(f"ScoreBundle: Aggregated score: {result}")
         return result
 
@@ -29,6 +31,7 @@ class ScoreBundle:
 
     def to_orm(self, evaluation_id: int):
         from stephanie.models.score import ScoreORM
+
         return [
             ScoreORM(
                 evaluation_id=evaluation_id,
@@ -39,12 +42,10 @@ class ScoreBundle:
                 source=r.source,
             )
             for r in self.results.values()
-        ] 
+        ]
 
     def __repr__(self):
-        summary = ", ".join(
-            f"{dim}: {res.score}" for dim, res in self.results.items()
-        )
+        summary = ", ".join(f"{dim}: {res.score}" for dim, res in self.results.items())
         return f"<ScoreBundle({summary})>"
 
     def __str__(self):

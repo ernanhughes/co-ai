@@ -1,5 +1,6 @@
 # stephanie/scoring/mrq/training.py
 
+
 class MRQTraining:
     def train_from_database(self, cfg):
         all_samples = self.memory.mrq.get_training_pairs_by_dimension()
@@ -41,7 +42,9 @@ class MRQTraining:
 
             self.logger.log("MRQContextTrainingComplete", {"dimension": dim})
 
-    def align_mrq_with_llm_scores_from_pairs(self, pair_samples, dimension, log_prefix="MRQAlignment"):
+    def align_mrq_with_llm_scores_from_pairs(
+        self, pair_samples, dimension, log_prefix="MRQAlignment"
+    ):
         for pair in pair_samples:
             prompt = pair["prompt"]
             for side in ["a", "b"]:

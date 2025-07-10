@@ -15,7 +15,7 @@ class CartridgeScorer:
         document = {
             "id": hash(cartridge.signature),
             "title": f"Cartridge: {cartridge.goal}",
-            "text": cartridge.to_markdown()
+            "text": cartridge.to_markdown(),
         }
 
         result = self.scorer.score_paper(document)
@@ -29,14 +29,11 @@ class CartridgeScorer:
             "novelty": 0.3,
             "actionability": 0.25,
             "coherence": 0.15,
-            "confidence": 0.1
+            "confidence": 0.1,
         }
 
         overall = sum(scores.get(k, 0.0) * weights.get(k, 0.0) for k in weights)
 
-        cartridge.quality_metrics = {
-            "overall_score": overall,
-            **scores
-        }
+        cartridge.quality_metrics = {"overall_score": overall, **scores}
 
         return cartridge

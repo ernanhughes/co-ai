@@ -19,5 +19,7 @@ class PaperScoringMixin:
             memory=self.memory,
         )
 
-        scores = evaluator.evaluate(document=paper_doc, context=context, llm_fn=self.call_llm)
+        scores = evaluator.evaluate(
+            document=paper_doc, context=context, llm_fn=self.call_llm
+        )
         return scores

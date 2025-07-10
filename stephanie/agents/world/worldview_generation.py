@@ -5,6 +5,7 @@ class ToolPermissions:
         self.enable_arxiv = enable_arxiv
         self.enable_huggingface = enable_huggingface
 
+
 class WorldviewContext:
     def __init__(self, worldview_id, tools: ToolPermissions, embeddings):
         self.id = worldview_id

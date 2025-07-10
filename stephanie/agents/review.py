@@ -15,7 +15,11 @@ class ReviewAgent(ScoringMixin, BaseAgent):
 
         for hyp in hypotheses:
             # Score and update review
-            scorable = Scorable(id=hyp.get("id", ""), text=hyp.get("text", ""), target_type=TargetType.HYPOTHESIS)
+            scorable = Scorable(
+                id=hyp.get("id", ""),
+                text=hyp.get("text", ""),
+                target_type=TargetType.HYPOTHESIS,
+            )
             score = self.score_item(scorable, context, metrics="review")
             self.logger.log(
                 "ReviewScoreComputed",

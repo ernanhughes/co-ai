@@ -15,9 +15,7 @@ def time_function(logger=None):
                 result = await func(*args, **kwargs)
                 duration = time.perf_counter() - start
 
-                obj = (
-                    args[0] if args and hasattr(args[0], "__class__") else None
-                )
+                obj = args[0] if args and hasattr(args[0], "__class__") else None
                 class_name = obj.__class__.__name__ if obj else "Function"
 
                 log_data = {
@@ -50,9 +48,7 @@ def time_function(logger=None):
                 result = func(*args, **kwargs)
                 duration = time.perf_counter() - start
 
-                obj = (
-                    args[0] if args and hasattr(args[0], "__class__") else None
-                )
+                obj = args[0] if args and hasattr(args[0], "__class__") else None
                 class_name = obj.__class__.__name__ if obj else "Function"
 
                 log_data = {
@@ -96,9 +92,7 @@ class TimingAnalyzer:
             function_times[key].append(data["duration_ms"])
 
         return {
-            "avg_times": {
-                k: sum(v) / len(v) for k, v in function_times.items()
-            },
+            "avg_times": {k: sum(v) / len(v) for k, v in function_times.items()},
             "total_calls": {k: len(v) for k, v in function_times.items()},
             "max_times": {k: max(v) for k, v in function_times.items()},
         }

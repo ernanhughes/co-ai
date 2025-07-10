@@ -50,7 +50,9 @@ class CartridgeDomainStore:
         )
 
     def delete_domains(self, cartridge_id: int):
-        self.session.query(CartridgeDomainORM).filter_by(cartridge_id=cartridge_id).delete()
+        self.session.query(CartridgeDomainORM).filter_by(
+            cartridge_id=cartridge_id
+        ).delete()
         self.session.commit()
         if self.logger:
             self.logger.log("CartridgeDomainsDeleted", {"cartridge_id": cartridge_id})
@@ -62,8 +64,10 @@ class CartridgeDomainStore:
         """
         self.delete_domains(cartridge_id)
         for domain, score in domains:
-            self.insert({
-                "cartridge_id": cartridge_id,
-                "domain": domain,
-                "score": float(score),
-            })
+            self.insert(
+                {
+                    "cartridge_id": cartridge_id,
+                    "domain": domain,
+                    "score": float(score),
+                }
+            )

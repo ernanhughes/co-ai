@@ -15,7 +15,9 @@ class PreferencePairBuilder:
         self.db = db
         self.logger = logger
 
-    def get_training_pairs_by_dimension(self, goal: str = None, limit: int = 100) -> dict:
+    def get_training_pairs_by_dimension(
+        self, goal: str = None, limit: int = 100
+    ) -> dict:
         """
         Returns a dictionary of document preference pairs grouped by dimension.
 
@@ -111,12 +113,14 @@ class PreferencePairBuilder:
 
         for (dimension, _), data in grouped.items():
             if "top" in data and "bottom" in data:
-                results_by_dimension[dimension].append({
-                    "title": data["top"].title,
-                    "output_a": data["top"].content,
-                    "output_b": data["bottom"].content,
-                    "value_a": float(data["top"].score),
-                    "value_b": float(data["bottom"].score)
-                })
+                results_by_dimension[dimension].append(
+                    {
+                        "title": data["top"].title,
+                        "output_a": data["top"].content,
+                        "output_b": data["bottom"].content,
+                        "value_a": float(data["top"].score),
+                        "value_b": float(data["bottom"].score),
+                    }
+                )
 
         return dict(results_by_dimension)

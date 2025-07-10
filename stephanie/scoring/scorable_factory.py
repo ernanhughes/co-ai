@@ -39,22 +39,18 @@ class ScorableFactory:
             return ScorableFactory.from_prompt_pair(obj, mode)
         elif isinstance(obj, CartridgeORM):
             return Scorable(
-                id=obj.id,
-                text=obj.markdown_content,
-                target_type=TargetType.CARTRIDGE
+                id=obj.id, text=obj.markdown_content, target_type=TargetType.CARTRIDGE
             )
         elif isinstance(obj, CartridgeTripleORM):
             # For a triple, we concatenate subject, relation, and object as a textual representation
             return Scorable(
                 id=obj.id,
                 text=f"{obj.subject} {obj.relation} {obj.object}",
-                target_type=TargetType.TRIPLE
+                target_type=TargetType.TRIPLE,
             )
         elif isinstance(obj, TheoremORM):
             return Scorable(
-                id=obj.id,
-                text=obj.statement,
-                target_type=TargetType.THEOREM
+                id=obj.id, text=obj.statement, target_type=TargetType.THEOREM
             )
         elif isinstance(obj, DocumentORM):
             title = obj.title or ""
@@ -68,11 +64,7 @@ class ScorableFactory:
             else:
                 text = title or summary  # fallback if only one exists
 
-            return Scorable(
-                id=obj.id,
-                text=text,
-                target_type=TargetType.DOCUMENT
-            )
+            return Scorable(id=obj.id, text=text, target_type=TargetType.DOCUMENT)
         else:
             raise ValueError(f"Unsupported ORM type for scoring: {type(obj)}")
 
@@ -117,12 +109,10 @@ class ScorableFactory:
             else:
                 text = title or summary
         elif target_type == TargetType.TRIPLE:
-            text=f'{data.get("subject")} {data.get("relation")} {data.get("object")}',
+            text = (
+                f"{data.get('subject')} {data.get('relation')} {data.get('object')}",
+            )
         else:
             text = data.get("text", "")
 
-        return Scorable(
-            id=data.get("id"),
-            text=text,
-            target_type=target_type
-        )
+        return Scorable(id=data.get("id"), text=text, target_type=target_type)

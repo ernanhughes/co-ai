@@ -2,8 +2,7 @@
 # models/score.py
 from datetime import datetime, timezone
 
-from sqlalchemy import (JSON, Column, DateTime, Enum, ForeignKey, Integer,
-                        String, Text)
+from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from stephanie.models.base import Base
@@ -25,8 +24,6 @@ class EvaluationORM(Base):
         Integer, ForeignKey("documents.id", ondelete="SET NULL"), nullable=True
     )
 
-
-
     symbolic_rule_id = Column(Integer, ForeignKey("symbolic_rules.id"), nullable=True)
     pipeline_run_id = Column(Integer, ForeignKey("pipeline_runs.id"), nullable=True)
     agent_name = Column(String, nullable=False)
@@ -34,9 +31,9 @@ class EvaluationORM(Base):
     evaluator_name = Column(String, nullable=False)
     strategy = Column(String)
     reasoning_strategy = Column(String)
-    
+
     scores = Column(JSON, default={})
-    
+
     extra_data = Column(JSON)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
@@ -44,7 +41,9 @@ class EvaluationORM(Base):
     hypothesis = relationship("HypothesisORM", back_populates="scores")
     symbolic_rule = relationship("SymbolicRuleORM", back_populates="scores")
     pipeline_run = relationship("PipelineRunORM", back_populates="scores")
-    dimension_scores = relationship("ScoreORM", back_populates="evaluation", cascade="all, delete-orphan")
+    dimension_scores = relationship(
+        "ScoreORM", back_populates="evaluation", cascade="all, delete-orphan"
+    )
 
     def to_dict(self, include_relationships: bool = False) -> dict:
         data = {

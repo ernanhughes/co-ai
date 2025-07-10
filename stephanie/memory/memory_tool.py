@@ -11,8 +11,7 @@ from stephanie.memory.cartridge_domain_store import CartridgeDomainStore
 from stephanie.memory.cartridge_store import CartridgeStore
 from stephanie.memory.cartridge_triple_store import CartridgeTripleStore
 from stephanie.memory.context_store import ContextStore
-from stephanie.memory.document_domain_section_store import \
-    DocumentSectionDomainStore
+from stephanie.memory.document_domain_section_store import DocumentSectionDomainStore
 from stephanie.memory.document_domain_store import DocumentDomainStore
 from stephanie.memory.document_section_store import DocumentSectionStore
 from stephanie.memory.document_store import DocumentStore
@@ -89,8 +88,6 @@ class MemoryTool:
         self.register_store(CartridgeStore(self.session, logger))
         self.register_store(CartridgeTripleStore(self.session, logger))
 
-
-
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):
             for store_class in cfg.get("extra_stores", []):
@@ -144,4 +141,6 @@ class MemoryTool:
         finally:
             self.session = self.session_maker()
             if self.logger:
-                self.logger.log("SessionRefreshed", {"new_session_id": id(self.session)})
+                self.logger.log(
+                    "SessionRefreshed", {"new_session_id": id(self.session)}
+                )

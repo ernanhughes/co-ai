@@ -18,7 +18,7 @@ class PipelineRunnerAgent(BaseAgent):
         result = await self.runner.run(
             pipeline_def=pipeline_def,
             context=context,
-            tag=context.get("tag", "runtime")
+            tag=context.get("tag", "runtime"),
         )
 
         return result

@@ -10,8 +10,7 @@ from stephanie.models.score import ScoreORM
 from stephanie.models.score_dimension import ScoreDimensionORM
 from stephanie.prompts.prompt_renderer import PromptRenderer
 from stephanie.scoring.calculations.score_delta import ScoreDeltaCalculator
-from stephanie.scoring.calculations.weighted_average import \
-    WeightedAverageCalculator
+from stephanie.scoring.calculations.weighted_average import WeightedAverageCalculator
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
@@ -103,7 +102,16 @@ class ScoringManager:
         return [d["name"] for d in self.dimensions]
 
     @classmethod
-    def from_file(cls, filepath: str, prompt_loader, cfg, logger, memory, scoring_profile=None, llm_fn=None):
+    def from_file(
+        cls,
+        filepath: str,
+        prompt_loader,
+        cfg,
+        logger,
+        memory,
+        scoring_profile=None,
+        llm_fn=None,
+    ):
         with open(Path(filepath), "r") as f:
             data = yaml.safe_load(f)
 
@@ -139,10 +147,12 @@ class ScoringManager:
         elif data["scorer"] == "svm":
             # Use SVM scoring profile if specified
             scorer = SVMScorer(cfg, memory, logger)
-            scorer.load_models()   
+            scorer.load_models()
         else:
             # Default to LLM scoring profile
-            scorer = LLMScorer(cfg, memory, logger, prompt_loader=prompt_loader, llm_fn=llm_fn)
+            scorer = LLMScorer(
+                cfg, memory, logger, prompt_loader=prompt_loader, llm_fn=llm_fn
+            )
 
         return cls(
             dimensions=dimensions,
@@ -199,19 +209,17 @@ class ScoringManager:
         raise ValueError(f"Could not extract numeric score from response: {response}")
 
     def evaluate(self, scorable: Scorable, context: dict = {}, llm_fn=None):
-
-
         try:
-            score = self.scorer.score(context.get("goal"), scorable, self.dimension_names(), llm_fn=llm_fn)        
+            score = self.scorer.score(
+                context.get("goal"), scorable, self.dimension_names(), llm_fn=llm_fn
+            )
         except Exception as e:
             self.logger.log(
                 "MgrScoreParseError",
                 {"scorable": scorable, "error": str(e)},
             )
             score = self.evaluate_llm(scorable, context, llm_fn)
-        log_key = (
-            "CorDimensionEvaluated" if format == "cor" else "DimensionEvaluated"
-        )
+        log_key = "CorDimensionEvaluated" if format == "cor" else "DimensionEvaluated"
         self.logger.log(
             log_key,
             {"ScoreCompleted": score.to_dict()},
@@ -287,7 +295,14 @@ class ScoringManager:
 
     @staticmethod
     def save_score_to_memory(
-        bundle, scorable, context, cfg, memory, logger, source="ScoreEvaluator", model_name=None
+        bundle,
+        scorable,
+        context,
+        cfg,
+        memory,
+        logger,
+        source="ScoreEvaluator",
+        model_name=None,
     ):
         goal = context.get("goal")
         pipeline_run_id = context.get("pipeline_run_id")
@@ -358,7 +373,9 @@ class ScoringManager:
         weighted_score = bundle.calculator.calculate(bundle)
 
         soring_text = ScoringManager.get_scoring_text(document)
-        scorable = Scorable(text=soring_text, target_type=TargetType.DOCUMENT, id=document_id)
+        scorable = Scorable(
+            text=soring_text, target_type=TargetType.DOCUMENT, id=document_id
+        )
 
         scores_json = {
             "stage": cfg.get("stage", "review"),

@@ -7,9 +7,7 @@ from datetime import datetime
 import torch
 
 
-def get_model_version(
-    session, model_type: str, target_type: str, dimension: str
-):
+def get_model_version(session, model_type: str, target_type: str, dimension: str):
     return "v1"
 
 
@@ -39,9 +37,7 @@ def discover_saved_dimensions(
 
     for filename in os.listdir(path):
         # Ignore scalers, tuners, and meta
-        if any(
-            ex in filename for ex in ["_scaler", ".tuner", ".meta", ".json"]
-        ):
+        if any(ex in filename for ex in ["_scaler", ".tuner", ".meta", ".json"]):
             continue
 
         # Match patterns for EBT, MRQ, SVM
@@ -54,12 +50,8 @@ def discover_saved_dimensions(
     return sorted(dimension_names)
 
 
-def get_svm_file_paths(
-    model_path, model_type, target_type, dim, model_version="v1"
-):
-    base = get_model_path(
-        model_path, model_type, target_type, dim, model_version
-    )
+def get_svm_file_paths(model_path, model_type, target_type, dim, model_version="v1"):
+    base = get_model_path(model_path, model_type, target_type, dim, model_version)
     return {
         "model": base + f"{dim}.joblib",
         "scaler": base + f"{dim}_scaler.joblib",

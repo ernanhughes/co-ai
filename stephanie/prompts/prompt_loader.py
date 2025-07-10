@@ -3,8 +3,15 @@ import os
 
 from jinja2 import Template
 
-from stephanie.constants import (DEFAULT, FILE, NAME, PROMPT_DIR, PROMPT_FILE,
-                                 PROMPT_MODE, STRATEGY)
+from stephanie.constants import (
+    DEFAULT,
+    FILE,
+    NAME,
+    PROMPT_DIR,
+    PROMPT_FILE,
+    PROMPT_MODE,
+    STRATEGY,
+)
 
 
 def get_text_from_file(file_path: str) -> str:
@@ -40,18 +47,23 @@ class PromptLoader:
 
             if prompt_type == "tuning":
                 agent_name = config.get(NAME, "default")
-                return self._load_best_version(agent_name, context.get("goal", ""), merged)
+                return self._load_best_version(
+                    agent_name, context.get("goal", ""), merged
+                )
 
             return self._load_from_file(merged)
 
         except Exception as e:
             print(f"❌ Exception:  {type(e).__name__}: {e}")
             if self.logger:
-                self.logger.log("PromptLoadFailed", {
-                    "agent": config.get(NAME, DEFAULT),
-                    "error": str(e),
-                    "config_used": config
-                })
+                self.logger.log(
+                    "PromptLoadFailed",
+                    {
+                        "agent": config.get(NAME, DEFAULT),
+                        "error": str(e),
+                        "config_used": config,
+                    },
+                )
             return self._fallback_prompt(context.get("goal", ""))
 
     def from_file(self, file_name: str, config: dict, context: dict) -> str:
@@ -63,10 +75,13 @@ class PromptLoader:
             return Template(prompt_text).render(**merged)
         except KeyError as ke:
             if self.logger:
-                self.logger.log("PromptFormattingError", {
-                    "exception": ke,
-                    "prompt_text": prompt_text,
-                })
+                self.logger.log(
+                    "PromptFormattingError",
+                    {
+                        "exception": ke,
+                        "prompt_text": prompt_text,
+                    },
+                )
 
     @staticmethod
     def get_file_path(file_name: str, cfg: dict, context: dict) -> str:
@@ -82,39 +97,37 @@ class PromptLoader:
         file_name = f"{file_key}.txt" if not file_key.endswith(".txt") else file_key
         path = os.path.join(prompt_dir, config.get(NAME, "default"), file_name)
 
-        self.logger.log("PromptFileLoading", {
-            "file_key": file_key,
-            "resolved_file": file_name,
-            "path": path
-        })
+        self.logger.log(
+            "PromptFileLoading",
+            {"file_key": file_key, "resolved_file": file_name, "path": path},
+        )
 
         if not os.path.exists(path):
             if self.logger:
-                self.logger.log("PromptFileNotFound", {"path": path, "agent": config.get(NAME, DEFAULT)})
+                self.logger.log(
+                    "PromptFileNotFound",
+                    {"path": path, "agent": config.get(NAME, DEFAULT)},
+                )
             raise FileNotFoundError(f"Prompt file not found: {path}")
 
         try:
             prompt_text = get_text_from_file(path)
-            rendered =  Template(prompt_text).render(**self._merge_context(config, {}))
-            self.logger.log("PromptFileLoaded", {
-                "path": path,
-                "rendered_preview": rendered[:100]
-            })
+            rendered = Template(prompt_text).render(**self._merge_context(config, {}))
+            self.logger.log(
+                "PromptFileLoaded", {"path": path, "rendered_preview": rendered[:100]}
+            )
             return rendered
         except KeyError as ke:
             if self.logger:
-                self.logger.log("PromptFormattingError", {
-                    "missing_key": str(ke),
-                    "path": path
-                })
+                self.logger.log(
+                    "PromptFormattingError", {"missing_key": str(ke), "path": path}
+                )
             return prompt_text  # Fallback: return raw
 
     def _load_best_version(self, agent_name: str, goal: str, config: dict) -> str:
         """Load a tuned version of the prompt if available."""
         best_prompt = self.memory.prompt.get_best_prompt_for_agent(
-            agent_name=agent_name,
-            strategy=config.get(STRATEGY, DEFAULT),
-            goal=goal
+            agent_name=agent_name, strategy=config.get(STRATEGY, DEFAULT), goal=goal
         )
         if best_prompt:
             return best_prompt["prompt_text"]

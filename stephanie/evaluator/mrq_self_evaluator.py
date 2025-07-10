@@ -2,8 +2,7 @@
 import torch
 
 from stephanie.evaluator.base import BaseEvaluator
-from stephanie.evaluator.hypothesis_value_predictor import \
-    HypothesisValuePredictor
+from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
 from stephanie.evaluator.mrq_trainer import MRQTrainer
 from stephanie.models.sharpening_prediction import SharpeningPredictionORM
 from stephanie.scoring.mrq.encoder import TextEncoder
@@ -59,9 +58,7 @@ class MRQSelfEvaluator(BaseEvaluator):
                 value_b=value_b,
             )
 
-            self.memory.sharpening.insert_sharpening_prediction(
-                prediction.to_dict()
-            )
+            self.memory.sharpening.insert_sharpening_prediction(prediction.to_dict())
 
         return preferred_output, scores
 

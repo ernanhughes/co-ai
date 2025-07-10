@@ -20,12 +20,14 @@ class KnowledgeCartridge(KnowledgePackage):
 
     def add_icl_example(self, prompt, response, task_type):
         """Add in-context learning example"""
-        self.schema["icl_examples"].append({
-            "prompt": prompt,
-            "response": response,
-            "task_type": task_type,
-            "timestamp": datetime.utcnow().isoformat()
-        })
+        self.schema["icl_examples"].append(
+            {
+                "prompt": prompt,
+                "response": response,
+                "task_type": task_type,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
 
     def add_finding(self, category, content, source, confidence, metadata=None):
         finding = {
@@ -34,7 +36,7 @@ class KnowledgeCartridge(KnowledgePackage):
             "source": source,
             "confidence": confidence,
             "timestamp": datetime.utcnow().isoformat(),
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
         self.schema[category].append(finding)
         self._update_signature()
@@ -64,4 +66,6 @@ class KnowledgeCartridge(KnowledgePackage):
 
     def to_markdown(self):
         # Replace this with a clean formatter later
-        return f"# Report: {self.goal}\n\n## Thesis\n{self.schema['core_thesis']}\n\n..."
+        return (
+            f"# Report: {self.goal}\n\n## Thesis\n{self.schema['core_thesis']}\n\n..."
+        )

@@ -9,8 +9,6 @@ from stephanie.scoring.scoring_manager import ScoringManager
 
 
 class MRQCoreScoring:
-
-
     def evaluate(self, prompt, response):
         results = []
         for dim, (encoder, predictor) in self.models.items():
@@ -141,7 +139,7 @@ class MRQCoreScoring:
             if self.logger:
                 self.logger.log(
                     "MRQPromptScoreError",
-                    {"error": str(e), "prompt": prompt[:100], "dimension": dimension}
+                    {"error": str(e), "prompt": prompt[:100], "dimension": dimension},
                 )
             return 0.5
 
@@ -163,13 +161,18 @@ class MRQCoreScoring:
         tuner = self.regression_tuners.get(dimension)
         if tuner:
             tuned = tuner.transform(norm_score)
-            tuned = max(self.min_score_by_dim.get(dimension, 0.0),
-                        min(self.max_score_by_dim.get(dimension, 100.0), tuned))
-            self.logger.log("MRQTunedScore", {
-                "dimension": dimension,
-                "raw": norm_score,
-                "tuned": tuned,
-            })
+            tuned = max(
+                self.min_score_by_dim.get(dimension, 0.0),
+                min(self.max_score_by_dim.get(dimension, 100.0), tuned),
+            )
+            self.logger.log(
+                "MRQTunedScore",
+                {
+                    "dimension": dimension,
+                    "raw": norm_score,
+                    "tuned": tuned,
+                },
+            )
             return tuned
 
         return norm_score

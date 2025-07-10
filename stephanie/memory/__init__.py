@@ -1,5 +1,6 @@
 # stephanie/memory/__init__.py
 """Memory management and embedding tools"""
+
 from .base import BaseStore
 from .cartridge_domain_store import CartridgeDomainStore
 from .cartridge_store import CartridgeStore

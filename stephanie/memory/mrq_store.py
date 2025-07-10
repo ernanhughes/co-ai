@@ -6,8 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from stephanie.models import (MRQMemoryEntryORM, MRQPreferencePairORM,
-                              ReflectionDeltaORM)
+from stephanie.models import MRQMemoryEntryORM, MRQPreferencePairORM, ReflectionDeltaORM
 
 
 class MRQStore:
@@ -243,7 +242,7 @@ class MRQStore:
         fmt_b: str,
         difficulty: str,
         source: str = "arm_dataloader",
-        run_id: str = None
+        run_id: str = None,
     ):
         """
         Save preference pair to database with precomputed embeddings.
@@ -302,12 +301,15 @@ class MRQStore:
         finally:
             self.db.close()
 
-    def get_training_pairs_by_dimension(self, goal: str = None, limit: int = 10000) -> dict:
+    def get_training_pairs_by_dimension(
+        self, goal: str = None, limit: int = 10000
+    ) -> dict:
         """
         Returns top and bottom scored prompt/response pairs per dimension,
         suitable for MR.Q training.
         """
-        query = text("""
+        query = text(
+            """
             WITH scored_prompts AS (
                 SELECT
                     s.dimension,
@@ -363,7 +365,8 @@ class MRQStore:
             ) AS ranked_pairs
             ORDER BY dimension, prompt_id
             LIMIT :limit
-        """.replace("{goal_filter}", "AND p.goal_text = :goal" if goal else ""))
+        """.replace("{goal_filter}", "AND p.goal_text = :goal" if goal else "")
+        )
 
         params = {"limit": limit}
         if goal:
@@ -373,6 +376,7 @@ class MRQStore:
 
         # Group into pairs (top + bottom) by dimension and prompt_id
         from collections import defaultdict
+
         grouped = defaultdict(dict)
         for row in rows:
             key = (row.dimension, row.prompt_text)
@@ -380,11 +384,13 @@ class MRQStore:
             results_by_dimension = defaultdict(list)
             for (dimension, prompt_text), data in grouped.items():
                 if "top" in data and "bottom" in data:
-                    results_by_dimension[dimension].append({
-                        "prompt": prompt_text,
-                        "output_a": data["top"].response_text,
-                        "output_b": data["bottom"].response_text,
-                        "value_a": data["top"].score,
-                        "value_b": data["bottom"].score,
-                    })
+                    results_by_dimension[dimension].append(
+                        {
+                            "prompt": prompt_text,
+                            "output_a": data["top"].response_text,
+                            "output_b": data["bottom"].response_text,
+                            "value_a": data["top"].score,
+                            "value_b": data["bottom"].score,
+                        }
+                    )
         return dict(results_by_dimension)

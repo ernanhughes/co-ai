@@ -18,9 +18,7 @@ class PatternStatStore:
             self.session.commit()
 
             if self.logger:
-                self.logger.log("PatternStatsStored", {
-                    "stats": stats
-                })
+                self.logger.log("PatternStatsStored", {"stats": stats})
 
         except Exception as e:
             self.session.rollback()

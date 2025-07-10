@@ -4,8 +4,12 @@ from collections import defaultdict
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import PIPELINE_RUN_ID
-from stephanie.models import (EvaluationORM, PipelineRunORM,
-                              RuleApplicationORM, SymbolicRuleORM)
+from stephanie.models import (
+    EvaluationORM,
+    PipelineRunORM,
+    RuleApplicationORM,
+    SymbolicRuleORM,
+)
 
 
 class RuleGeneratorAgent(BaseAgent):
@@ -48,7 +52,11 @@ class RuleGeneratorAgent(BaseAgent):
         return context
 
     def _get_high_performance_runs(self):
-        scores = self.memory.session.query(EvaluationORM).filter(EvaluationORM.score >= self.min_score_threshold).all()
+        scores = (
+            self.memory.session.query(EvaluationORM)
+            .filter(EvaluationORM.score >= self.min_score_threshold)
+            .all()
+        )
         runs = []
         for score in scores:
             rule_app = (
@@ -88,7 +96,7 @@ class RuleGeneratorAgent(BaseAgent):
                 agent_name=agent,
                 context_hash=SymbolicRuleORM.compute_context_hash(
                     {"goal_type": goal_type}, {"model.name": model}
-                )
+                ),
             )
         except Exception as e:
             self.logger.log("SignatureParseError", {"sig": sig, "error": str(e)})
@@ -99,7 +107,8 @@ class RuleGeneratorAgent(BaseAgent):
             f"Goal: {e[1].config.get('goal', {}).get('goal_text')}\n"
             f"Agent: {e[1].config.get('agent')}\n"
             f"Model: {e[1].config.get('model', {}).get('name')}\n"
-            f"Score: {e[0].score}" for e in entries[:3]
+            f"Score: {e[0].score}"
+            for e in entries[:3]
         )
         return f"""You are a symbolic AI pipeline optimizer.
 Given the following successful pipeline configurations with high scores, suggest a symbolic rule that could be applied to future similar tasks.

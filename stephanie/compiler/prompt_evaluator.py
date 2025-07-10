@@ -7,6 +7,7 @@ class EvaluationResult:
         self.score = score
         self.reason = reason
 
+
 class BasePromptEvaluator(ABC):
     @abstractmethod
     def evaluate(self, program, context: dict = None) -> EvaluationResult:
@@ -28,11 +29,14 @@ class MRQPromptEvaluator(BasePromptEvaluator):
                 "prompt": program.prompt_text,
                 "hypothesis": program.hypothesis,
             }
-            prompt = self.prompt_loader.load_prompt("prompt_evaluation", evaluation_context)
+            prompt = self.prompt_loader.load_prompt(
+                "prompt_evaluation", evaluation_context
+            )
             response = self.llm(prompt)
 
             # Very basic scoring extraction
             import re
+
             match = re.search(r"score:(\d+(\.\d+)?)", response)
             score = float(match.group(1)) if match else 0.0
 

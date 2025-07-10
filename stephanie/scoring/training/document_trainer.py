@@ -42,11 +42,14 @@ class DocumentTrainer(BaseTrainer):
             labels.append(torch.tensor([1.0], device=self.device))
 
             if (idx + 1) % 100 == 0 or (idx + 1) == total:
-                self.logger.log("DocumentTrainingProgress", {
-                    "current": idx + 1,
-                    "total": total,
-                    "percent": round((idx + 1) / total * 100, 2)
-                })
+                self.logger.log(
+                    "DocumentTrainingProgress",
+                    {
+                        "current": idx + 1,
+                        "total": total,
+                        "percent": round((idx + 1) / total * 100, 2),
+                    },
+                )
 
         dataset = TensorDataset(torch.stack(inputs), torch.stack(labels))
         return DataLoader(dataset, batch_size=16, shuffle=True)

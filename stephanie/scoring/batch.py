@@ -14,6 +14,7 @@ def get_unscored_hypotheses(session, run_id: str = None):
 
     return query.all()
 
+
 async def score_unscored_hypotheses(memory, logger, config, run_id=None):
     session = memory.session
     unscored = get_unscored_hypotheses(session, run_id)
@@ -31,10 +32,13 @@ async def score_unscored_hypotheses(memory, logger, config, run_id=None):
             "rule_applications": [ra.to_dict() for ra in rule_apps],
         }
 
-        logger.log("ScoringUnscoredHypothesis", {
-            "hypothesis_id": hypo.id,
-            "goal_id": goal.id,
-            "rule_count": len(rule_apps),
-        })
+        logger.log(
+            "ScoringUnscoredHypothesis",
+            {
+                "hypothesis_id": hypo.id,
+                "goal_id": goal.id,
+                "rule_count": len(rule_apps),
+            },
+        )
 
         await agent.run(context)

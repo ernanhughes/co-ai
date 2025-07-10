@@ -60,8 +60,18 @@ class DocumentLLMInferenceAgent(ScoringMixin, BaseAgent):
                     "title": document.get("title"),
                 },
             )
-            ScoringManager.save_score_to_memory(result, scorable, context, self.cfg, self.memory, self.logger, source="llm")
-        self.logger.log("DocumentLLMInferenceCompleted", {"total_documents_scored": len(results)})
+            ScoringManager.save_score_to_memory(
+                result,
+                scorable,
+                context,
+                self.cfg,
+                self.memory,
+                self.logger,
+                source="llm",
+            )
+        self.logger.log(
+            "DocumentLLMInferenceCompleted", {"total_documents_scored": len(results)}
+        )
         # Store results in context for further processing
         context[self.output_key] = results
         return context

@@ -12,8 +12,7 @@ from stephanie.analysis.symbolic_impact_analyzer import SymbolicImpactAnalyzer
 from stephanie.constants import GOAL
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
-from stephanie.utils.graph_tools import (build_mermaid_graph,
-                                         save_mermaid_to_file)
+from stephanie.utils.graph_tools import build_mermaid_graph, save_mermaid_to_file
 
 
 class LATSAgent(ScoringMixin, BaseAgent):

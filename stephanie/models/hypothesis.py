@@ -2,8 +2,16 @@
 # models/hypothesis.py
 from datetime import datetime
 
-from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
-                        Integer, String)
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import relationship
 
 from stephanie.models.base import Base
@@ -24,7 +32,7 @@ class HypothesisORM(Base):
     reflection = Column(String)
     elo_rating = Column(Float, default=750.0)
     embedding = Column(JSON)  # Use pgvector later for better support
-    features = Column(JSON)   # For structured metadata
+    features = Column(JSON)  # For structured metadata
     source = Column(String)
     pipeline_signature = Column(String)
     enabled = Column(Boolean, default=True)

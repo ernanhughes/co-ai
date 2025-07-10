@@ -26,8 +26,9 @@ class EBTThinker:
             "energy": final_energy,
             "steps_used": len(energies),
             "converged": converged,
-            "energy_trace": energies
+            "energy_trace": energies,
         }
+
 
 class EnergyBasedScorer(nn.Module):
     def __init__(self, transformer):

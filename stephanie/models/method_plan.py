@@ -2,8 +2,16 @@
 # models/method_plan.py
 from datetime import datetime, timezone
 
-from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
-                        Integer, String)
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import relationship
 
 from stephanie.models.base import Base
@@ -79,7 +87,7 @@ class MethodPlanORM(Base):
             "evolution_level": self.evolution_level,
             "parent_plan_id": self.parent_plan_id,
             "is_refinement": self.is_refinement,
-            "created_at": self.created_at.isoformat() if self.created_at else None
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
         if include_relationships and self.goal:

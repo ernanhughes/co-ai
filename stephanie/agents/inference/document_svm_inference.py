@@ -12,8 +12,7 @@ from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
-from stephanie.utils.model_utils import (discover_saved_dimensions,
-                                         get_svm_file_paths)
+from stephanie.utils.model_utils import discover_saved_dimensions, get_svm_file_paths
 
 
 class DocumentSVMInferenceAgent(BaseAgent):
@@ -30,16 +29,21 @@ class DocumentSVMInferenceAgent(BaseAgent):
 
         if not self.dimensions:
             self.dimensions = discover_saved_dimensions(
-                model_type=self.model_type,
-                target_type=self.target_type
+                model_type=self.model_type, target_type=self.target_type
             )
 
-        self.logger.log("DocumentSVMInferenceInitialized", {
-            "dimensions": self.dimensions
-        })
+        self.logger.log(
+            "DocumentSVMInferenceInitialized", {"dimensions": self.dimensions}
+        )
 
         for dim in self.dimensions:
-            paths = get_svm_file_paths(self.model_path, self.model_type, self.target_type, dim, self.model_version)
+            paths = get_svm_file_paths(
+                self.model_path,
+                self.model_type,
+                self.target_type,
+                dim,
+                self.model_version,
+            )
             scaler_path = paths["scaler"]
             model_file = paths["model"]
             meta_path = paths["meta"]
@@ -47,7 +51,11 @@ class DocumentSVMInferenceAgent(BaseAgent):
             self.logger.log("LoadingSVMModel", {"dimension": dim, "model": model_file})
 
             self.models[dim] = (load(scaler_path), load(model_file))
-            self.model_meta[dim] = load_json(meta_path) if os.path.exists(meta_path) else {"min_score": 0, "max_score": 100}
+            self.model_meta[dim] = (
+                load_json(meta_path)
+                if os.path.exists(meta_path)
+                else {"min_score": 0, "max_score": 100}
+            )
             self.tuners[dim] = RegressionTuner(dimension=dim, logger=logger)
             self.tuners[dim].load(paths["tuner"])
 
@@ -63,9 +71,7 @@ class DocumentSVMInferenceAgent(BaseAgent):
             self.logger.log("SVMScoringStarted", {"document_id": doc_id})
 
             scorable = Scorable(
-                id=doc_id,
-                text=doc.get("text", ""),
-                target_type=TargetType.DOCUMENT
+                id=doc_id, text=doc.get("text", ""), target_type=TargetType.DOCUMENT
             )
 
             ctx_emb = self.memory.embedding.get_or_create(goal_text)
@@ -97,13 +103,16 @@ class DocumentSVMInferenceAgent(BaseAgent):
                     )
                 )
 
-                self.logger.log("SVMScoreComputed", {
-                    "document_id": doc_id,
-                    "dimension": dim,
-                    "raw_score": round(raw_score, 4),
-                    "tuned_score": round(tuned_score, 4),
-                    "final_score": final_score
-                })
+                self.logger.log(
+                    "SVMScoreComputed",
+                    {
+                        "document_id": doc_id,
+                        "dimension": dim,
+                        "raw_score": round(raw_score, 4),
+                        "tuned_score": round(tuned_score, 4),
+                        "final_score": final_score,
+                    },
+                )
 
             score_bundle = ScoreBundle(results={r.dimension: r for r in score_results})
 
@@ -118,18 +127,25 @@ class DocumentSVMInferenceAgent(BaseAgent):
                 model_name=self.get_model_name(),
             )
 
-            results.append({
-                "scorable": scorable.to_dict(),
-                "scores": dimension_scores,
-                "score_bundle": score_bundle.to_dict()
-            })
+            results.append(
+                {
+                    "scorable": scorable.to_dict(),
+                    "scores": dimension_scores,
+                    "score_bundle": score_bundle.to_dict(),
+                }
+            )
 
-            self.logger.log("SVMScoringFinished", {
-                "document_id": doc_id,
-                "scores": dimension_scores,
-                "dimensions_scored": list(dimension_scores.keys())
-            })
+            self.logger.log(
+                "SVMScoringFinished",
+                {
+                    "document_id": doc_id,
+                    "scores": dimension_scores,
+                    "dimensions_scored": list(dimension_scores.keys()),
+                },
+            )
 
         context[self.output_key] = results
-        self.logger.log("SVMInferenceCompleted", {"total_documents_scored": len(results)})
+        self.logger.log(
+            "SVMInferenceCompleted", {"total_documents_scored": len(results)}
+        )
         return context

@@ -30,9 +30,7 @@ def get_log_file_path(run_id: str, cfg: DictConfig) -> str:
         return cfg.logging.logger.log_file
 
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
-    safe_run_id = re.sub(
-        r"[\\W_]+", "_", run_id
-    )  # remove/replace unsafe chars
+    safe_run_id = re.sub(r"[\\W_]+", "_", run_id)  # remove/replace unsafe chars
     log_filename = f"{safe_run_id}_{timestamp}.jsonl"
     os.makedirs(cfg.logging.logger.log_path, exist_ok=True)
     log_file_path = os.path.join(cfg.logging.logger.log_path, log_filename)

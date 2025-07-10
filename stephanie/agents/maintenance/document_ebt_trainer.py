@@ -8,8 +8,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.agents.maintenance.model_evolution_manager import \
-    ModelEvolutionManager
+from stephanie.agents.maintenance.model_evolution_manager import ModelEvolutionManager
 from stephanie.scoring.mrq.value_predictor import ValuePredictor
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.mrq.encoder import TextEncoder
@@ -71,13 +70,10 @@ class DocumentEBTTrainerAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
-        from stephanie.scoring.mrq.preference_pair_builder import \
-            PreferencePairBuilder
+        from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 
         # Build contrastive training pairs grouped by scoring dimension
-        builder = PreferencePairBuilder(
-            db=self.memory.session, logger=self.logger
-        )
+        builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
         training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -24,7 +24,9 @@ class StepCompilerAgent(ScoringMixin, MemoryAwareMixin, BaseAgent):
         goal = context.get("goal")
 
         # Augment context with shared memory
-        context = self.inject_memory_context(goal=goal, context=context, tags=["step", "plan"])
+        context = self.inject_memory_context(
+            goal=goal, context=context, tags=["step", "plan"]
+        )
         prompt = self.prompt_loader.load_prompt(self.cfg, context=context)
 
         # Generate response from LLM
@@ -41,7 +43,9 @@ class StepCompilerAgent(ScoringMixin, MemoryAwareMixin, BaseAgent):
                 scorer=self.scorer,
             )
             context["step_plan_score"] = score_result.aggregate()
-            context.setdefault("dimension_scores", {})["step_plan"] = score_result.to_dict()
+            context.setdefault("dimension_scores", {})["step_plan"] = (
+                score_result.to_dict()
+            )
         except Exception as e:
             self.logger.log("StepCompilerScoringError", {"error": str(e)})
             context["step_plan_score"] = None
@@ -54,7 +58,9 @@ class StepCompilerAgent(ScoringMixin, MemoryAwareMixin, BaseAgent):
                 "trace": "\n".join([s["description"] for s in steps]),
                 "response": response,
                 "score": context.get("step_plan_score"),
-                "dimension_scores": context.get("dimension_scores", {}).get("step_plan"),
+                "dimension_scores": context.get("dimension_scores", {}).get(
+                    "step_plan"
+                ),
                 "tags": ["step", "plan"],
             },
         )

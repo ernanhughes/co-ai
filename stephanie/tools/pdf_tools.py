@@ -32,7 +32,7 @@ class PDFConverter:
             # Log and return False instead of crashing the pipeline
             print(f"[validate_pdf] Exception while parsing {file_path}: {e}")
             return False
-        
+
     @staticmethod
     def pdf_to_text(file_path: Union[str, Path]) -> str:
         """
@@ -49,7 +49,7 @@ class PDFConverter:
 
         try:
             text = extract_text(str(file_path))
-            clean_text = text.replace('\x00', '') 
+            clean_text = text.replace("\x00", "")
             return clean_text.strip()
         except PDFSyntaxError as e:
             raise ValueError(f"Error parsing PDF file: {e}")

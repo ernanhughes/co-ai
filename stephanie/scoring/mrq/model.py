@@ -23,7 +23,9 @@ class MRQModel:
 
     def load_weights(self, encoder_path: str, predictor_path: str):
         self.encoder.load_state_dict(torch.load(encoder_path, map_location=self.device))
-        self.predictor.load_state_dict(torch.load(predictor_path, map_location=self.device))
+        self.predictor.load_state_dict(
+            torch.load(predictor_path, map_location=self.device)
+        )
         self.encoder.eval()
         self.predictor.eval()
 

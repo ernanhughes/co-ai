@@ -25,15 +25,29 @@ class MRQScorer(MRQCoreScoring, MRQTraining, MRQModelIO):
             initialize_dimension(self, dim)
 
         # Bind methods to self
-        self.estimate_score = lambda goal, scorable, dim: estimate_score(self, goal, scorable, dim)
+        self.estimate_score = lambda goal, scorable, dim: estimate_score(
+            self, goal, scorable, dim
+        )
         self.evaluate = lambda prompt, response: evaluate(self, prompt, response)
         self.judge = lambda goal, prompt, a, b: judge(self, goal, prompt, a, b)
-        self.predict_score_from_prompt = lambda prompt, dim="mrq", top_k=5: predict_score_from_prompt(self, prompt, dim, top_k)
+        self.predict_score_from_prompt = (
+            lambda prompt, dim="mrq", top_k=5: predict_score_from_prompt(
+                self, prompt, dim, top_k
+            )
+        )
 
         self.train_from_database = lambda cfg: train_from_database(self, cfg)
         self.train_from_context = lambda ctx, cfg: train_from_context(self, ctx, cfg)
-        self.align_mrq_with_llm_scores_from_pairs = lambda samples, dim, prefix="MRQAlignment": align_mrq_with_llm_scores_from_pairs(self, samples, dim, prefix)
-        self.update_score_bounds_from_data = lambda samples, dim: update_score_bounds_from_data(self, samples, dim)
+        self.align_mrq_with_llm_scores_from_pairs = (
+            lambda samples,
+            dim,
+            prefix="MRQAlignment": align_mrq_with_llm_scores_from_pairs(
+                self, samples, dim, prefix
+            )
+        )
+        self.update_score_bounds_from_data = (
+            lambda samples, dim: update_score_bounds_from_data(self, samples, dim)
+        )
 
         self.save_models = lambda: save_models(self)
         self.load_models = lambda: load_models(self)

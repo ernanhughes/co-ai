@@ -20,7 +20,9 @@ class RuleApplicationStore:
             self.session.commit()
             self.session.refresh(application)
             if self.logger:
-                self.logger.log("RuleApplicationAdded", {"rule_application_id": application.id})
+                self.logger.log(
+                    "RuleApplicationAdded", {"rule_application_id": application.id}
+                )
             return application
         except Exception as e:
             self.session.rollback()
@@ -32,7 +34,11 @@ class RuleApplicationStore:
         return self.session.query(RuleApplicationORM).get(application_id)
 
     def get_all(self) -> List[RuleApplicationORM]:
-        return self.session.query(RuleApplicationORM).order_by(desc(RuleApplicationORM.created_at)).all()
+        return (
+            self.session.query(RuleApplicationORM)
+            .order_by(desc(RuleApplicationORM.created_at))
+            .all()
+        )
 
     def get_by_goal(self, goal_id: int) -> List[RuleApplicationORM]:
         return (
@@ -66,7 +72,9 @@ class RuleApplicationStore:
             .first()
         )
 
-    def get_for_goal_and_hypothesis(self, goal_id: int, hypothesis_id: int) -> List[RuleApplicationORM]:
+    def get_for_goal_and_hypothesis(
+        self, goal_id: int, hypothesis_id: int
+    ) -> List[RuleApplicationORM]:
         return (
             self.session.query(RuleApplicationORM)
             .filter(

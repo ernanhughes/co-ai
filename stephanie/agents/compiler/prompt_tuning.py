@@ -3,8 +3,7 @@ import re
 from abc import ABC, abstractmethod
 
 import dspy
-from dspy import (BootstrapFewShot, Example, InputField, OutputField, Predict,
-                  Signature)
+from dspy import BootstrapFewShot, Example, InputField, OutputField, Predict, Signature
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL
@@ -96,12 +95,15 @@ class PromptTuningAgent(BaseAgent):
                 original_output = step["output"]
                 original_score = step.get("score", 1000)
 
-                self.logger.log("TuningInputExample", {
-                    "goal": goal,
-                    "input_prompt": original_prompt,
-                    "hypotheses": original_output,
-                    "score": original_score
-                })
+                self.logger.log(
+                    "TuningInputExample",
+                    {
+                        "goal": goal,
+                        "input_prompt": original_prompt,
+                        "hypotheses": original_output,
+                        "score": original_score,
+                    },
+                )
 
                 # Run DSPy prompt tuning program
                 example = Example(
@@ -116,7 +118,7 @@ class PromptTuningAgent(BaseAgent):
                 program = Predict(PromptTuningSignature)
                 tuned_program = BootstrapFewShot(metric=lambda e, p, _: 1.0).compile(
                     student=program,
-                    trainset=[example]  # one-shot tuning
+                    trainset=[example],  # one-shot tuning
                 )
 
                 result = tuned_program(
@@ -126,10 +128,11 @@ class PromptTuningAgent(BaseAgent):
                     review="",
                     score=original_score,
                 )
-                self.logger.log("TunedProgramResult", {"step_index": i, "result": str(result)})
+                self.logger.log(
+                    "TunedProgramResult", {"step_index": i, "result": str(result)}
+                )
                 print(f"Refined prompt: {result}")
                 refined_prompt = result.refined_prompt.strip()
-
 
                 # Score both versions
                 prompt_a = original_prompt
@@ -174,21 +177,27 @@ class PromptTuningAgent(BaseAgent):
 
                 tuned_steps.append(step)
 
-                self.logger.log("StepPromptRefined", {
-                    "step_index": i,
-                    "original_snippet": prompt_a[:100],
-                    "refined_snippet": prompt_b[:100],
-                    "winner": "B" if score_b > score_a else "A",
-                    "score_a": score_a,
-                    "score_b": score_b,
-                })
+                self.logger.log(
+                    "StepPromptRefined",
+                    {
+                        "step_index": i,
+                        "original_snippet": prompt_a[:100],
+                        "refined_snippet": prompt_b[:100],
+                        "winner": "B" if score_b > score_a else "A",
+                        "score_a": score_a,
+                        "score_b": score_b,
+                    },
+                )
 
             except Exception as e:
-                self.logger.log("StepPromptTuningFailed", {
-                    "step_index": i,
-                    "error": str(e),
-                    "step_snippet": str(step)[:100],
-                })
+                self.logger.log(
+                    "StepPromptTuningFailed",
+                    {
+                        "step_index": i,
+                        "error": str(e),
+                        "step_snippet": str(step)[:100],
+                    },
+                )
 
         context["step_outputs"] = tuned_steps
         self.logger.log("StepPromptTuningCompleted", {"count": len(tuned_steps)})
@@ -220,11 +229,17 @@ class PromptTuningAgent(BaseAgent):
                     score=example.get("elo_rating", 1000),
                 )
 
-                self.logger.log("TunedProgramResult", {"step_index": i, "result": str(result)})
+                self.logger.log(
+                    "TunedProgramResult", {"step_index": i, "result": str(result)}
+                )
                 print(f"Refined prompt: {result}")
 
                 # Safely extract refined prompt
-                if not result or not hasattr(result, "refined_prompt") or result.refined_prompt is None:
+                if (
+                    not result
+                    or not hasattr(result, "refined_prompt")
+                    or result.refined_prompt is None
+                ):
                     raise ValueError("Refined prompt not returned from DSPy program.")
 
                 refined_prompt = result.refined_prompt.strip()

@@ -13,12 +13,14 @@ class GoalStore:
         self.session = session
         self.logger = logger
         self.name = "goals"
-    
+
     def name(self) -> str:
         return "goals"
 
     def get_from_text(self, goal_text: str):
-        return self.session.query(GoalORM).filter(GoalORM.goal_text == goal_text).first()
+        return (
+            self.session.query(GoalORM).filter(GoalORM.goal_text == goal_text).first()
+        )
 
     def create(self, goal_dict: dict):
         try:
@@ -36,11 +38,14 @@ class GoalStore:
             self.session.refresh(new_goal)
 
             if self.logger:
-                self.logger.log("GoalCreated", {
-                    "goal_id": new_goal.id,
-                    "goal_text": new_goal.goal_text[:100],
-                    "source": new_goal.source
-                })
+                self.logger.log(
+                    "GoalCreated",
+                    {
+                        "goal_id": new_goal.id,
+                        "goal_text": new_goal.goal_text[:100],
+                        "source": new_goal.source,
+                    },
+                )
 
             return new_goal
 

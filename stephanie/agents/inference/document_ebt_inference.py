@@ -11,8 +11,7 @@ from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.utils.file_utils import load_json
-from stephanie.utils.model_utils import (discover_saved_dimensions,
-                                         get_model_path)
+from stephanie.utils.model_utils import discover_saved_dimensions, get_model_path
 
 
 class DocumentEBTInferenceAgent(BaseAgent):
@@ -85,8 +84,12 @@ class DocumentEBTInferenceAgent(BaseAgent):
                 id=doc_id, text=doc.get("text", ""), target_type=TargetType.DOCUMENT
             )
 
-            ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal_text)).to(self.device)
-            doc_emb = torch.tensor(self.memory.embedding.get_or_create(scorable.text)).to(self.device)
+            ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal_text)).to(
+                self.device
+            )
+            doc_emb = torch.tensor(
+                self.memory.embedding.get_or_create(scorable.text)
+            ).to(self.device)
 
             dimension_scores = {}
             score_results = []
@@ -96,7 +99,9 @@ class DocumentEBTInferenceAgent(BaseAgent):
                     raw_energy = model(ctx_emb, doc_emb).squeeze().cpu().item()
                     normalized_score = torch.sigmoid(torch.tensor(raw_energy)).item()
                     meta = self.model_meta.get(dim, {"min": 40, "max": 100})
-                    real_score = normalized_score * (meta["max"] - meta["min"]) + meta["min"]
+                    real_score = (
+                        normalized_score * (meta["max"] - meta["min"]) + meta["min"]
+                    )
                     final_score = round(real_score, 4)
                     dimension_scores[dim] = final_score
 
@@ -134,11 +139,13 @@ class DocumentEBTInferenceAgent(BaseAgent):
                 model_name=self.get_model_name(),
             )
 
-            results.append({
-                "scorable": scorable.to_dict(),
-                "scores": dimension_scores,
-                "score_bundle": score_bundle.to_dict(),
-            })
+            results.append(
+                {
+                    "scorable": scorable.to_dict(),
+                    "scores": dimension_scores,
+                    "score_bundle": score_bundle.to_dict(),
+                }
+            )
 
             self.logger.log(
                 "EBTScoringFinished",
@@ -150,5 +157,7 @@ class DocumentEBTInferenceAgent(BaseAgent):
             )
 
         context[self.output_key] = results
-        self.logger.log("EBTInferenceCompleted", {"total_documents_scored": len(results)})
+        self.logger.log(
+            "EBTInferenceCompleted", {"total_documents_scored": len(results)}
+        )
         return context

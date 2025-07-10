@@ -11,7 +11,7 @@ from stephanie.utils.file_utils import write_text_to_file
 
 class WebSearchTool:
     def __init__(self, cfg: dict, logger):
-        self.base_url = f'{cfg.get("instance_url", "localhost:8080")}/search'
+        self.base_url = f"{cfg.get('instance_url', 'localhost:8080')}/search"
         self.max_results = cfg.get("max_results", 15)
         self.fetch_page = cfg.get("fetch_page", False)
         self.categories = cfg.get("categories", "general")
@@ -25,7 +25,7 @@ class WebSearchTool:
             "q": query,
             "categories": "general",
             "language": self.language,
-            "formats": ["html", "json"]
+            "formats": ["html", "json"],
         }
 
         try:
@@ -42,7 +42,7 @@ class WebSearchTool:
 
     from bs4 import BeautifulSoup
 
-    def parse_searxng_results(self, html: str, max_results:int=20):
+    def parse_searxng_results(self, html: str, max_results: int = 20):
         soup = BeautifulSoup(html, "html.parser")
         results = []
 
@@ -87,7 +87,7 @@ class WebSearchTool:
                 self.logger.log("FetchHTMLFailed", {"url": url, "error": str(e)})
             return None  # or return ""
 
-    def fetch_and_parse_readable(self, url:str):
+    def fetch_and_parse_readable(self, url: str):
         html = self.fetch_html(url)
         title, clean_text = self.extract_main_text(html)
         return {"url": url, "title": title, "text": clean_text}
@@ -98,6 +98,6 @@ class WebSearchTool:
         summary_html = doc.summary()
 
         # Use BeautifulSoup to clean text
-        soup = BeautifulSoup(summary_html, 'html.parser')
-        clean_text = soup.get_text(separator='\n', strip=True)
+        soup = BeautifulSoup(summary_html, "html.parser")
+        clean_text = soup.get_text(separator="\n", strip=True)
         return title, clean_text

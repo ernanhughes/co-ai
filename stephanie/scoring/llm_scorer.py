@@ -20,12 +20,11 @@ class LLMScorer(BaseScorer):
         self.memory = memory
         self.logger = logger
         self.prompt_loader = prompt_loader
-        self.llm_fn = llm_fn 
+        self.llm_fn = llm_fn
 
     @property
     def name(self) -> str:
         return "llm"
-
 
     def score(self, goal, scorable: Scorable, dimensions: list[dict]) -> ScoreBundle:
         """

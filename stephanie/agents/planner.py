@@ -17,7 +17,6 @@ class PipelinePlannerAgent:
         if self.lookahead_enabled:
             self.lookahead = LookaheadAgent(cfg, memory, logger)
 
-
     async def run(self, context):
         if self.dots:
             context = await self.dots.run(context)

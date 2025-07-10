@@ -11,16 +11,13 @@ class RefinerAgent(BaseAgent):
         history = context.get("prompt_history", {}).get(target_agent, None)
 
         if not history:
-            self.logger.log("RefinerNoHistoryFound", {
-                "target_agent": target_agent,
-                "context_keys": list(context.keys())
-            })
+            self.logger.log(
+                "RefinerNoHistoryFound",
+                {"target_agent": target_agent, "context_keys": list(context.keys())},
+            )
             return context
 
-        self.logger.log("RefinerStart", {
-            "target_agent": target_agent,
-            "goal": goal
-        })
+        self.logger.log("RefinerStart", {"target_agent": target_agent, "goal": goal})
 
         original_prompt = history["prompt"]
         original_response = history["response"]
@@ -38,19 +35,20 @@ class RefinerAgent(BaseAgent):
             prompt_improved_prompt = self.prompt_loader.load_prompt(
                 self.cfg, context=merged
             )
-            self.logger.log("RefinerImprovementPromptLoaded", {
-                "snippet": prompt_improved_prompt[:200]
-            })
+            self.logger.log(
+                "RefinerImprovementPromptLoaded",
+                {"snippet": prompt_improved_prompt[:200]},
+            )
 
             refined_prompt = self.call_llm(prompt_improved_prompt, context)
-            self.logger.log("RefinerPromptGenerated", {
-                "prompt_snippet": refined_prompt[:200]
-            })
+            self.logger.log(
+                "RefinerPromptGenerated", {"prompt_snippet": refined_prompt[:200]}
+            )
 
             refined_response = self.call_llm(refined_prompt, context)
-            self.logger.log("RefinerResponseGenerated", {
-                "response_snippet": refined_response[:200]
-            })
+            self.logger.log(
+                "RefinerResponseGenerated", {"response_snippet": refined_response[:200]}
+            )
 
             refined_hypotheses = extract_hypotheses(refined_response)
             self.logger.log(
@@ -67,7 +65,7 @@ class RefinerAgent(BaseAgent):
                         "pipeline_run_id": context.get(PIPELINE_RUN_ID),
                         "pipeline_signature": context.get(PIPELINE),
                     },
-                    context=context
+                    context=context,
                 )
                 refined.append(hyp)
 
@@ -75,7 +73,7 @@ class RefinerAgent(BaseAgent):
                 "original_response": original_response,
                 "original_hypotheses": original_hypotheses,
                 "refined_prompt": refined_prompt,
-                "refined_hypotheses": refined_hypotheses
+                "refined_hypotheses": refined_hypotheses,
             }
             refined_merged = {**merged, **info}
 
@@ -83,14 +81,14 @@ class RefinerAgent(BaseAgent):
             evaluation_prompt = self.prompt_loader.from_file(
                 evaluation_template, self.cfg, refined_merged
             )
-            self.logger.log("RefinerEvaluationPromptGenerated", {
-                "snippet": evaluation_prompt[:200]
-            })
+            self.logger.log(
+                "RefinerEvaluationPromptGenerated", {"snippet": evaluation_prompt[:200]}
+            )
 
             evaluation_response = self.call_llm(evaluation_prompt, context)
-            self.logger.log("RefinerEvaluationResponse", {
-                "snippet": evaluation_response[:200]
-            })
+            self.logger.log(
+                "RefinerEvaluationResponse", {"snippet": evaluation_response[:200]}
+            )
 
             if " 2" in evaluation_response:
                 context[HYPOTHESES] = refined_hypotheses
@@ -100,9 +98,8 @@ class RefinerAgent(BaseAgent):
 
         except Exception as e:
             print(f"❌ Exception: {type(e).__name__}: {e}")
-            self.logger.log("RefinerError", {
-                "error": str(e),
-                "context_keys": list(context.keys())
-            })
+            self.logger.log(
+                "RefinerError", {"error": str(e), "context_keys": list(context.keys())}
+            )
 
         return context

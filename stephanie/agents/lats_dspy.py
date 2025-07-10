@@ -4,8 +4,7 @@ import re
 from collections import defaultdict
 
 import dspy
-from dspy import (BootstrapFewShot, Example, InputField, OutputField, Predict,
-                  Signature)
+from dspy import BootstrapFewShot, Example, InputField, OutputField, Predict, Signature
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
@@ -16,8 +15,11 @@ from stephanie.constants import GOAL
 from stephanie.scoring.mrq.scorer import MRQScorer
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.utils.graph_tools import (build_mermaid_graph, compare_graphs,
-                                         save_mermaid_to_file)
+from stephanie.utils.graph_tools import (
+    build_mermaid_graph,
+    compare_graphs,
+    save_mermaid_to_file,
+)
 
 
 class TraceStep(Signature):

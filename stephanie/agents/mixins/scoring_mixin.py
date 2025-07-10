@@ -24,13 +24,15 @@ class ScoringMixin:
         """
         if scoring_profile not in self._scorers:
             config_key = f"{scoring_profile}_score_config"
-            config_path = self.cfg.get(config_key, f"config/scoring/{scoring_profile}.yaml")
+            config_path = self.cfg.get(
+                config_key, f"config/scoring/{scoring_profile}.yaml"
+            )
             self._scorers[scoring_profile] = ScoringManager.from_file(
                 filepath=config_path,
                 prompt_loader=self.prompt_loader,
                 cfg=self.cfg,
                 logger=self.logger,
-                memory=self.memory
+                memory=self.memory,
             )
         return self._scorers[scoring_profile]
 
@@ -61,9 +63,7 @@ class ScoringMixin:
             # Default to full ScoringManager logic (LLM-driven)
             scoring_manager = self.get_scorer(metrics)
             bundle = scoring_manager.evaluate(
-                scorable=scorable,
-                context=context,
-                llm_fn=self.call_llm
+                scorable=scorable, context=context, llm_fn=self.call_llm
             )
 
         self.logger.log("HypothesisScored", bundle.to_dict())

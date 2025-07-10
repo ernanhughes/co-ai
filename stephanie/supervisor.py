@@ -8,9 +8,17 @@ from uuid import uuid4
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID,
-                                 PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
-                                 SKIP_IF_COMPLETED, STAGE)
+from stephanie.constants import (
+    GOAL,
+    NAME,
+    PIPELINE,
+    PIPELINE_RUN_ID,
+    PROMPT_DIR,
+    RUN_ID,
+    SAVE_CONTEXT,
+    SKIP_IF_COMPLETED,
+    STAGE,
+)
 from stephanie.engine.cycle_watcher import CycleWatcher
 from stephanie.engine.meta_confidence import MetaConfidenceTracker
 from stephanie.engine.self_validation import SelfValidationEngine
@@ -35,6 +43,7 @@ class PipelineStage:
         self.iterations = config.get("iterations", 1)
         self.stage_dict = stage_dict
 
+
 class SingleAgentPipeline:
     def __init__(self, agent_name, config):
         self.agent = AgentRegistry(config).get(agent_name)
@@ -45,7 +54,7 @@ class SingleAgentPipeline:
         # goals = load_goal_list(self.goal_input)
         # for goal in goals:
         #     result = self.agent.run(goal)
-            # wrap it in pipeline logs, score evals, etc.
+        # wrap it in pipeline logs, score evals, etc.
 
 
 class Supervisor:
@@ -96,12 +105,15 @@ class Supervisor:
         register("cycle_watcher", cycle_watcher)
         register("training_controller", training_controller)
         register("self_validation", validator)
-        self.logger.log("SupervisorComponentsRegistered", {
-            "state_tracker": state_tracker,
-            "confidence_tracker": confidence_tracker,
-            "cycle_watcher": cycle_watcher,
-            "training_controller": training_controller,
-        })
+        self.logger.log(
+            "SupervisorComponentsRegistered",
+            {
+                "state_tracker": state_tracker,
+                "confidence_tracker": confidence_tracker,
+                "cycle_watcher": cycle_watcher,
+                "training_controller": training_controller,
+            },
+        )
 
     def _parse_pipeline_stages(
         self, stage_configs: list[dict[str, any]]
@@ -167,7 +179,7 @@ class Supervisor:
         # Create and store PipelineRun
         pipeline_run_data = {
             "name": self.cfg.get("pipeline", {}).get(NAME, "UnnamedPipelineRun"),
-            "tag":  self.cfg.get("pipeline", {}).get("tag", "default"),
+            "tag": self.cfg.get("pipeline", {}).get("tag", "default"),
             "description": self.cfg.get("pipeline", {}).get("description", ""),
             "goal_id": goal_dict.get("id"),
             "run_id": run_id,
@@ -216,31 +228,36 @@ class Supervisor:
             return context
         self.logger.log("PipelineJudgeStart", {"context_keys": list(context.keys())})
 
-        judge_cfg = OmegaConf.to_container(
-            self.cfg.post_judgment, resolve=True
+        judge_cfg = OmegaConf.to_container(self.cfg.post_judgment, resolve=True)
+        stage_dict = OmegaConf.to_container(
+            self.cfg.agents.pipeline_judge, resolve=True
         )
-        stage_dict =  OmegaConf.to_container(self.cfg.agents.pipeline_judge, resolve=True)
         judge_cls = hydra.utils.get_class(judge_cfg["cls"])
         judge_agent = judge_cls(cfg=stage_dict, memory=self.memory, logger=self.logger)
         context = await judge_agent.run(context)
         self.logger.log("PipelineJudgeEnd", {"context_keys": list(context.keys())})
         return context
 
-
-
     @time_function(logger=None)
     async def _run_single_stage(self, stage: PipelineStage, context: dict) -> dict:
         if not stage.enabled:
-            self.logger.log("PipelineStageSkipped", {STAGE: stage.name, "reason": "disabled_in_config"})
+            self.logger.log(
+                "PipelineStageSkipped",
+                {STAGE: stage.name, "reason": "disabled_in_config"},
+            )
             return context
 
         cls = hydra.utils.get_class(stage.cls)
         stage_dict = OmegaConf.to_container(stage.stage_dict, resolve=True)
         self.rule_applier.apply_to_agent(stage_dict, context)
 
-        saved_context = self.load_context(stage_dict, goal_id=context.get(GOAL).get("id"))
+        saved_context = self.load_context(
+            stage_dict, goal_id=context.get(GOAL).get("id")
+        )
         if saved_context:
-            self.logger.log("PipelineStageSkipped", {STAGE: stage.name, "reason": "context_loaded"})
+            self.logger.log(
+                "PipelineStageSkipped", {STAGE: stage.name, "reason": "context_loaded"}
+            )
             return {**context, **saved_context}
 
         agent_args = {
@@ -255,17 +272,23 @@ class Supervisor:
 
         self.logger.log("PipelineStageStart", {STAGE: stage.name})
         for i in range(stage.iterations or 1):
-            self.logger.log("PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1})
+            self.logger.log(
+                "PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1}
+            )
             context = await agent.run(context)
             if self.rule_applier.rules:
                 self.rule_applier.track_pipeline_stage(stage_dict, context)
-            self.logger.log("PipelineIterationEnd", {STAGE: stage.name, "iteration": i + 1})
+            self.logger.log(
+                "PipelineIterationEnd", {STAGE: stage.name, "iteration": i + 1}
+            )
 
         self.save_context(stage_dict, context)
         self.logger.log("PipelineStageEnd", {STAGE: stage.name})
-        self.logger.log("ContextAfterStage", {STAGE: stage.name, "context_keys": list(context.keys())})
+        self.logger.log(
+            "ContextAfterStage",
+            {STAGE: stage.name, "context_keys": list(context.keys())},
+        )
         return context
-
 
     def generate_report(self, context: dict[str, any], run_id: str) -> str:
         """Generate a report based on the pipeline context."""
@@ -294,7 +317,7 @@ class Supervisor:
         if self.memory and cfg.get(SKIP_IF_COMPLETED, False):
             name = cfg.get(NAME, None)
             if name and self.memory.context.has_completed(goal_id, name):
-                saved_context = self.memory.context.load(goal_id, name) 
+                saved_context = self.memory.context.load(goal_id, name)
                 if saved_context:
                     self.logger.log("ContextLoaded", {"Goal Id": goal_id, NAME: name})
                     return saved_context
@@ -429,12 +452,14 @@ class Supervisor:
         for key, value in goal_dict.items():
             if value is not None:
                 if key in merged and merged[key] != value:
-                    self.logger.log("GoalContextOverride", {
-                        "field": key,
-                        "original": merged[key],
-                        "override": value,
-                        "note": "Overriding goal field from context"
-                    })
+                    self.logger.log(
+                        "GoalContextOverride",
+                        {
+                            "field": key,
+                            "original": merged[key],
+                            "override": value,
+                            "note": "Overriding goal field from context",
+                        },
+                    )
                 merged[key] = value
         return merged
-
