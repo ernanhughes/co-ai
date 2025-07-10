@@ -1,6 +1,6 @@
 # stephanie/registry/scorer.py
 from stephanie.scoring.llm_scorer import LLMScorer
-from stephanie.scoring.mrq_scorer import MRQScorer
+from stephanie.scoring.mrq.mrq_scorer import MRQScorer
 from stephanie.scoring.proximity_scorer import ProximityScorer
 from stephanie.scoring.svm_scorer import SVMScorer
 

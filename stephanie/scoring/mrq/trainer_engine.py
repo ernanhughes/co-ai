@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from stephanie.scoring.document_value_predictor import ValuePredictor
+from stephanie.scoring.mrq.value_predictor import ValuePredictor
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 

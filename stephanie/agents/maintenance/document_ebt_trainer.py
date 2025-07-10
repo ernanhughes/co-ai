@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader, Dataset
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.maintenance.model_evolution_manager import \
     ModelEvolutionManager
-from stephanie.scoring.document_value_predictor import ValuePredictor
+from stephanie.scoring.mrq.value_predictor import ValuePredictor
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.utils.file_utils import save_json
