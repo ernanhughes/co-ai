@@ -208,6 +208,27 @@ class Supervisor:
 
         return context
 
+    async def _maybe_run_pipeline_judge(self, context: dict) -> dict:
+        """
+        Optionally run a pipeline judge to evaluate the context after all stages.
+        This is useful for final validation or scoring.
+        """
+        if not self.cfg.get("pipeline_judge", {}).get("enabled", False):
+            return context
+        self.logger.log("PipelineJudgeStart", {"context_keys": list(context.keys())})
+
+        judge_cfg = OmegaConf.to_container(
+            self.cfg.post_judgment, resolve=True
+        )
+        stage_dict =  OmegaConf.to_container(self.cfg.agents.pipeline_judge, resolve=True)
+        judge_cls = hydra.utils.get_class(judge_cfg["cls"])
+        judge_agent = judge_cls(cfg=stage_dict, memory=self.memory, logger=self.logger)
+        context = await judge_agent.run(context)
+        self.logger.log("PipelineJudgeEnd", {"context_keys": list(context.keys())})
+        return context
+
+
+
     @time_function(logger=None)
     async def _run_single_stage(self, stage: PipelineStage, context: dict) -> dict:
         if not stage.enabled:
