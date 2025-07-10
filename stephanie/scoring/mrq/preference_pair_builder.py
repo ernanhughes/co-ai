@@ -16,10 +16,12 @@ class PreferencePairBuilder:
         self.logger = logger
 
     def get_training_pairs_by_dimension(
-        self, goal: str = None, limit: int = 100
+        self, goal: str = None, limit: int = 100, dim: list[str] = None
     ) -> dict:
         """
         Returns a dictionary of document preference pairs grouped by dimension.
+
+        If `dim` is provided, only those dimensions will be included.
 
         Output Format:
         {
@@ -36,7 +38,7 @@ class PreferencePairBuilder:
             ...
         }
         """
-        query = text("""
+        query = text(f"""
             WITH scored_docs AS (
                 SELECT
                     s.dimension,
@@ -54,6 +56,7 @@ class PreferencePairBuilder:
                 JOIN evaluations e ON s.evaluation_id = e.id
                 JOIN documents d ON e.document_id = d.id
                 WHERE s.score IS NOT NULL
+                { "AND s.dimension IN :dims" if dim else "" }
             )
             SELECT
                 dimension,
@@ -72,9 +75,9 @@ class PreferencePairBuilder:
                     doc_id
                 FROM scored_docs
                 WHERE rank_high = 1
-                  AND content IS NOT NULL
-                  AND content <> ''
-                  
+                AND content IS NOT NULL
+                AND content <> ''
+
                 UNION ALL
 
                 SELECT
@@ -92,6 +95,8 @@ class PreferencePairBuilder:
         """)
 
         params = {"limit": limit}
+        if dim:
+            params["dims"] = tuple(dim)
         if goal:
             params["goal"] = goal
 

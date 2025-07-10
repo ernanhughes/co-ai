@@ -4,9 +4,7 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.score import ScoreORM
-from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
-from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.scoring_engine import ScoringEngine
 from stephanie.scoring.scoring_manager import ScoringManager
 
@@ -19,7 +17,7 @@ DEFAULT_DIMENSIONS = [
 ]
 
 
-class DocumentLLMInferenceAgent(ScoringMixin, BaseAgent):
+class LLMInferenceAgent(ScoringMixin, BaseAgent):
     """
     Scores document sections or full documents to assess reward value
     using configured reward model (e.g., SVM-based or regression-based).
@@ -51,7 +49,9 @@ class DocumentLLMInferenceAgent(ScoringMixin, BaseAgent):
                 continue
 
             scorable = ScorableFactory.from_dict(document, TargetType.DOCUMENT)
-            result = self.scoring_engine.score_item(scorable, context, "document")
+            result = self.scoring_engine.score_item(
+                scorable, context, "document"
+            )
             results.append(result)
             self.logger.log(
                 "DocumentScored",
@@ -70,7 +70,8 @@ class DocumentLLMInferenceAgent(ScoringMixin, BaseAgent):
                 source="llm",
             )
         self.logger.log(
-            "DocumentLLMInferenceCompleted", {"total_documents_scored": len(results)}
+            "DocumentLLMInferenceCompleted",
+            {"total_documents_scored": len(results)},
         )
         # Store results in context for further processing
         context[self.output_key] = results

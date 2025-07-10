@@ -32,3 +32,4 @@ class Ethics(EthicsScoringMixin, BaseAgent):
             },
         )
         context["final_ethics_review"] = response
+        return context

@@ -18,12 +18,33 @@ class MRQTrainerAgent(BaseAgent):
         self.model_type = cfg.get("model_type", "mrq")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
+        self.dimensions = cfg.get("dimensions", [])
+        self.epochs = cfg.get("epochs", 10)
+        self.lr = cfg.get("lr", 1e-4)
+        self.patience = cfg.get("patience", 2)  
+        self.min_delta = cfg.get("min_delta", 0.001)
+
+
+        self.logger.log(
+            "MRQTrainerAgentInitialized",
+            {
+                "dimensions": self.dimensions,
+                "model_type": self.model_type,
+                "target_type": self.target_type,
+                "model_version": self.model_version,
+                "model_path": self.model_path,
+                "epochs": self.epochs,
+                "lr": self.lr,  
+                "patience": self.patience,
+                "min_delta": self.min_delta,
+            },
+        )
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
         builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
-        training_pairs_by_dim = builder.get_training_pairs_by_dimension(goal=goal_text)
+        training_pairs_by_dim = builder.get_training_pairs_by_dimension(goal=goal_text, dim=self.dimensions)
 
         contrast_pairs = [
             {
@@ -39,7 +60,7 @@ class MRQTrainerAgent(BaseAgent):
         ]
 
         self.logger.log(
-            "DocumentPairBuilderComplete",
+            "PreferencePairBuilder",
             {
                 "dimensions": list(training_pairs_by_dim.keys()),
                 "total_pairs": len(contrast_pairs),
@@ -52,12 +73,11 @@ class MRQTrainerAgent(BaseAgent):
             device="cuda" if torch.cuda.is_available() else "cpu",
         )
 
-        config = {"epochs": 10, "lr": 1e-4, "patience": 2, "min_delta": 0.001}
 
         assert contrast_pairs, "No contrast pairs found"
 
         trained_encoders, trained_models, regression_tuners = trainer.train_all(
-            contrast_pairs, cfg=config
+            contrast_pairs, cfg=self.cfg
         )
 
         for dim in trained_models:

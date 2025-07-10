@@ -135,7 +135,7 @@ class EBTTrainerAgent(BaseAgent):
                 self.model_version,
             )
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
-            predictor_path = f"{model_path}/{dim}.pt"
+            predictor_path = f"{model_path}{dim}.pt"
             print(model.state_dict().keys())
             torch.save(model.state_dict(), predictor_path)
             self.logger.log(
@@ -143,7 +143,7 @@ class EBTTrainerAgent(BaseAgent):
             )
 
             # Save score normalization metadata for this dimension
-            meta_path = f"{model_path}/{dim}.meta.json"
+            meta_path = f"{model_path}{dim}.meta.json"
             normalization = ds.get_normalization()
             save_json(normalization, meta_path)
 

@@ -13,7 +13,7 @@ from stephanie.utils.file_utils import save_json
 from stephanie.utils.model_utils import get_model_path
 
 
-class DocumentSVMTrainerAgent(BaseAgent):
+class SVMTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")
@@ -28,17 +28,33 @@ class DocumentSVMTrainerAgent(BaseAgent):
         # Initialize tuners and models
         for dim in self.dimensions:
             self._initialize_dimension(dim)
+        self.logger.log(
+            "SVMTrainerInitialized",
+            {
+                "dimensions": self.dimensions,
+                "model_type": self.model_type,
+                "target_type": self.target_type,
+                "model_version": self.model_version,
+                "model_path": self.model_path,
+            },
+        )
 
     def _initialize_dimension(self, dim):
         """Initialize SVM model, scaler, and tuner for each dimension"""
         self.models[dim] = (StandardScaler(), SVR(kernel="linear"))
-        self.regression_tuners[dim] = RegressionTuner(dimension=dim, logger=self.logger)
+        self.regression_tuners[dim] = RegressionTuner(
+            dimension=dim, logger=self.logger
+        )
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
-        builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
-        training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)
+        builder = PreferencePairBuilder(
+            db=self.memory.session, logger=self.logger
+        )
+        training_pairs = builder.get_training_pairs_by_dimension(
+            goal=goal_text
+        )
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -110,17 +126,24 @@ class DocumentSVMTrainerAgent(BaseAgent):
             dump(model, model_path_joblib)
 
             # Save normalization meta
-            meta = {"min_score": float(np.min(y)), "max_score": float(np.max(y))}
+            meta = {
+                "min_score": float(np.min(y)),
+                "max_score": float(np.max(y)),
+            }
             save_json(meta, meta_path)
 
             # Train regression tuner using same data
             tuner = self.regression_tuners[dim]
             for i in range(len(X)):
-                tuner.train_single(model.predict(X_scaled[i].reshape(1, -1))[0], y[i])
+                tuner.train_single(
+                    model.predict(X_scaled[i].reshape(1, -1))[0], y[i]
+                )
 
             tuner.save(tuner_path)
 
-            self.logger.log("SVMModelSaved", {"dimension": dim, "path": model_path})
+            self.logger.log(
+                "SVMModelSaved", {"dimension": dim, "path": model_path}
+            )
 
         context[self.output_key] = training_pairs
         return context

@@ -15,7 +15,7 @@ from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_utils import discover_saved_dimensions, get_svm_file_paths
 
 
-class DocumentSVMInferenceAgent(BaseAgent):
+class SVMInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")
@@ -33,7 +33,7 @@ class DocumentSVMInferenceAgent(BaseAgent):
             )
 
         self.logger.log(
-            "DocumentSVMInferenceInitialized", {"dimensions": self.dimensions}
+            "SVMInferenceInitialized", {"dimensions": self.dimensions}
         )
 
         for dim in self.dimensions:

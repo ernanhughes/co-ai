@@ -14,7 +14,7 @@ from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_utils import discover_saved_dimensions, get_model_path
 
 
-class DocumentEBTInferenceAgent(BaseAgent):
+class EBTInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")

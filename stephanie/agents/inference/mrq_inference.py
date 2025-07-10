@@ -4,7 +4,9 @@ import os
 import torch
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from stephanie.evaluator.hypothesis_value_predictor import (
+    HypothesisValuePredictor,
+)
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.model import MRQModel
 from stephanie.scoring.scorable import Scorable
@@ -14,10 +16,13 @@ from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
-from stephanie.utils.model_utils import discover_saved_dimensions, get_model_path
+from stephanie.utils.model_utils import (
+    discover_saved_dimensions,
+    get_model_path,
+)
 
 
-class DocumentMRQInferenceAgent(BaseAgent):
+class MRQInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")
@@ -28,7 +33,9 @@ class DocumentMRQInferenceAgent(BaseAgent):
         self.models = {}
         self.model_meta = {}
         self.tuners = {}  # Added tuners dict
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
 
         if not self.dimensions:
             self.dimensions = discover_saved_dimensions(
@@ -36,7 +43,7 @@ class DocumentMRQInferenceAgent(BaseAgent):
             )
 
         self.logger.log(
-            "DocumentMRQInferenceAgentInitialized",
+            "MRQInferenceAgentInitialized",
             {
                 "model_type": self.model_type,
                 "target_type": self.target_type,
@@ -97,7 +104,9 @@ class DocumentMRQInferenceAgent(BaseAgent):
             self.logger.log("MRQScoringStarted", {"document_id": doc_id})
 
             scorable = Scorable(
-                id=doc_id, text=doc.get("text", ""), target_type=TargetType.DOCUMENT
+                id=doc_id,
+                text=doc.get("text", ""),
+                target_type=TargetType.DOCUMENT,
             )
 
             dimension_scores = {}
@@ -141,9 +150,13 @@ class DocumentMRQInferenceAgent(BaseAgent):
                 )
 
             # Create ScoreBundle
-            score_bundle = ScoreBundle(results={r.dimension: r for r in score_results})
+            score_bundle = ScoreBundle(
+                results={r.dimension: r for r in score_results}
+            )
 
-            model_name = f"{self.target_type}_{self.model_type}_{self.model_version}"
+            model_name = (
+                f"{self.target_type}_{self.model_type}_{self.model_version}"
+            )
             # Save score bundle to memory via ScoringManager
             ScoringManager.save_score_to_memory(
                 score_bundle,
