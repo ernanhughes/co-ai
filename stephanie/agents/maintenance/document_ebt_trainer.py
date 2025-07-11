@@ -1,15 +1,18 @@
 # stephanie/agents/scoring/document_ebt_trainer.py
 import os
+
 import torch
-from torch.utils.data import Dataset, DataLoader
 from torch import nn, optim
+from torch.utils.data import DataLoader, Dataset
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.utils.file_utils import save_json
+from stephanie.agents.maintenance.model_evolution_manager import \
+    ModelEvolutionManager
 from stephanie.scoring.model.ebt_model import DocumentEBTScorer
-from stephanie.agents.maintenance.model_evolution_manager import ModelEvolutionManager
 from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
+from stephanie.utils.file_utils import save_json
+
 
 class DocumentEBTDataset(Dataset):
     """Dataset that normalizes LLM scores for EBT training"""

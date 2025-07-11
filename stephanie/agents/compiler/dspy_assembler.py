@@ -1,13 +1,7 @@
 # stephanie/agents/compiler/dspy_assembler.py
 import dspy
-from dspy import (
-    BootstrapFewShot,
-    ChainOfThought,
-    Example,
-    InputField,
-    OutputField,
-    Signature,
-)
+from dspy import (BootstrapFewShot, ChainOfThought, Example, InputField,
+                  OutputField, Signature)
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.memory_aware_mixin import MemoryAwareMixin

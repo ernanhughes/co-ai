@@ -10,7 +10,8 @@ from stephanie.models.score import ScoreORM
 from stephanie.models.score_dimension import ScoreDimensionORM
 from stephanie.prompts.prompt_renderer import PromptRenderer
 from stephanie.scoring.calculations.score_delta import ScoreDeltaCalculator
-from stephanie.scoring.calculations.weighted_average import WeightedAverageCalculator
+from stephanie.scoring.calculations.weighted_average import \
+    WeightedAverageCalculator
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle

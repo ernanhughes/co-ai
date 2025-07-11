@@ -2,14 +2,8 @@
 from abc import ABC, abstractmethod
 
 import dspy
-from dspy import (
-    BootstrapFewShot,
-    Example,
-    InputField,
-    OutputField,
-    Predict,
-    Signature,
-)
+from dspy import (BootstrapFewShot, Example, InputField, OutputField, Predict,
+                  Signature)
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL

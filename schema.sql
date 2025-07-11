@@ -939,3 +939,29 @@ CREATE TABLE IF NOT EXISTS mem_cubes (
 );
 
 
+
+CREATE TABLE memcubes (
+    id TEXT PRIMARY KEY,  -- hash-based ID + version
+    scorable_id INTEGER NOT NULL,  -- Foreign key to Scorable
+    scorable_type TEXT NOT NULL,   -- e.g., document, theorem, triple
+    content TEXT NOT NULL,        -- Raw text from Scorable
+    version TEXT NOT NULL,        -- v1, v2, etc.
+    created_at TIMESTAMP DEFAULT NOW(),
+    last_modified TIMESTAMP DEFAULT NOW(),
+    source TEXT,                -- e.g., user_input, inference_engine
+    model TEXT,                 -- e.g., gpt-4, llama3
+    priority INT DEFAULT 5,     -- 1–10 scale
+    sensitivity TEXT DEFAULT 'public',  -- security tag
+    ttl INT,                    -- Time-to-live in days
+    usage_count INT DEFAULT 0,
+    metadata JSONB              -- Extra info like provenance, lineage
+);
+
+-- Add versioning support
+CREATE TABLE memcube_versions (
+    cube_id TEXT REFERENCES memcubes(id),
+    version TEXT NOT NULL,
+    content TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (cube_id, version)
+);

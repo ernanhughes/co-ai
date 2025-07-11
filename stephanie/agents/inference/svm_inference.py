@@ -12,7 +12,8 @@ from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
-from stephanie.utils.model_utils import discover_saved_dimensions, get_svm_file_paths
+from stephanie.utils.model_utils import (discover_saved_dimensions,
+                                         get_svm_file_paths)
 
 
 class SVMInferenceAgent(BaseAgent):

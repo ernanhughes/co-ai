@@ -4,8 +4,8 @@ from typing import List
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-from stephanie.scoring.mrq.value_predictor import ValuePredictor
 from stephanie.scoring.mrq.encoder import TextEncoder
+from stephanie.scoring.mrq.value_predictor import ValuePredictor
 from stephanie.scoring.training.base_trainer import BaseTrainer
 
 

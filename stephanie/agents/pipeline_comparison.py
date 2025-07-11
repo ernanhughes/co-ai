@@ -47,7 +47,8 @@ class PipelineComparisonAgent(ScoringMixin, BaseAgent):
         return context
 
     def compare_runs(self, tags: list[str], goal_id: int = None):
-        from stephanie.models.comparison_preference import ComparisonPreferenceORM
+        from stephanie.models.comparison_preference import \
+            ComparisonPreferenceORM
 
         """
         Compare multiple sets of pipeline runs by tag across the same goals.

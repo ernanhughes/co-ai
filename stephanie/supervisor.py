@@ -8,17 +8,9 @@ from uuid import uuid4
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
-from stephanie.constants import (
-    GOAL,
-    NAME,
-    PIPELINE,
-    PIPELINE_RUN_ID,
-    PROMPT_DIR,
-    RUN_ID,
-    SAVE_CONTEXT,
-    SKIP_IF_COMPLETED,
-    STAGE,
-)
+from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID,
+                                 PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
+                                 SKIP_IF_COMPLETED, STAGE)
 from stephanie.engine.cycle_watcher import CycleWatcher
 from stephanie.engine.meta_confidence import MetaConfidenceTracker
 from stephanie.engine.self_validation import SelfValidationEngine
@@ -463,3 +455,22 @@ class Supervisor:
                     )
                 merged[key] = value
         return merged
+
+    # Inside your supervisor.py
+    def check_for_retraining(self):
+        query = """
+        SELECT dimension, AVG(uncertainty) as avg_uncertainty
+        FROM scoring_history
+        WHERE created_at > NOW() - INTERVAL '1 day'
+        GROUP BY dimension
+        """
+        results = self.memory.session.execute(query).fetchall()
+        
+        for r in results:
+            if r.avg_uncertainty > self.cfg.get("retrain_threshold", 0.75):
+                self.logger.log("EBTRetrainNeeded", {
+                    "dimension": r.dimension,
+                    "avg_uncertainty": r.avg_uncertainty
+                })
+                # Trigger retraining
+                self._trigger_ebt_retraining(r.dimension)

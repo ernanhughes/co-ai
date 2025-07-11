@@ -1,14 +1,15 @@
+import torch
+from sqlalchemy import text
+
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.inference.ebt_inference import EBTInferenceAgent
-from stephanie.agents.inference.mrq_inference import MRQInferenceAgent
 from stephanie.agents.inference.llm_inference import LLMInferenceAgent
-from stephanie.scoring.scorable_factory import TargetType
-from stephanie.scoring.scorable_factory import ScorableFactory
+from stephanie.agents.inference.mrq_inference import MRQInferenceAgent
+from stephanie.memcubes.memcube import MemCube
+from stephanie.memcubes.memcube_factory import MemCubeFactory
 from stephanie.scoring.ebt.buffer import EBTTrainingBuffer
-from sqlalchemy import text
 from stephanie.scoring.ebt.refinement_trainer import EBTRefinementTrainer
-
-import torch
+from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 
 DEFAULT_DIMENSIONS = [
     "alignment",
@@ -264,8 +265,8 @@ class ScoringPolicyAgent(BaseAgent):
 
     # In scoring_policy.py
     def plot_uncertainty_map(self, uncertainties, doc_id):
-        import seaborn as sns
         import matplotlib.pyplot as plt
+        import seaborn as sns
 
         plt.figure(figsize=(8, 4))
         sns.heatmap(
@@ -283,9 +284,9 @@ class ScoringPolicyAgent(BaseAgent):
         # After processing all documents
 
     def plot_score_distributions(self, results):
+        import matplotlib.pyplot as plt
         import pandas as pd
         import seaborn as sns
-        import matplotlib.pyplot as plt
 
         df = pd.DataFrame(
             [
@@ -341,8 +342,8 @@ class ScoringPolicyAgent(BaseAgent):
         return summary
 
     def analyze_refinement_impact(self, results):
-        import pandas as pd
         import matplotlib.pyplot as plt
+        import pandas as pd
         import seaborn as sns
 
         impacts = []
@@ -414,3 +415,22 @@ class ScoringPolicyAgent(BaseAgent):
                 "total_examples": len(examples),
                 "dimensions": list(set(e["dimension"] for e in examples))
             })
+
+    def score_with_memcube(self, goal: str, memcube: MemCube):
+        # Check access policy
+        if not memcube.apply_governance(self.user, "read"):
+            raise PermissionError(f"User {self.user} cannot read MemCube {memcube.id}")
+        
+        # Get raw Scorable
+        scorable = memcube.scorable
+        
+        # Score using EBT/MRQ
+        scores = self.ebt.score(goal, scorable.text)
+        mrq_scores = self.mrq.score(goal, scorable.text)
+        
+        # Decide which scores to use
+        if any(u > self.cfg.get("ebt_refine_threshold", 0.7) for u in scores["uncertainty_by_dimension"].values()):
+            refined = self.refine_document(goal, memcube)
+            refined_scores = self.ebt.score(goal, refined.scorable.text)
+            return refined_scores
+        return scores

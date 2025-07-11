@@ -1,17 +1,8 @@
 # stephanie/models/model_version.py
 from datetime import datetime
 
-from sqlalchemy import (
-    JSON,
-    TIMESTAMP,
-    Boolean,
-    Column,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-)
+from sqlalchemy import (JSON, TIMESTAMP, Boolean, Column, Float, ForeignKey,
+                        Integer, String, Text)
 from sqlalchemy.ext.declarative import declarative_base
 
 from stephanie.models.base import Base

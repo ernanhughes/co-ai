@@ -11,7 +11,8 @@ from stephanie.memory.cartridge_domain_store import CartridgeDomainStore
 from stephanie.memory.cartridge_store import CartridgeStore
 from stephanie.memory.cartridge_triple_store import CartridgeTripleStore
 from stephanie.memory.context_store import ContextStore
-from stephanie.memory.document_domain_section_store import DocumentSectionDomainStore
+from stephanie.memory.document_domain_section_store import \
+    DocumentSectionDomainStore
 from stephanie.memory.document_domain_store import DocumentDomainStore
 from stephanie.memory.document_section_store import DocumentSectionStore
 from stephanie.memory.document_store import DocumentStore
@@ -35,6 +36,7 @@ from stephanie.memory.search_result_store import SearchResultStore
 from stephanie.memory.sharpening_store import SharpeningStore
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
+from stephanie.memory.memcube_store import MemcubeStore
 
 
 class MemoryTool:
@@ -87,6 +89,7 @@ class MemoryTool:
         self.register_store(CartridgeDomainStore(self.session, logger))
         self.register_store(CartridgeStore(self.session, logger))
         self.register_store(CartridgeTripleStore(self.session, logger))
+        self.register_store(MemcubeStore(self.session, logger))
 
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):

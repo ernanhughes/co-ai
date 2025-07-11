@@ -7,27 +7,11 @@ from datetime import datetime, timezone
 
 import litellm
 
-from stephanie.constants import (
-    AGENT,
-    API_BASE,
-    API_KEY,
-    BATCH_SIZE,
-    CONTEXT,
-    GOAL,
-    HYPOTHESES,
-    INPUT_KEY,
-    MODEL,
-    NAME,
-    OUTPUT_KEY,
-    PIPELINE,
-    PIPELINE_RUN_ID,
-    PROMPT_MATCH_RE,
-    PROMPT_PATH,
-    SAVE_CONTEXT,
-    SAVE_PROMPT,
-    SOURCE,
-    STRATEGY,
-)
+from stephanie.constants import (AGENT, API_BASE, API_KEY, BATCH_SIZE, CONTEXT,
+                                 GOAL, HYPOTHESES, INPUT_KEY, MODEL, NAME,
+                                 OUTPUT_KEY, PIPELINE, PIPELINE_RUN_ID,
+                                 PROMPT_MATCH_RE, PROMPT_PATH, SAVE_CONTEXT,
+                                 SAVE_PROMPT, SOURCE, STRATEGY)
 from stephanie.logs import JSONLogger
 from stephanie.models import PromptORM
 from stephanie.prompts import PromptLoader
@@ -348,9 +332,8 @@ class BaseAgent(ABC):
         Central method to save hypotheses and track document section links.
         """
         from stephanie.models.hypothesis import HypothesisORM
-        from stephanie.models.hypothesis_document_section import (
-            HypothesisDocumentSectionORM,
-        )
+        from stephanie.models.hypothesis_document_section import \
+            HypothesisDocumentSectionORM
 
         # Ensure metadata is set if not already in the dict
         goal = context.get(GOAL, {})

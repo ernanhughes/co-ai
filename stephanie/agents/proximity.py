@@ -4,8 +4,10 @@ import itertools
 import numpy as np
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.agents.mixins.scoring_mixin import ScoringMixin  # Adjust path if needed
-from stephanie.constants import DATABASE_MATCHES, GOAL, GOAL_TEXT, PIPELINE_RUN_ID, TEXT
+from stephanie.agents.mixins.scoring_mixin import \
+    ScoringMixin  # Adjust path if needed
+from stephanie.constants import (DATABASE_MATCHES, GOAL, GOAL_TEXT,
+                                 PIPELINE_RUN_ID, TEXT)
 from stephanie.models import EvaluationORM
 from stephanie.scoring.proximity_scorer import ProximityScorer
 from stephanie.scoring.scorable import Scorable

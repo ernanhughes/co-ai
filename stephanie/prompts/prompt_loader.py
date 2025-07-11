@@ -3,15 +3,8 @@ import os
 
 from jinja2 import Template
 
-from stephanie.constants import (
-    DEFAULT,
-    FILE,
-    NAME,
-    PROMPT_DIR,
-    PROMPT_FILE,
-    PROMPT_MODE,
-    STRATEGY,
-)
+from stephanie.constants import (DEFAULT, FILE, NAME, PROMPT_DIR, PROMPT_FILE,
+                                 PROMPT_MODE, STRATEGY)
 
 
 def get_text_from_file(file_path: str) -> str:

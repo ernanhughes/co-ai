@@ -6,9 +6,8 @@ from stephanie.scoring.score_result import ScoreResult
 
 class ScoreBundle:
     def __init__(self, results: dict[str, ScoreResult]):
-        from stephanie.scoring.calculations.weighted_average import (
-            WeightedAverageCalculator,
-        )
+        from stephanie.scoring.calculations.weighted_average import \
+            WeightedAverageCalculator
 
         self.results = results
         self.calculator = WeightedAverageCalculator()

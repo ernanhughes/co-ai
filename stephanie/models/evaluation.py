@@ -2,7 +2,8 @@
 # models/score.py
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import (JSON, Column, DateTime, Enum, ForeignKey, Integer,
+                        String, Text)
 from sqlalchemy.orm import relationship
 
 from stephanie.models.base import Base

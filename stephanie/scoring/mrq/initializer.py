@@ -1,5 +1,6 @@
 # stephanie/scoring/mrq/initializer.py
-from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from stephanie.evaluator.hypothesis_value_predictor import \
+    HypothesisValuePredictor
 from stephanie.evaluator.mrq_trainer import MRQTrainer
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 

@@ -1,24 +1,19 @@
 # stephanie/scoring/ebt/ebt_refinement_trainer.py
 import os
-import torch
-import json
-from torch.utils.data import Dataset, DataLoader
-from torch import nn, optim
-from torch.nn.functional import cosine_similarity
-from typing import List, Dict, Optional
 from collections import defaultdict
 from datetime import datetime
+from typing import Dict, List
+
+import torch
+from torch import optim
+from torch.utils.data import DataLoader, Dataset
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.evaluator.text_encoder import TextEncoder
-from stephanie.scoring.model.ebt_model import EBTModel
-from stephanie.utils.model_utils import get_model_path
-from stephanie.utils.file_utils import save_json, load_json
-from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-from stephanie.scoring.score_result import ScoreResult
-from stephanie.scoring.scorable import Scorable
-from stephanie.scoring.scorable_factory import TargetType
 from stephanie.agents.mixins.ebt_mixin import EBTMixin
+from stephanie.scoring.model.ebt_model import EBTModel
+from stephanie.scoring.transforms.regression_tuner import RegressionTuner
+from stephanie.utils.file_utils import save_json
+from stephanie.utils.model_utils import get_model_path
 
 
 class EBTRefinementDataset(Dataset):
@@ -121,6 +116,7 @@ class EBTRefinementTrainer(BaseAgent, EBTMixin):
             ds = EBTRefinementDataset(pairs)
             loaders[dim] = DataLoader(
                 ds,
+                num_workers= 4,
                 batch_size=self.batch_size,
                 shuffle=True,
                 collate_fn=lambda b: self._collate_fn(b, self.memory.embedding, self.device)

@@ -4,6 +4,7 @@ import os
 import torch
 
 from stephanie.agents.base_agent import BaseAgent
+from stephanie.memcubes.memcube_factory import MemCubeFactory
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
@@ -11,7 +12,8 @@ from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.utils.file_utils import load_json
-from stephanie.utils.model_utils import discover_saved_dimensions, get_model_path
+from stephanie.utils.model_utils import (discover_saved_dimensions,
+                                         get_model_path)
 
 
 class EBTInferenceAgent(BaseAgent):
@@ -96,6 +98,8 @@ class EBTInferenceAgent(BaseAgent):
             scorable = Scorable(
                 id=doc_id, text=doc.get("text", ""), target_type=TargetType.DOCUMENT
             )
+            memcube = MemCubeFactory.from_scordable(scorable, version="auto")
+            memcube.extra_data["pipeline"] = "ebt_inference"
 
             ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal_text)).to(
                 self.device
@@ -256,6 +260,16 @@ class EBTInferenceAgent(BaseAgent):
         final_energy = model(ctx_emb, refined_emb).item()
         uncertainty = torch.norm(refined_emb.grad).item() if refined_emb.grad is not None else 0.0
         
+        # Create new MemCube version
+        from stephanie.memcubes.memcube_factory import MemCubeFactory
+        scorable = Scorable(id=hash(refined_text), text=refined_text, target_type=TargetType.DOCUMENT)
+        memcube = MemCubeFactory.from_scordable(scorable, version="auto")
+        memcube.extra_data["refinement_trace"] = energy_trace
+        memcube.sensitivity = "internal"  # Upgrade sensitivity on refinement
+        
+        # Save new version
+        self.memory.memcube.save_memcube(memcube)
+
         return {
             "refined_text": refined_text,
             "energy_trace": [round(e, 4) for e in energy_trace],
@@ -316,7 +330,7 @@ class EBTInferenceAgent(BaseAgent):
             prompt = f"""Improve the following text to better align with this goal:
             
             Goal: {original_goal}
-            Original Text: {original_text}
+            Original Text: {original_text}**** ****
             
             Generate an improved version that maintains content while optimizing for alignment."""
             

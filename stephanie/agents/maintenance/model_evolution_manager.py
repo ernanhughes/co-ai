@@ -7,6 +7,7 @@ from sqlalchemy import text
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.ebt.refinement_trainer import EBTRefinementTrainer
 
+
 class ModelEvolutionManager(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
@@ -193,3 +194,46 @@ class ModelEvolutionManager(BaseAgent):
                         "dimension": dim,
                         "improvement": improvement
                     })
+
+    # model_evolution_manager.py
+    def get_best_model(self, model_type: str, target_type: str, dimension: str):
+        """Get the current best model for a dimension"""
+        query = """
+        SELECT version, performance 
+        FROM model_versions 
+        WHERE model_type = :model_type
+        AND target_type = :target_type
+        AND dimension = :dimension
+        AND active = TRUE
+        ORDER BY created_at DESC
+        LIMIT 1
+        """
+        result = self.memory.db.execute(query, {
+            "model_type": model_type,
+            "target_type": target_type,
+            "dimension": dimension
+        }).fetchone()
+        
+        return {
+            "version": result.version,
+            "performance": json.loads(result.performance)
+        } if result else {"version": "v0"}
+
+    def _trigger_ebt_retraining(self, cfg, dimension: str):
+        from stephanie.agents.maintenance.ebt_trainer import EBTTrainerAgent
+        """Trigger EBT retraining for a dimension"""
+        query = """
+        SELECT * FROM scoring_history
+        WHERE dimension = :dim
+        AND created_at > NOW() - INTERVAL '7 days'
+        """
+        recent_data = self.memory.db.execute(text(query), {"dim": dimension}).fetchall()
+        
+        if recent_data:
+            self.logger.log("EBTRetrainTriggered", {
+                "dimension": dimension,
+                "examples": len(recent_data)
+            })
+            # Run trainer with new data
+            trainer = EBTTrainerAgent(cfg.ebt_trainer)
+            trainer.run(recent_data)

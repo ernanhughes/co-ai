@@ -4,9 +4,8 @@ import os
 import torch
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.evaluator.hypothesis_value_predictor import (
-    HypothesisValuePredictor,
-)
+from stephanie.evaluator.hypothesis_value_predictor import \
+    HypothesisValuePredictor
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.model import MRQModel
 from stephanie.scoring.scorable import Scorable
@@ -16,10 +15,8 @@ from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
-from stephanie.utils.model_utils import (
-    discover_saved_dimensions,
-    get_model_path,
-)
+from stephanie.utils.model_utils import (discover_saved_dimensions,
+                                         get_model_path)
 
 
 class MRQInferenceAgent(BaseAgent):

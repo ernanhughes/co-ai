@@ -5,7 +5,8 @@ import re
 
 import torch
 
-from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from stephanie.evaluator.hypothesis_value_predictor import \
+    HypothesisValuePredictor
 from stephanie.evaluator.mrq_trainer import MRQTrainer
 from stephanie.models.sharpening_prediction import SharpeningPredictionORM
 from stephanie.scoring.base_scorer import BaseScorer

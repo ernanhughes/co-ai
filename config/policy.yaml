@@ -118,7 +118,7 @@ pipeline:
      - name: document_ebt_inference
        description: "Infer EBT scores for documents" 
        cls: stephanie.agents.inference.ebt_inference.EBTInferenceAgent 
-       enabled: false
+       enabled: true
        iterations: 
        
      - name: document_reward_scorer
