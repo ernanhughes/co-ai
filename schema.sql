@@ -887,3 +887,20 @@ CREATE TABLE scoring_dimensions (
     final_score FLOAT,
     PRIMARY KEY (event_id, dimension)
 );
+
+CREATE TABLE scores (
+    id SERIAL PRIMARY KEY,
+    evaluation_id INTEGER REFERENCES evaluations(id),
+    target_type TEXT NOT NULL,         -- e.g., "document", "triplet"
+    target_id INTEGER NOT NULL,        -- refers to document.id, etc.
+    dimension TEXT NOT NULL,
+
+    score FLOAT NOT NULL,
+    energy FLOAT,                      -- nullable: only present if EBT was used
+    uncertainty FLOAT,                 -- sigmoid(energy), optional
+
+    weight FLOAT DEFAULT 1.0,
+    rationale TEXT,
+    source TEXT,                       -- "mrq", "llm", "ebt", etc.
+    created_at TIMESTAMP DEFAULT NOW()
+);
