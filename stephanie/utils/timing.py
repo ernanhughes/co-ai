@@ -5,6 +5,12 @@ import inspect
 import time
 
 
+def format_timing_string(
+    class_name: str, func_name: str, duration_ms: float, timestamp: str
+) -> str:
+    return f"⏱️ {class_name}.{func_name} : {round(duration_ms, 2)}ms [{timestamp}]"
+
+
 def time_function(logger=None):
     def decorator(func):
         if inspect.iscoroutinefunction(func):
@@ -15,7 +21,9 @@ def time_function(logger=None):
                 result = await func(*args, **kwargs)
                 duration = time.perf_counter() - start
 
-                obj = args[0] if args and hasattr(args[0], "__class__") else None
+                obj = (
+                    args[0] if args and hasattr(args[0], "__class__") else None
+                )
                 class_name = obj.__class__.__name__ if obj else "Function"
 
                 log_data = {
@@ -32,9 +40,12 @@ def time_function(logger=None):
                     logger.log("FunctionTiming", log_data)
                 else:
                     print(
-                        f"""⏱️ {class_name}.{func.__name__}:
-                            {log_data["duration_ms"]}ms 
-                            [{log_data["timestamp"]}]"""
+                        format_timing_string(
+                            class_name,
+                            func.__name__,
+                            log_data["duration_ms"],
+                            log_data["timestamp"],
+                        )
                     )
 
                 return result
@@ -48,7 +59,9 @@ def time_function(logger=None):
                 result = func(*args, **kwargs)
                 duration = time.perf_counter() - start
 
-                obj = args[0] if args and hasattr(args[0], "__class__") else None
+                obj = (
+                    args[0] if args and hasattr(args[0], "__class__") else None
+                )
                 class_name = obj.__class__.__name__ if obj else "Function"
 
                 log_data = {
@@ -92,7 +105,9 @@ class TimingAnalyzer:
             function_times[key].append(data["duration_ms"])
 
         return {
-            "avg_times": {k: sum(v) / len(v) for k, v in function_times.items()},
+            "avg_times": {
+                k: sum(v) / len(v) for k, v in function_times.items()
+            },
             "total_calls": {k: len(v) for k, v in function_times.items()},
             "max_times": {k: max(v) for k, v in function_times.items()},
         }

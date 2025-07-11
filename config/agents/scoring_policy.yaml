@@ -13,6 +13,9 @@ scoring_policy:
     - "novelty"
     - "relevance"
 
+  training_buffer_path: "${hydra:runtime.cwd}/logs/ebt_training.jsonl"
+
+
   model:
     name: ollama/qwen3
     api_base: http://localhost:11434

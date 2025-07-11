@@ -1,5 +1,4 @@
 # stephanie/models/score.py
-# models/score.py
 
 import hashlib
 

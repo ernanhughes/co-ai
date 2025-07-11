@@ -17,5 +17,6 @@ document_ebt_inference:
     - "implementability"
     - "novelty"
     - "relevance"
+
   input_key: "documents"
   output_key: "document_ebt_inference"

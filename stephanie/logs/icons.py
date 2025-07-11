@@ -12,7 +12,7 @@ SYSTEM_INIT = {
     "EBTEnergyCalculated": "⚡",  # EBT energy calculation
     "ScoringPolicyCompleted": "✅",  # Scoring policy completed
     "AllEBTModelsLoaded": "📦✅",  # All EBT models loaded
-    
+
     "SupervisorInit": "👨‍🏫",  # Supervisor initialization
     "DocumentLLMInferenceCompleted": "📄✅",  # Document LLM inference completed
     "DocumentEmbeddingsBackfilled": "📄🌱",  # Document embeddings backfilled
@@ -30,6 +30,11 @@ SYSTEM_INIT = {
 # KNOWLEDGE STORAGE
 # =================
 KNOWLEDGE_OPS = {
+    "DocumentRefinedWithEBT": "📄🔄",  # Document refined with EBT
+    "EBTExampleAdded": "🧪➕",  # EBT example added
+    "ScoringEvent": "📊",  # Scoring event
+    "MRQScoresCalculated": "📊✅",  # MRQ scores calculated
+    "ScoringEvent": "📊",  # Scoring event
     "DocumentEBTTrainingStart": "🧪▶️ I",  # Training started for a dimension
     "DocumentEBTEpoch": "📊🔁",  # Epoch completed during training
     "DocumentEBTModelSaved": "💾✅",  # Model saved after training
