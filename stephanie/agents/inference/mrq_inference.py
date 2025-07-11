@@ -27,6 +27,7 @@ class MRQInferenceAgent(BaseAgent):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")
         self.model_type = "mrq"
+        self.evaluator = "mrq"
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
         self.dimensions = cfg.get("dimensions", [])

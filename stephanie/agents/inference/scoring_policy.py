@@ -49,13 +49,21 @@ class ScoringPolicyAgent(BaseAgent):
             scorable = ScorableFactory.from_dict(doc, TargetType.DOCUMENT)
             # 1. Initial MRQ score
             mrq_scores = self.mrq.score(goal_text, scorable.text)
+            self.logger.log(
+                "MRQScoresCalculated",
+                {
+                    "scorable": scorable.id,
+                    "scores": mrq_scores,
+                },
+            )
+
 
             # Step 2: Estimate uncertainty using EBT energy
             ebt_energy = self.ebt.get_energy(goal_text, scorable.text)
             self.logger.log(
                 "EBTEnergyCalculated",
                 {
-                    "scorable": scorable.to_dict(),
+                    "scorable": scorable.id,
                     "energy": ebt_energy
                 },
             )
@@ -65,16 +73,17 @@ class ScoringPolicyAgent(BaseAgent):
             }
 
             self.logger.log("UncertaintyEstimated", {
-                "scorable": scorable.to_dict(),
+                "scorable": scorable.id,
                 "uncertainty_by_dimension": uncertainty_by_dim,
             })
 
             refined = False
+            refined_text = None
             # Step 3: Optional refinement (if any dimension exceeds EBT refine threshold)
             if any(u > self.ebt_refine_threshold for u in uncertainty_by_dim.values()):
                 refined = True
-                refined_text = self.ebt.optimize(goal_text, scorable.text)
-                doc["text"] = refined_text
+                refined_result = self.ebt.optimize(goal_text, scorable.text)
+                refined_text = refined_result.get("refined_text")
                 mrq_scores = self.mrq.score(goal_text, refined_text)
                 self.logger.log("DocumentRefinedWithEBT", {"document_id": scorable.id})
 
@@ -205,7 +214,7 @@ class ScoringPolicyAgent(BaseAgent):
                 "mrq_score": entry["mrq_scores"].get(dim),
                 "ebt_energy": entry["ebt_energy"].get(dim),
                 "uncertainty_score": entry["uncertainty_by_dimension"].get(dim),
-                "final_score": entry["final_scores"].get(dim),
+                "final_score": entry["mrq_scores"].get(dim),
             }
             self.memory.session.execute(text(insert_dim_sql), dim_params)
 
@@ -241,7 +250,7 @@ class ScoringPolicyAgent(BaseAgent):
             {
                 "dimension": dim,
                 "source": result["final_source"],
-                "score": result["scores"][dim]
+                "score": result["mrq_scores"][dim]
             }
             for result in results
             for dim in self.dimensions

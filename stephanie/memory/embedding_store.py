@@ -335,3 +335,44 @@ class EmbeddingStore(BaseStore):
             else:
                 print(f"[VectorMemory] Document search failed: {e}")
             return []
+
+    def find_neighbors(self, embedding: list[float], k: int = 5) -> list[str]:
+        """
+        Return the text associated with the k nearest neighbors to the given embedding.
+
+        Args:
+            embedding (list[float]): The embedding vector to compare against.
+            k (int): Number of nearest neighbors to return.
+
+        Returns:
+            list[str]: List of text contents of the top-k nearest items.
+        """
+        try:
+            import torch    
+              # ✅ Fix: convert tensor to list if needed
+            if isinstance(embedding, torch.Tensor):
+                embedding = embedding.detach().cpu().tolist()
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT 
+                        e.id,
+                        e.text,
+                        1 - (e.embedding <-> %s::vector) AS score  -- cosine similarity proxy
+                    FROM embeddings e
+                    WHERE e.embedding IS NOT NULL
+                    ORDER BY e.embedding <-> %s::vector
+                    LIMIT %s;
+                    """,
+                    (embedding, embedding, k),
+                )
+                rows = cur.fetchall()
+
+            return [row[1] for row in rows]  # Return only the 'text' column
+
+        except Exception as e:
+            if self.logger:
+                self.logger.log("FindNeighborsFailed", {"error": str(e)})
+            else:
+                print(f"[EmbeddingStore] find_neighbors failed: {e}")
+            return []

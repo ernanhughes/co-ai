@@ -25,6 +25,9 @@ class LLMInferenceAgent(ScoringMixin, BaseAgent):
 
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
+        self.model_type = "llm"
+        self.evaluator = "llm"
+
         self.dimensions = cfg.get("dimensions", DEFAULT_DIMENSIONS)
         self.scoring_engine = ScoringEngine(
             cfg=self.cfg,

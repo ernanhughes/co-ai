@@ -1,0 +1,19 @@
+{
+  "total_documents": 50,
+  "refined_documents": 39,
+  "llm_fallback_rate": 0.0,
+  "average_uncertainty": {
+    "alignment": 0.4954509973526001,
+    "clarity": 0.4831738358736038,
+    "implementability": 0.7428851068019867,
+    "novelty": 0.5609305685758591,
+    "relevance": 0.6124463093280792
+  },
+  "dimension_refinement_rate": {
+    "alignment": 0.04,
+    "clarity": 0.0,
+    "implementability": 0.7,
+    "novelty": 0.02,
+    "relevance": 0.14
+  }
+}

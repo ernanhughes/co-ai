@@ -17,8 +17,10 @@ from stephanie.utils.model_utils import discover_saved_dimensions, get_model_pat
 class EBTInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
+        self.model_type = "ebt"
+        self.evaluator = "ebt"
+
         self.model_path = cfg.get("model_path", "models")
-        self.model_type = cfg.get("model_type", "ebt")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
         self.dimensions = cfg.get("dimensions", [])
@@ -260,6 +262,7 @@ class EBTInferenceAgent(BaseAgent):
             "uncertainty_trace": [round(u, 4) for u in uncertainty_trace],
             "final_energy": final_energy,
             "converged": abs(energy_trace[-1] - energy_trace[0]) < 0.05,
+            "uncertainty": uncertainty,
             "dimension": target_dim
         }
     
@@ -320,7 +323,7 @@ class EBTInferenceAgent(BaseAgent):
             return llm.generate(prompt)
         
         # Fallback: Use nearest neighbor from embedding database
-        return neighbors[0].text
+        return neighbors[0]
     
 
     def plot_refinement_trace(self, trace, title):

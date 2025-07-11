@@ -4,6 +4,15 @@ scoring_policy:
   save_prompt: true
   save_context: true
   skip_if_completed: false
+
+  target_type: "document"
+  dimensions: 
+    - "alignment"
+    - "clarity"
+    - "implementability"
+    - "novelty"
+    - "relevance"
+
   model:
     name: ollama/qwen3
     api_base: http://localhost:11434
