@@ -26,7 +26,7 @@ class MRQInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")
-        self.model_type = cfg.get("model_type", "mrq")
+        self.model_type = "mrq"
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
         self.dimensions = cfg.get("dimensions", [])
@@ -52,53 +52,13 @@ class MRQInferenceAgent(BaseAgent):
             },
         )
 
-        for dim in self.dimensions:
-            model_path = get_model_path(
-                self.model_path,
-                self.model_type,
-                self.target_type,
-                dim,
-                version=self.model_version,
-            )
-            encoder_path = f"{model_path}/{dim}_encoder.pt"
-            predictor_path = f"{model_path}/{dim}.pt"
-            meta_path = f"{model_path}/{dim}.meta.json"
-            tuner_path = f"{model_path}/{dim}_model.tuner.json"
-
-            self.logger.log(
-                "LoadingModelPaths",
-                {
-                    "dimension": dim,
-                    "encoder_path": encoder_path,
-                    "predictor_path": predictor_path,
-                },
-            )
-            encoder = TextEncoder()
-            predictor = HypothesisValuePredictor(512, 1024)
-            model = MRQModel(
-                encoder, predictor, self.memory.embedding, device=self.device
-            )
-            model.load_weights(encoder_path, predictor_path)
-            self.models[dim] = model
-
-            if os.path.exists(meta_path):
-                self.model_meta[dim] = load_json(meta_path)
-            else:
-                self.model_meta[dim] = {"min": 0, "max": 100}
-
-            if os.path.exists(tuner_path):
-                tuner = RegressionTuner(dimension=dim)
-                tuner.load(tuner_path)
-                self.tuners[dim] = tuner
-
-        self.logger.log("AllMRQModelsLoaded", {"dimensions": self.dimensions})
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
         results = []
 
         docs = context.get(self.input_key, [])
-
+        self.load_models(self.dimensions)
         for doc in docs:
             doc_id = doc.get("id")
             self.logger.log("MRQScoringStarted", {"document_id": doc_id})
@@ -192,3 +152,79 @@ class MRQInferenceAgent(BaseAgent):
             "MRQInferenceCompleted", {"total_documents_scored": len(results)}
         )
         return context
+
+    def load_models(self, dimensions: list):
+        """
+        Load MRQ models for the specified dimensions.
+        This is called during initialization to ensure models are ready for scoring.
+        """
+        self.models = {}
+        self.model_meta = {}
+        self.tuners = {}
+
+        for dim in dimensions:
+            model_path = get_model_path(
+                self.model_path,
+                self.model_type,
+                self.target_type,
+                dim,
+                version=self.model_version,
+            )
+            encoder_path = f"{model_path}/{dim}_encoder.pt"
+            predictor_path = f"{model_path}/{dim}.pt"
+            meta_path = f"{model_path}/{dim}.meta.json"
+            tuner_path = f"{model_path}/{dim}_model.tuner.json"
+
+            encoder = TextEncoder()
+            predictor = HypothesisValuePredictor(512, 1024)
+            model = MRQModel(
+                encoder, predictor, self.memory.embedding, device=self.device
+            )
+            model.load_weights(encoder_path, predictor_path)
+            self.models[dim] = model
+
+            if os.path.exists(meta_path):
+                self.model_meta[dim] = load_json(meta_path)
+            else:
+                self.model_meta[dim] = {"min": 0, "max": 100}
+
+            if os.path.exists(tuner_path):
+                tuner = RegressionTuner(dimension=dim)
+                tuner.load(tuner_path)
+                self.tuners[dim] = tuner
+
+        self.logger.log("AllMRQModelsLoaded", {"dimensions": dimensions})
+
+    def score(self, goal_text: str, text: str) -> dict:
+        """
+        Score a single document using all loaded MRQ models and return a dict of dimension -> score.
+        This does NOT save to memory or return a ScoreBundle — just raw scores.
+        """
+
+        dimension_scores = {}
+
+        for dim, model in self.models.items():
+            q_value = model.predict(goal_text, text)
+
+            if dim in self.tuners:
+                scaled_score = self.tuners[dim].transform(q_value)
+            else:
+                meta = self.model_meta.get(dim, {"min": 0, "max": 100})
+                normalized = torch.sigmoid(torch.tensor(q_value)).item()
+                scaled_score = normalized * (meta["max"] - meta["min"]) + meta["min"]
+
+            final_score = round(scaled_score, 4)
+            dimension_scores[dim] = final_score
+
+            if self.logger:
+                self.logger.log(
+                    "MRQScoreComputed",
+                    {
+                        "document": text,
+                        "dimension": dim,
+                        "q_value": round(q_value, 4),
+                        "final_score": final_score,
+                    },
+                )
+
+        return dimension_scores

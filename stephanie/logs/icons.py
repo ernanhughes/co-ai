@@ -8,6 +8,11 @@ def get_event_icon(event_type: str) -> str:
 # SYSTEM & INITIALIZATION
 # ========================
 SYSTEM_INIT = {
+    "UncertaintyEstimated": "🔍",  # Uncertainty estimation
+    "EBTEnergyCalculated": "⚡",  # EBT energy calculation
+    "ScoringPolicyCompleted": "✅",  # Scoring policy completed
+    "AllEBTModelsLoaded": "📦✅",  # All EBT models loaded
+    
     "SupervisorInit": "👨‍🏫",  # Supervisor initialization
     "DocumentLLMInferenceCompleted": "📄✅",  # Document LLM inference completed
     "DocumentEmbeddingsBackfilled": "📄🌱",  # Document embeddings backfilled

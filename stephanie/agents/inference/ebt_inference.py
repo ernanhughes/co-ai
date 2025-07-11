@@ -41,33 +41,44 @@ class EBTInferenceAgent(BaseAgent):
             },
         )
 
-        for dim in self.dimensions:
-            model_path = get_model_path(
-                self.model_path,
-                self.model_type,
-                self.target_type,
-                dim,
-                self.model_version,
-            )
-            infer_path = f"{model_path}/{dim}.pt"
-            meta_path = f"{model_path}/{dim}.meta.json"
-
-            self.logger.log("LoadingEBTModel", {"dimension": dim, "path": infer_path})
-            model = self._load_model(infer_path)
-            self.models[dim] = model
-
-            if os.path.exists(meta_path):
-                self.model_meta[dim] = load_json(meta_path)
-            else:
-                self.model_meta[dim] = {"min": 40, "max": 100}
-
+        self.load_models(self.dimensions)
         self.logger.log("AllEBTModelsLoaded", {"dimensions": self.dimensions})
+
+    def load_models(self, dimensions):
+        """
+        Load EBT models for specified dimensions.
+        If dimensions are not provided, load all available models.
+        """
+        if not dimensions:
+            dimensions = self.dimensions
+
+        for dim in dimensions:
+            if dim not in self.models:
+                model_path = get_model_path(
+                    self.model_path,
+                    self.model_type,
+                    self.target_type,
+                    dim,
+                    self.model_version,
+                )
+                infer_path = f"{model_path}/{dim}.pt"
+                meta_path = f"{model_path}/{dim}.meta.json"
+
+                self.logger.log("LoadingEBTModel", {"dimension": dim, "path": infer_path})
+                model = self._load_model(infer_path)
+                self.models[dim] = model
+
+                if os.path.exists(meta_path):
+                    self.model_meta[dim] = load_json(meta_path)
+                else:
+                    self.model_meta[dim] = {"min": 40, "max": 100}
 
     def _load_model(self, path):
         model = EBTModel().to(self.device)
         model.load_state_dict(torch.load(path, map_location=self.device))
         model.eval()
         return model
+
 
     def get_model_name(self) -> str:
         return f"{self.target_type}_{self.model_type}_{self.model_version}"
@@ -161,3 +172,168 @@ class EBTInferenceAgent(BaseAgent):
             "EBTInferenceCompleted", {"total_documents_scored": len(results)}
         )
         return context
+
+    def get_energy(self, goal: str, text: str) -> dict[str, float]:
+        """
+        Returns raw (unnormalized) energy scores per dimension for a document-goal pair.
+        This is useful for estimating uncertainty.
+
+        Returns:
+            A dictionary like: { "relevance": 3.42, "accuracy": 5.13, ... }
+        """
+        ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal)).to(self.device)
+        doc_emb = torch.tensor(self.memory.embedding.get_or_create(text)).to(self.device)
+
+        energy_by_dimension = {}
+
+        for dim in self.dimensions:
+            model = self.models.get(dim)
+            if model is None:
+                self.logger.log("EBTModelMissing", {"dimension": dim})
+                continue
+
+            try:
+                with torch.no_grad():
+                    raw_energy = model(ctx_emb, doc_emb).squeeze().cpu().item()
+                    energy_by_dimension[dim] = raw_energy
+            except Exception as e:
+                self.logger.log("EBTEnergyComputationError", {
+                    "dimension": dim,
+                    "error": str(e),
+                    "goal": goal[:100],
+                    "text": text[:100]
+                })
+
+        return energy_by_dimension
+
+    def optimize(self, goal: str, text: str, dimension: str = None, 
+                steps: int = 10, step_size: float = 0.1) -> dict:
+        """
+        Optimize document text with energy trace and uncertainty estimation
+        
+        Returns:
+            dict: {
+                "refined_text": str,
+                "energy_trace": List[float],
+                "uncertainty_trace": List[float],
+                "converged": bool
+            }
+        """
+        # Setup
+        target_dim = dimension or next(iter(self.models.keys()))
+        model = self.models[target_dim]
+        
+        # Get base embeddings
+        ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal)).to(self.device)
+        doc_emb = torch.tensor(self.memory.embedding.get_or_create(text)).to(self.device)
+        
+        # Make document embedding differentiable
+        doc_tensor = doc_emb.clone().detach().requires_grad_(True)
+        optimizer = torch.optim.Adam([doc_tensor], lr=step_size)
+        
+        energy_trace = []
+        uncertainty_trace = []
+        
+        for _ in range(steps):
+            optimizer.zero_grad()
+            energy = model(ctx_emb, doc_tensor)
+            energy.backward()
+            
+            # Save trace data
+            energy_trace.append(energy.item())
+            uncertainty_trace.append(torch.norm(doc_tensor.grad).item() if doc_tensor.grad is not None else 0.0)
+            
+            # Update document embedding
+            optimizer.step()
+        
+        # Generate refined document
+        refined_emb = doc_tensor.detach()
+        refined_text = self._embedding_to_text(refined_emb, goal, text)
+        
+        # Final evaluation
+        final_energy = model(ctx_emb, refined_emb).item()
+        uncertainty = torch.norm(refined_emb.grad).item() if refined_emb.grad is not None else 0.0
+        
+        return {
+            "refined_text": refined_text,
+            "energy_trace": [round(e, 4) for e in energy_trace],
+            "uncertainty_trace": [round(u, 4) for u in uncertainty_trace],
+            "final_energy": final_energy,
+            "converged": abs(energy_trace[-1] - energy_trace[0]) < 0.05,
+            "dimension": target_dim
+        }
+    
+    def is_uncertain(self, goal: str, text: str, dimension: str, threshold: float = 0.75) -> bool:
+        """
+        Determine if energy-based prediction is uncertain.
+        Uses energy magnitude and gradient stability.
+        """
+        target_dim = dimension or next(iter(self.models.keys()))
+        
+        # Get base energy
+        base_energy = self.get_energy(goal, text)[target_dim]
+        
+        # Get energy after small perturbation
+        ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal)).to(self.device)
+        doc_emb = torch.tensor(self.memory.embedding.get_or_create(text)).to(self.device)
+        
+        doc_tensor = doc_emb.clone().detach().requires_grad_(True)
+        doc_tensor.retain_grad()
+        
+        # Forward pass
+        energy = self.models[dimension](ctx_emb, doc_tensor)
+        energy.backward()
+        
+        # Calculate uncertainty from gradient magnitude
+        grad_norm = torch.norm(doc_tensor.grad).item()
+        
+        self.logger.log("EBTUncertaintyEstimate", {
+            "dimension": target_dim,
+            "base_energy": round(base_energy, 4),
+            "gradient_norm": round(grad_norm, 4),
+            "uncertainty_score": round(abs(base_energy) + grad_norm, 4)
+        })
+        
+        return abs(base_energy) > threshold or grad_norm > threshold
+    
+
+    def _embedding_to_text(self, embedding, original_goal, original_text):
+        """
+        Convert a refined embedding back to text.
+        Currently uses nearest neighbor search; could be replaced with a generator model.
+        """
+        # Option 1: Nearest neighbor search in embedding store
+        neighbors = self.memory.embedding.find_neighbors(embedding, k=5)
+        
+        # Option 2: Hybrid approach with LLM
+        if self.cfg.get("use_llm_refinement", False):
+            from stephanie.agents.inference import LLMGenerator
+            llm = LLMGenerator(self.cfg, self.memory, self.logger)
+            
+            prompt = f"""Improve the following text to better align with this goal:
+            
+            Goal: {original_goal}
+            Original Text: {original_text}
+            
+            Generate an improved version that maintains content while optimizing for alignment."""
+            
+            return llm.generate(prompt)
+        
+        # Fallback: Use nearest neighbor from embedding database
+        return neighbors[0].text
+    
+
+    def plot_refinement_trace(self, trace, title):
+        import matplotlib.pyplot as plt
+        
+        plt.figure(figsize=(10, 4))
+        plt.plot(trace, marker="o")
+        plt.title(title)
+        plt.xlabel("Optimization Step")
+        plt.ylabel("Energy Value")
+        plt.grid(True)
+        
+        # Save for analysis
+        os.makedirs("energy_traces", exist_ok=True)
+        plt.savefig(f"energy_traces/{title}.png")
+        plt.close()

@@ -864,3 +864,26 @@ CREATE TABLE IF NOT EXISTS scoring_history (
     source TEXT,                      -- e.g., "gpt-4", "human"
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE scoring_events (
+    id SERIAL PRIMARY KEY,
+    document_id INTEGER NOT NULL,
+    goal_text TEXT NOT NULL,
+    original_text TEXT,
+    refined_text TEXT,
+    final_source TEXT NOT NULL, -- "mrq", "ebt", or "llm"
+    used_refinement BOOLEAN DEFAULT FALSE,
+    refinement_steps INTEGER,
+    used_llm_fallback BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE scoring_dimensions (
+    event_id INTEGER REFERENCES scoring_events(id),
+    dimension TEXT,
+    mrq_score FLOAT,
+    ebt_energy FLOAT,
+    uncertainty_score FLOAT,
+    final_score FLOAT,
+    PRIMARY KEY (event_id, dimension)
+);
