@@ -6,6 +6,7 @@ from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.scorable_factory import ScorableFactory
 from stephanie.scoring.ebt.buffer import EBTTrainingBuffer
 from sqlalchemy import text
+from stephanie.scoring.ebt.refinement_trainer import EBTRefinementTrainer
 
 import torch
 
@@ -376,8 +377,6 @@ class ScoringPolicyAgent(BaseAgent):
     def export_results(self, results):
         """Export results to CSV for external analysis"""
         import pandas as pd
-        import matplotlib.pyplot as plt
-        import seaborn as sns
 
         rows = []
         for result in results:
@@ -403,3 +402,15 @@ class ScoringPolicyAgent(BaseAgent):
         df = pd.DataFrame(rows)
         df.to_csv("scoring_results.csv", index=False)
         return df
+
+    # In your self-tuning agent
+    def update_ebt(self):
+        """Periodically update EBT models from refinement history"""
+        examples = self._fetch_recent_refinements()
+        if examples:
+            trainer = EBTRefinementTrainer(self.cfg.ebt_refinement)
+            trainer.run(examples)
+            self.logger.log("EBTModelRetrained", {
+                "total_examples": len(examples),
+                "dimensions": list(set(e["dimension"] for e in examples))
+            })

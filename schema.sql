@@ -865,7 +865,7 @@ CREATE TABLE IF NOT EXISTS scoring_history (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE scoring_events (
+CREATE TABLE IF NOT EXISTS scoring_events (
     id SERIAL PRIMARY KEY,
     document_id INTEGER NOT NULL,
     goal_text TEXT NOT NULL,
@@ -878,7 +878,7 @@ CREATE TABLE scoring_events (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE scoring_dimensions (
+CREATE TABLE IF NOT EXISTS scoring_dimensions (
     event_id INTEGER REFERENCES scoring_events(id),
     dimension TEXT,
     mrq_score FLOAT,
@@ -888,7 +888,7 @@ CREATE TABLE scoring_dimensions (
     PRIMARY KEY (event_id, dimension)
 );
 
-CREATE TABLE scores (
+CREATE TABLE IF NOT EXISTS scores (
     id SERIAL PRIMARY KEY,
     evaluation_id INTEGER REFERENCES evaluations(id),
     target_type TEXT NOT NULL,         -- e.g., "document", "triplet"
@@ -904,3 +904,38 @@ CREATE TABLE scores (
     source TEXT,                       -- "mrq", "llm", "ebt", etc.
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Table for storing refinement history
+CREATE TABLE IF NOT EXISTS refinement_events (
+    id SERIAL PRIMARY KEY,
+    context TEXT NOT NULL,
+    original TEXT NOT NULL,
+    refined TEXT NOT NULL,
+    context_hash TEXT NOT NULL,
+    original_hash TEXT NOT NULL,
+    refined_hash TEXT NOT NULL,
+    original_score FLOAT,
+    refined_score FLOAT,
+    dimension TEXT NOT NULL,
+    improvement FLOAT,
+    energy_before FLOAT,
+    energy_after FLOAT,
+    steps_used INTEGER,
+    source TEXT DEFAULT 'auto',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+
+CREATE TABLE IF NOT EXISTS mem_cubes (
+    id SERIAL PRIMARY KEY,
+    scorable_type TEXT NOT NULL,
+    scorable_id INTEGER NOT NULL,
+
+    state TEXT DEFAULT 'raw',           -- e.g., raw, refined, locked
+    tags TEXT[],
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+

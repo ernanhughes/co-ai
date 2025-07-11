@@ -5,7 +5,7 @@ import json
 from sqlalchemy import text
 
 from stephanie.agents.base_agent import BaseAgent
-
+from stephanie.scoring.ebt.refinement_trainer import EBTRefinementTrainer
 
 class ModelEvolutionManager(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -172,3 +172,24 @@ class ModelEvolutionManager(BaseAgent):
 
         # Accept if improvement exceeds threshold
         return (old_loss - new_loss) / old_loss > self.min_improvement
+
+    # In model_evolution_manager.py
+    def retrain_ebt_from_refinement(self):
+        """Check if EBT needs retraining from recent refinements"""
+        examples = self._get_recent_refinements()
+        
+        if examples:
+            trainer = EBTRefinementTrainer(self.cfg.ebt_refinement)
+            trained_models = trainer.run(examples)
+            
+            # Promote better models
+            for dim, new_model in trained_models.items():
+                old_model = self.ebt.models[dim]
+                improvement = self._evaluate_improvement(old_model, new_model, dim)
+                
+                if improvement > self.cfg.get("min_improvement", 0.05):
+                    self.ebt.models[dim] = new_model
+                    self.logger.log("EBTModelPromoted", {
+                        "dimension": dim,
+                        "improvement": improvement
+                    })
