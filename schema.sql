@@ -54,7 +54,7 @@ CREATE INDEX IF NOT EXISTS idx_prompt_version
 
 
 
-CREATE TABLE pipeline_runs (
+CREATE TABLE IF NOT EXISTS pipeline_runs (
     id SERIAL PRIMARY KEY,
     goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
     run_id TEXT UNIQUE NOT NULL, -- UUID or generated string
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS evaluations (
 
 
 
-CREATE TABLE elo_ranking_log (
+CREATE TABLE IF NOT EXISTS elo_ranking_log (
     id SERIAL PRIMARY KEY,
     run_id TEXT,
     hypothesis TEXT,
@@ -144,14 +144,14 @@ CREATE TABLE elo_ranking_log (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE summaries (
+CREATE TABLE IF NOT EXISTS  summaries (
     id SERIAL PRIMARY KEY,
     text TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
 
-CREATE TABLE ranking_trace (
+CREATE TABLE IF NOT EXISTS ranking_trace (
     id SERIAL PRIMARY KEY,
     run_id TEXT,
     prompt_version INT,
@@ -294,9 +294,9 @@ CREATE TABLE IF NOT EXISTS model_performance (
 );
 
 -- Indexes
-CREATE INDEX idx_model_name ON model_performance(model_name);
-CREATE INDEX idx_task_type ON model_performance(task_type);
-CREATE INDEX idx_preference_used ON model_performance USING GIN(preference_used);
+CREATE INDEX IF NOT EXISTS idx_model_name ON model_performance(model_name);
+CREATE INDEX IF NOT EXISTS idx_task_type ON model_performance(task_type);
+CREATE INDEX IF NOT EXISTS idx_preference_used ON model_performance USING GIN(preference_used);
 
 CREATE TABLE IF NOT EXISTS mrq_evaluations (
     id SERIAL PRIMARY KEY,
@@ -312,8 +312,8 @@ CREATE TABLE IF NOT EXISTS mrq_evaluations (
 );
 
 -- Indexes
-CREATE INDEX idx_mrq_goal ON mrq_evaluations(goal);
-CREATE INDEX idx_mrq_winner ON mrq_evaluations(winner);
+CREATE INDEX IF NOT EXISTS idx_mrq_goal ON mrq_evaluations(goal);
+CREATE INDEX IF NOT EXISTS idx_mrq_winner ON mrq_evaluations(winner);
 
 CREATE TABLE IF NOT EXISTS sharpening_results (
     id SERIAL PRIMARY KEY,
@@ -334,7 +334,7 @@ CREATE TABLE IF NOT EXISTS sharpening_results (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE cot_pattern_stats (
+CREATE TABLE IF NOT EXISTS cot_pattern_stats (
     id SERIAL PRIMARY KEY,
     goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
     hypothesis_id INTEGER REFERENCES hypotheses(id) ON DELETE CASCADE,
@@ -346,9 +346,9 @@ CREATE TABLE cot_pattern_stats (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_cot_pattern_goal ON cot_pattern_stats (goal_id);
-CREATE INDEX idx_cot_pattern_model ON cot_pattern_stats (model_name);
-CREATE INDEX idx_cot_pattern_dimension ON cot_pattern_stats (dimension);
+CREATE INDEX IF NOT EXISTS idx_cot_pattern_goal ON cot_pattern_stats (goal_id);
+CREATE INDEX IF NOT EXISTS idx_cot_pattern_model ON cot_pattern_stats (model_name);
+CREATE INDEX IF NOT EXISTS idx_cot_pattern_dimension ON cot_pattern_stats (dimension);
 
 
 CREATE TABLE IF NOT EXISTS scores (
@@ -389,6 +389,8 @@ CREATE TABLE IF NOT EXISTS lookaheads (
     run_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
 CREATE TABLE IF NOT EXISTS reflection_deltas (
     id SERIAL PRIMARY KEY,
     goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
@@ -498,12 +500,12 @@ CREATE TABLE IF NOT EXISTS method_plans (
 );
 
 -- Indexes for faster querying
-CREATE INDEX idx_idea_text ON method_plans USING GIN (to_tsvector('english', idea_text));
-CREATE INDEX idx_research_objective ON method_plans USING GIN (to_tsvector('english', research_objective));
-CREATE INDEX idx_focus_area ON method_plans (focus_area);
-CREATE INDEX idx_evolution_level ON method_plans (evolution_level);
-CREATE INDEX idx_goal_id ON method_plans (goal_id);
-CREATE INDEX idx_parent_plan_id ON method_plans (parent_plan_id);
+CREATE INDEX IF NOT EXISTS idx_idea_text ON method_plans USING GIN (to_tsvector('english', idea_text));
+CREATE INDEX IF NOT EXISTS idx_research_objective ON method_plans USING GIN (to_tsvector('english', research_objective));
+CREATE INDEX IF NOT EXISTS idx_focus_area ON method_plans (focus_area);
+CREATE INDEX IF NOT EXISTS idx_evolution_level ON method_plans (evolution_level);
+CREATE INDEX IF NOT EXISTS idx_goal_id ON method_plans (goal_id);
+CREATE INDEX IF NOT EXISTS idx_parent_plan_id ON method_plans (parent_plan_id);
 
 
 -- Create table for storing preference pairs used in ARM/MrQ training
@@ -563,8 +565,8 @@ CREATE TABLE IF NOT EXISTS symbolic_rules
     difficulty text,
     focus_area text,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-)
+    updated_at TIMESTAMP DEFAULT NOW()
+);
 
 
 CREATE TABLE IF NOT EXISTS rule_applications (
@@ -665,7 +667,7 @@ CREATE TABLE IF NOT EXISTS documents (
     content TEXT,
     summary TEXT,
     date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-Kenny
+
     -- Relationships
     goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL,
 
@@ -698,7 +700,7 @@ CREATE TABLE IF NOT EXISTS document_sections (
     UNIQUE(document_id, section_name)
 );
 
-CREATE TABLE document_section_domains (
+CREATE TABLE IF NOT EXISTS document_section_domains (
     id SERIAL PRIMARY KEY,
     document_section_id INTEGER NOT NULL REFERENCES document_sections(id) ON DELETE CASCADE,
     domain TEXT NOT NULL,
@@ -725,7 +727,7 @@ CREATE TABLE IF NOT EXISTS evaluations (
     created_at TIMESTAMP DEFAULT NOW()
 
      -- Add unique constraint here
-    CONSTRAINT unique_source_type_uri UNIQUE (source_type, source_uri)
+  ---  CONSTRAINT unique_source_type_uri UNIQUE (source_type, source_uri)
 );
 
 CREATE TABLE IF NOT EXISTS evaluation_rule_links (
@@ -853,7 +855,7 @@ CREATE TABLE IF NOT EXISTS scoring_history (
     model_version_id INTEGER REFERENCES model_versions(id),
     goal_id INTEGER,                  -- optional: link to goal context
     pipeline_run_id INTEGER REFERENCES pipeline_runs(id) ON DELETE SET NULL,
-    model_type(TEXT),
+    model_type TEXT,
     target_id INTEGER NOT NULL,       -- e.g., document_id, cartridge_id
     target_type TEXT NOT NULL,         -- e.g., "document", "cartridge"
     dimension TEXT NOT NULL,            -- e.g., "relevance"
