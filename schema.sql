@@ -925,37 +925,27 @@ CREATE TABLE IF NOT EXISTS refinement_events (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-
-CREATE TABLE IF NOT EXISTS mem_cubes (
-    id SERIAL PRIMARY KEY,
-    scorable_type TEXT NOT NULL,
-    scorable_id INTEGER NOT NULL,
-
-    state TEXT DEFAULT 'raw',           -- e.g., raw, refined, locked
-    tags TEXT[],
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-
-
-CREATE TABLE memcubes (
+CREATE TABLE IF NOT EXISTS memcubes (
     id TEXT PRIMARY KEY,  -- hash-based ID + version
-    scorable_id INTEGER NOT NULL,  -- Foreign key to Scorable
+    scorable_id bigint NOT NULL,  -- Foreign key to Scorable
     scorable_type TEXT NOT NULL,   -- e.g., document, theorem, triple
     content TEXT NOT NULL,        -- Raw text from Scorable
+    dimension TEXT,               -- e.g., relevance, clarity, ethics
+    original_score FLOAT,         -- Original score before any transformations
+    refined_score FLOAT,          -- Post-processed score (e.g., tuned)
+    refined_content TEXT,          -- Optional: text after refinement
     version TEXT NOT NULL,        -- v1, v2, etc.
-    created_at TIMESTAMP DEFAULT NOW(),
-    last_modified TIMESTAMP DEFAULT NOW(),
     source TEXT,                -- e.g., user_input, inference_engine
     model TEXT,                 -- e.g., gpt-4, llama3
     priority INT DEFAULT 5,     -- 1–10 scale
     sensitivity TEXT DEFAULT 'public',  -- security tag
     ttl INT,                    -- Time-to-live in days
     usage_count INT DEFAULT 0,
-    metadata JSONB              -- Extra info like provenance, lineage
+    extra_data JSONB, 
+    created_at TIMESTAMP DEFAULT NOW(),
+    last_modified TIMESTAMP DEFAULT NOW()
 );
+
 
 -- Add versioning support
 CREATE TABLE memcube_versions (

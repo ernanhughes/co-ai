@@ -7,6 +7,7 @@ from stephanie.scoring.base_scorer import BaseScorer
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
+from stephanie.models.score import ScoreORM
 
 
 class LLMScorer(BaseScorer):
@@ -21,6 +22,7 @@ class LLMScorer(BaseScorer):
         self.logger = logger
         self.prompt_loader = prompt_loader
         self.llm_fn = llm_fn
+        self.force_rescore = cfg.get("force_rescore", False)    
 
     @property
     def name(self) -> str:
@@ -38,6 +40,16 @@ class LLMScorer(BaseScorer):
 
         for dim in dimensions:
             prompt = self._render_prompt(dim, goal, scorable)
+
+            if not self.force_rescore:
+                prompt_hash = ScoreORM.compute_prompt_hash(prompt, scorable)
+                cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
+                if cached_result:
+                    self.logger.log("ScoreCacheHit", {"dimension": dim["name"]})
+                    result = cached_result
+                    results.append(result)
+                    continue
+
             response = self.llm_fn(prompt, {"goal": goal})
 
             try:

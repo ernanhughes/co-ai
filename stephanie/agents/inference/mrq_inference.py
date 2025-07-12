@@ -193,7 +193,7 @@ class MRQInferenceAgent(BaseAgent):
 
         self.logger.log("AllMRQModelsLoaded", {"dimensions": dimensions})
 
-    def score(self, goal_text: str, text: str) -> dict:
+    def score(self, goal_text: str, scorable: Scorable) -> dict:
         """
         Score a single document using all loaded MRQ models and return a dict of dimension -> score.
         This does NOT save to memory or return a ScoreBundle — just raw scores.
@@ -202,7 +202,7 @@ class MRQInferenceAgent(BaseAgent):
         dimension_scores = {}
 
         for dim, model in self.models.items():
-            q_value = model.predict(goal_text, text)
+            q_value = model.predict(goal_text, scorable.text)
 
             if dim in self.tuners:
                 scaled_score = self.tuners[dim].transform(q_value)
@@ -218,7 +218,7 @@ class MRQInferenceAgent(BaseAgent):
                 self.logger.log(
                     "MRQScoreComputed",
                     {
-                        "document": text,
+                        "scorble": scorable.to_dict(),
                         "dimension": dim,
                         "q_value": round(q_value, 4),
                         "final_score": final_score,

@@ -26,6 +26,7 @@ class ScoringPolicyAgent(BaseAgent):
         self.cfg = cfg
         self.memory = memory
         self.logger = logger
+        self.source = cfg.get("source", "mrq")
 
         self.dimensions = cfg.get("dimensions", DEFAULT_DIMENSIONS)
 
@@ -53,10 +54,12 @@ class ScoringPolicyAgent(BaseAgent):
         self.ebt.load_models(self.dimensions)
         self.mrq.load_models(self.dimensions)
 
+
         for doc in docs:
             scorable = ScorableFactory.from_dict(doc, TargetType.DOCUMENT)
             # 1. Initial MRQ score
-            mrq_scores = self.mrq.score(goal_text, scorable.text)
+            mrq_scores = self.mrq.score(goal_text, scorable)
+            llm_scores = self.llm.score(goal_text, scorable)
             self.logger.log(
                 "MRQScoresCalculated",
                 {
@@ -94,11 +97,23 @@ class ScoringPolicyAgent(BaseAgent):
                 refined = True
                 refined_result = self.ebt.optimize(goal_text, scorable.text)
                 refined_text = refined_result.get("refined_text")
-                mrq_scores = self.mrq.score(goal_text, refined_text)
+                refined_scorable = ScorableFactory.from_text(refined_text, scorable.target_type)
+                mrq_scores = self.mrq.score(goal_text, refined_scorable)
                 self.logger.log(
                     "DocumentRefinedWithEBT", {"document_id": scorable.id}
                 )
                 refined_score = refined_result.get("final_energy")
+
+                self._log_memcubes_for_srft(
+                    scorable,  
+                    refined_text,
+                    goal_text,
+                    mrq_scores,
+                    llm_scores,
+                    ebt_energy,
+                    uncertainty_by_dim,
+                    refined=refined,
+                ) 
                 # Log disagreement for retraining
                 self.training_buffer.maybe_add(
                     context=goal_text,
@@ -376,7 +391,7 @@ class ScoringPolicyAgent(BaseAgent):
         plt.close()
 
     def export_results(self, results):
-        """Export results to CSV for external analysis"""
+        """Ex Where is the training myself port results to CSV for external analysis"""
         import pandas as pd
 
         rows = []
@@ -416,6 +431,21 @@ class ScoringPolicyAgent(BaseAgent):
                 "dimensions": list(set(e["dimension"] for e in examples))
             })
 
+    def extract_srft_examples(self, scoring_events: list[dict]) -> list[dict]:
+        return [{
+            "context": e["context"],
+            "original": e["original"],
+            "refined": e["refined"],
+            "dimension": e["dimension"],
+            "original_score": e["original_mrq_score"],
+            "refined_score": e["final_mrq_score"],
+            "original_energy": e["original_ebt_energy"],
+            "refined_energy": e["final_ebt_energy"],
+            "llm_score": e.get("llm_score"),
+            "uncertainty": e.get("original_ebt_energy"),
+        } for e in scoring_events if "refined" in e]
+
+
     def score_with_memcube(self, goal: str, memcube: MemCube):
         # Check access policy
         if not memcube.apply_governance(self.user, "read"):
@@ -434,3 +464,21 @@ class ScoringPolicyAgent(BaseAgent):
             refined_scores = self.ebt.score(goal, refined.scorable.text)
             return refined_scores
         return scores
+    
+
+    def _log_memcubes_for_srft(self, scorable, refined_text, goal_text, mrq_scores, llm_scores, ebt_energy, uncertainty_by_dim, refined):
+        for dim in self.dimensions:
+            memcube = MemCube.from_dict({           
+                "scorable": scorable.to_dict(),
+                "dimension": dim,
+                "memcube_type": "refinement",
+                "context": goal_text,
+                "original": scorable.text,
+                "refined": refined_text if refined else scorable.text,
+                "original_score": ebt_energy.get(dim),
+                "refined_score": mrq_scores.get(dim) if refined else None,
+                "llm_score": llm_scores.get(dim) if self.source == "llm" else None,
+                "uncertainty": uncertainty_by_dim.get(dim),
+                "source": self.name
+            })
+            self.memory.memcube.save_memcube(memcube)

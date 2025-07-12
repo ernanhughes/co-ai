@@ -7,6 +7,8 @@ from stephanie.models.score import ScoreORM
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.scoring_engine import ScoringEngine
 from stephanie.scoring.scoring_manager import ScoringManager
+from stephanie.scoring.scorable import Scorable
+
 
 DEFAULT_DIMENSIONS = [
     "alignment",
@@ -95,3 +97,15 @@ class LLMInferenceAgent(ScoringMixin, BaseAgent):
                 .all()
             )
         return scores
+
+    def score(self, goal_text: str, scorable: Scorable) -> dict:
+        """
+        Score a single text input using the LLM scoring engine across all configured dimensions.
+        Returns a dictionary of {dimension: score}.
+        """
+        context = {"goal": {"goal_text": goal_text}}
+        result = self.scoring_engine.score_item(
+            scorable, context, "document"
+        )
+
+        return result

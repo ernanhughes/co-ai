@@ -93,11 +93,15 @@ class ScorableFactory:
         return Scorable(id=obj.id, text=text, target_type=target_type)
 
     @staticmethod
-    def from_dict(data: dict, target_type: TargetType) -> Scorable:
+    def from_dict(data: dict, target_type: TargetType = None) -> Scorable:
         """
         Converts a plain dictionary into a Scorable, using optional fields like
         title, summary, and content for DOCUMENT types.
         """
+        if target_type is None:
+            target_type = data.get("target_type", "document")
+        if "text" in data: # If text is provided, use it directly
+            return Scorable(id=data.get("id", ""), text=data["text"], target_type=target_type)
         if target_type == TargetType.DOCUMENT:
             title = data.get("title", "")
             summary = data.get("summary", "")
@@ -116,3 +120,12 @@ class ScorableFactory:
             text = data.get("text", "")
 
         return Scorable(id=data.get("id"), text=text, target_type=target_type)
+
+
+    @staticmethod
+    def from_text(text: str, target_type: TargetType) -> Scorable:
+        """
+        Converts a plain dictionary into a Scorable, using optional fields like
+        title, summary, and content for DOCUMENT types.
+        """
+        return Scorable(id="", text=text, target_type=target_type)

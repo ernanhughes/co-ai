@@ -24,13 +24,19 @@ class EBTRefinementDataset(Dataset):
     def __init__(self, refinement_examples: List[Dict], min_score=None, max_score=None):
         """
         Args:
-            refinement_examples: List of {
-                "context": str,
-                "original": str,
-                "refined": str,
-                "dimension": str,
-                "score": float
-            }
+            refinement_examples: List of # Existing structure:
+                {
+                    "context": str,
+                    "original": str,
+                    "refined": str,
+                    "dimension": str,
+                    "original_score": float,
+                    "refined_score": float,
+                    "original_energy": float,
+                    "refined_energy": float,
+                    "llm_score": Optional[float],
+                    "uncertainty": Optional[float]
+                }
         """
         self.data = []
         self.min_score = min_score
@@ -291,6 +297,35 @@ class EBTRefinementTrainer(BaseAgent, EBTMixin):
         """
         result = self.memory.db.execute(query).fetchone()
         return result[0] if result else 40
+
+    def srft_loss(self, energy_orig, energy_ref, llm_score=None, orig_score=None, ref_score=None, entropy=None):
+        """
+        SRFT-style loss combining:
+        - Supervised Fine-Tuning (match LLM score or gold refined score)
+        - Reinforcement-style reward (improve MRQ score or reduce energy)
+        """
+        losses = []
+
+        # 1. SFT: encourage refined to match or beat LLM score
+        if llm_score is not None:
+            target = torch.tensor(llm_score).to(self.device)
+            losses.append(torch.nn.functional.mse_loss(energy_ref, target))
+
+        # 2. RL-style reward: reward if refined energy < original
+        if energy_orig is not None:
+            margin = self.cfg.get("rl_margin", 0.05)
+            diff = energy_orig - energy_ref
+            rl_loss = -torch.relu(diff - margin)  # reward if improvement
+            losses.append(rl_loss.mean())
+
+        # 3. Entropy-aware weighting (optional)
+        if entropy is not None:
+            weight = 1.0 / (1.0 + entropy)
+            total = sum(losses)
+            return weight * total
+
+        return sum(losses)
+
 
     def _get_train_max_score(self, dimension: str):
         """Get training maximum score for normalization"""

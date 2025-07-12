@@ -25,29 +25,32 @@ class MemCubeFactory:
             priority=5,  # Default priority
             sensitivity="public",  # Default sensitivity
             extra_data={
-                "type": scorable.target_type.value,
-                "source_hash": hash(scorable.text),
-                "pipeline_origin": source
+                "scorable": scorable.to_dict()
             }
         )
 
     @staticmethod
     def from_dict(data: dict) -> MemCube:
-        """Load MemCube from serialized data"""
-        scorable = ScorableFactory.from_dict(data["scorable"])
+
+        scorable = ScorableFactory.from_dict(data.get("scorable", {}))
+
         return MemCube(
             scorable=scorable,
-            version=data["version"],
-            created_at=datetime.fromisoformat(data["created_at"]),
-            last_modified=datetime.fromisoformat(data["last_modified"]),
-            source=data["source"],
-            model=data["model"],
-            priority=data["priority"],
-            sensitivity=data["sensitivity"],
-            ttl=data.get("ttl"),
+            version=data.get("version", "v1"),
+            created_at=datetime.fromisoformat(data.get("created_at")) if data.get("created_at") else None,
+            last_modified=datetime.fromisoformat(data.get("last_modified")) if data.get("last_modified") else None,
+            source=data.get("source", "user_input"),
+            model=data.get("model", "llama3"),
+            priority=data.get("priority", 5),
+            original_score=data.get("original_score", None),
+            refined_score=data.get("refined_score", None),
+            refined_content=data.get("refined_content", None),
+            sensitivity=data.get("sensitivity", "public"),
+            ttl=data.get("ttl", None),
             usage_count=data.get("usage_count", 0),
-            extra_data=data.get("metadata", {})
+            extra_data=data.get("extra_data", {})
         )
+
     
     def _generate_version(self, scorable: Scorable) -> str:
         """Generate version based on content stability"""

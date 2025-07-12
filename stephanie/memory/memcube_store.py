@@ -81,7 +81,7 @@ class MemcubeStore:
         params = {
             "id": memcube.id,
             "scorable_id": memcube.scorable.id,
-            "scorable_type": memcube.scorable.target_type.value,
+            "scorable_type": self.get_target_type(memcube.scorable.target_type),
             "content": memcube.scorable.text,
             "version": memcube.version,
             "source": memcube.source,
@@ -102,6 +102,14 @@ class MemcubeStore:
                 "type": memcube.scorable.target_type
             })
 
+    def get_target_type(self, target_type) -> str:
+        if isinstance(target_type, str):
+            return target_type.lower()
+        elif hasattr(target_type, 'value'):
+            return target_type.value.lower()
+        else:
+            raise ValueError(f"Unsupported target type: {target_type}")
+        
     # In DocumentEBTTrainerAgent
     def get_training_data(self, dimension: str) -> list[dict]:
         """Get versioned training data from MemCube"""
