@@ -39,6 +39,9 @@ class ScoreBundle:
                 weight=r.weight,
                 rationale=r.rationale,
                 source=r.source,
+                target_type=r.target_type,
+                prompt_hash=r.prompt_hash,
+
             )
             for r in self.results.values()
         ]
@@ -64,6 +67,9 @@ class ScoreBundle:
                 weight=entry.get("weight", 1.0),
                 rationale=entry.get("rationale", ""),
                 source=entry.get("source", "from_dict"),
+                target_type=entry.get("target_type", "unknown"),
+                prompt_hash=entry.get("prompt_hash", ""),
+                
             )
             for dim, entry in data.items()
             if isinstance(entry, dict)  # Defensive: skip bad formats

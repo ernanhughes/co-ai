@@ -957,3 +957,30 @@ CREATE TABLE memcube_versions (
     updated_at TIMESTAMP DEFAULT NOW(),
     PRIMARY KEY (cube_id, version)
 );
+
+
+-- Track belief graph versions
+CREATE TABLE belief_graph_versions (
+    id SERIAL PRIMARY KEY,
+    goal TEXT NOT NULL,
+    node_count INT,
+    edge_count INT,
+    avg_strength FLOAT,
+    avg_relevance FLOAT,
+    contradictions INT,
+    theorems INT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    model_path TEXT
+);
+
+-- Track theorem applications
+CREATE TABLE theorem_applications (
+    id SERIAL PRIMARY KEY,
+    theorem_id TEXT NOT NULL,
+    context TEXT,
+    result TEXT,
+    success BOOLEAN,
+    energy FLOAT,
+    uncertainty FLOAT,
+    applied_at TIMESTAMP DEFAULT NOW()
+);

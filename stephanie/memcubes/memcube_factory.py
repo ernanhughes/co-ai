@@ -1,6 +1,6 @@
 # stephanie/memcubes/memcube_factory.py
 from stephanie.scoring.scorable import Scorable
-from stephanie.memcubes.memcube import MemCube, MemCubeType
+from stephanie.memcubes.memcube import MemCube
 from stephanie.scoring.scorable_factory import ScorableFactory
 from datetime import datetime
 
@@ -8,7 +8,7 @@ from sqlalchemy.sql import text
 
 class MemCubeFactory:
     @staticmethod
-    def from_scordable(
+    def from_scorable(
         scorable: Scorable,
         version: str = "v1",
         source: str = "scorable_factory",

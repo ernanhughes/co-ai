@@ -10,7 +10,7 @@ from stephanie.memcubes.memcube_factory import MemCubeFactory
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 
 
-class ScoringMemCubeAgent(BaseAgent):
+class ScoringMemcubeAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.ebt_refine_threshold = cfg.get("ebt_refine_threshold", 0.7)
@@ -19,9 +19,9 @@ class ScoringMemCubeAgent(BaseAgent):
         self.step_size = cfg.get("step_size", 0.05)
         
         # Initialize versioned scorers
-        self.ebt = EBTInferenceAgent(cfg.ebt)
-        self.mrq = MRQInferenceAgent(cfg.mrq)
-        self.llm = LLMInferenceAgent(cfg.llm)
+        self.ebt = EBTInferenceAgent(cfg.get("ebt"), self.memory, self.logger)
+        self.mrq = MRQInferenceAgent(cfg.get("mrq"), self.memory, self.logger)
+        self.llm = LLMInferenceAgent(cfg.get("llm"), self.memory, self.logger)
 
     async def run(self, context: dict) -> dict:
         goal_text = context["goal"]["goal_text"]
@@ -34,7 +34,7 @@ class ScoringMemCubeAgent(BaseAgent):
             memcube = MemCubeFactory.from_scorable(scorable, version="auto")
             
             # Initial MRQ score
-            mrq_scores = self.mrq.score(goal_text, memcube.scorable.text)
+            mrq_scores = self.mrq.score(context, memcube.scorable)
             
             # Estimate uncertainty using EBT
             ebt_energy = self.ebt.get_energy(goal_text, memcube.scorable.text)

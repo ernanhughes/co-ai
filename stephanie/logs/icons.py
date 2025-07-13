@@ -30,9 +30,12 @@ SYSTEM_INIT = {
 # KNOWLEDGE STORAGE
 # =================
 KNOWLEDGE_OPS = {
+    "MRQInferenceAgentInitialized": "📊🤖",  # MRQ inference agent initialized
+    "EBTBufferLoaded": "🧪📦",  # EBT buffer loaded
+    "EBTInferenceCompleted": "🧪✅",  # EBT inference complete I know what just before I refuse this I just want to kick it off just in case it's not being kicked off seems like it's gone d
+    "MemCubeSaved": "💾📦✅",  # MemCube saved
     "DocumentRefinedWithEBT": "📄🔄",  # Document refined with EBT
     "EBTExampleAdded": "🧪➕",  # EBT example added
-    "ScoringEvent": "📊",  # Scoring event
     "MRQScoresCalculated": "📊✅",  # MRQ scores calculated
     "ScoringEvent": "📊",  # Scoring event
     "DocumentEBTTrainingStart": "🧪▶️ I",  # Training started for a dimension
@@ -115,7 +118,7 @@ SCORING = {
     "MRQDimensionEvaluated": "📏🧠",  # Dimension evaluated
     "CorDimensionEvaluated": "📐✅",  # COR dimension evaluated
     "MRQScoringComplete": "📊✅",  # MRQ scoring complete
-    "MRQScoreComputed": "🧠📊",  # MRQ score computed
+    "MRQScoreComputed": "📐✅",  # MRQ score computed
     "ReportGenerated": "📄✅",  # Report generated
     "MRQScoringFinished": "📊🏁",  # MRQ scoring finished
     "MRQScoringStarted": "📊▶️",  # MRQ scoring started

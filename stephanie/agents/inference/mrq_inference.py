@@ -17,6 +17,7 @@ from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_utils import (discover_saved_dimensions,
                                          get_model_path)
+from stephanie.models.score import ScoreORM
 
 
 class MRQInferenceAgent(BaseAgent):
@@ -92,8 +93,9 @@ class MRQInferenceAgent(BaseAgent):
                         score=final_score,
                         rationale=f"Q={round(q_value, 4)}",  # Optional
                         weight=1.0,
-                        source="mrq",
+                        source=self.name,
                         target_type=scorable.target_type,
+                        prompt_hash = ScoreORM.compute_prompt_hash(goal_text, scorable)
                     )
                 )
 
@@ -193,12 +195,12 @@ class MRQInferenceAgent(BaseAgent):
 
         self.logger.log("AllMRQModelsLoaded", {"dimensions": dimensions})
 
-    def score(self, goal_text: str, scorable: Scorable) -> dict:
+    def score(self, context: dict, scorable: Scorable) -> dict:
         """
         Score a single document using all loaded MRQ models and return a dict of dimension -> score.
         This does NOT save to memory or return a ScoreBundle — just raw scores.
         """
-
+        goal_text = context["goal"]["goal_text"]
         dimension_scores = {}
 
         for dim, model in self.models.items():

@@ -146,10 +146,10 @@ class SVMScorer(BaseScorer):
     ) -> ScoreBundle:
         results = {}
         for dim in dimensions:
-            if not self.force_rescore:
-                prompt_hash = ScoreORM.compute_prompt_hash(
-                    goal.get("goal_text"), scorable
-                )
+            prompt_hash = ScoreORM.compute_prompt_hash(
+                goal.get("goal_text"), scorable
+            )
+            if not self.force_rescore: # TODO  do we need this here it is super fast
                 cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
                 if cached_result:
                     self.logger.log(
@@ -194,6 +194,8 @@ class SVMScorer(BaseScorer):
                 rationale=rationale,
                 weight=1.0,
                 source="svm",
+                target_type=scorable.target_type,
+                prompt_hash=prompt_hash,
             )
 
         return ScoreBundle(results=results)

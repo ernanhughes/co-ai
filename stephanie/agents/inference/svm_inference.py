@@ -14,7 +14,7 @@ from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_utils import (discover_saved_dimensions,
                                          get_svm_file_paths)
-
+from stephanie.models.score import ScoreORM
 
 class SVMInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -101,6 +101,7 @@ class SVMInferenceAgent(BaseAgent):
                         weight=1.0,
                         source=self.model_type,
                         target_type=scorable.target_type,
+                        prompt_hash = ScoreORM.compute_prompt_hash(goal_text, scorable)
                     )
                 )
 

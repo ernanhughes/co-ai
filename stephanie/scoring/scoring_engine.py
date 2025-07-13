@@ -56,9 +56,8 @@ class ScoringEngine:
                 )
             else:
                 score_result = scorer.score(
-                    context.get("goal"), scorable, scoring_manager.dimensions
+                    context, scorable, scoring_manager.dimensions
                 )
-                self.logger.log(f"{target_type.value}Scored", score_result.to_dict())
 
             self.logger.log("ItemScored", score_result.to_dict())
             return score_result
@@ -89,9 +88,8 @@ class ScoringEngine:
                 )
             else:
                 score_result = scorer.score(
-                    context.get("goal"), scorable, scoring_manager.dimensions
+                    context, scorable, scoring_manager.dimensions
                 )
-                self.logger.log(f"{scorable.target_type.value}Scored", score_result)
 
             self.logger.log("ItemScored", score_result.to_dict())
             return score_result

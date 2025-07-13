@@ -25,7 +25,7 @@ class TargetType(PyEnum):
 
 
 class ScorableFactory:
-    """
+    """ Why am I hitting the cash It shouldn't be slamming the cash by now
     Factory for turning various content types into unified Scorable objects.
     """
 

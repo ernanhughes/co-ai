@@ -58,8 +58,8 @@ class ScoringPolicyAgent(BaseAgent):
         for doc in docs:
             scorable = ScorableFactory.from_dict(doc, TargetType.DOCUMENT)
             # 1. Initial MRQ score
-            mrq_scores = self.mrq.score(goal_text, scorable)
-            llm_scores = self.llm.score(goal_text, scorable)
+            mrq_scores = self.mrq.score(context, scorable)
+            llm_scores = self.llm.score(context, scorable)
             self.logger.log(
                 "MRQScoresCalculated",
                 {
@@ -98,7 +98,7 @@ class ScoringPolicyAgent(BaseAgent):
                 refined_result = self.ebt.optimize(goal_text, scorable.text)
                 refined_text = refined_result.get("refined_text")
                 refined_scorable = ScorableFactory.from_text(refined_text, scorable.target_type)
-                mrq_scores = self.mrq.score(goal_text, refined_scorable)
+                mrq_scores = self.mrq.score(context, refined_scorable)
                 self.logger.log(
                     "DocumentRefinedWithEBT", {"document_id": scorable.id}
                 )
@@ -129,7 +129,7 @@ class ScoringPolicyAgent(BaseAgent):
                 u > self.llm_fallback_threshold
                 for u in uncertainty_by_dim.values()
             ):
-                llm_scores = self.llm.score(goal_text, scorable)
+                llm_scores = self.llm.score(context, scorable)
                 final_scores = llm_scores
                 source = "llm"
                 self.logger.log(

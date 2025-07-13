@@ -244,8 +244,8 @@ class ScoringManager:
                 dim, {"hypothesis": scorable, **context}
             )
 
+            prompt_hash = ScoreORM.compute_prompt_hash(prompt, scorable)
             if not force_rescore:
-                prompt_hash = ScoreORM.compute_prompt_hash(prompt, scorable)
                 cached_result = self.memory.scores.get_score_by_prompt_hash(prompt_hash)
                 if cached_result:
                     self.logger.log("ScoreCacheHit", {"dimension": dim["name"]})
@@ -272,6 +272,7 @@ class ScoringManager:
                 rationale=response,
                 prompt_hash=prompt_hash,
                 source="llm",
+                target_type=scorable.target_type,
             )
             results.append(result)
 
@@ -296,10 +297,10 @@ class ScoringManager:
 
     @staticmethod
     def save_score_to_memory(
-        bundle,
-        scorable,
-        context,
-        cfg,
+        bundle: ScoreBundle,
+        scorable: Scorable,
+        context: dict,
+        cfg: dict,
         memory,
         logger,
         source="ScoreEvaluator",

@@ -25,31 +25,31 @@ class MRQScorer(MRQCoreScoring, MRQTraining, MRQModelIO):
             initialize_dimension(self, dim)
 
         # Bind methods to self
-        self.estimate_score = lambda goal, scorable, dim: estimate_score(
+        self.estimate_score = lambda goal, scorable, dim: self.estimate_score(
             self, goal, scorable, dim
         )
-        self.evaluate = lambda prompt, response: evaluate(self, prompt, response)
-        self.judge = lambda goal, prompt, a, b: judge(self, goal, prompt, a, b)
+        self.evaluate = lambda prompt, response: self.evaluate(self, prompt, response)
+        self.judge = lambda goal, prompt, a, b: self.judge(self, goal, prompt, a, b)
         self.predict_score_from_prompt = (
-            lambda prompt, dim="mrq", top_k=5: predict_score_from_prompt(
+            lambda prompt, dim="mrq", top_k=5: self.predict_score_from_prompt(
                 self, prompt, dim, top_k
             )
         )
 
-        self.train_from_database = lambda cfg: train_from_database(self, cfg)
-        self.train_from_context = lambda ctx, cfg: train_from_context(self, ctx, cfg)
+        self.train_from_database = lambda cfg: self.train_from_database(self, cfg)
+        self.train_from_context = lambda ctx, cfg: self.train_from_context(self, ctx, cfg)
         self.align_mrq_with_llm_scores_from_pairs = (
             lambda samples,
             dim,
-            prefix="MRQAlignment": align_mrq_with_llm_scores_from_pairs(
+            prefix="MRQAlignment": self.align_mrq_with_llm_scores_from_pairs(
                 self, samples, dim, prefix
             )
         )
         self.update_score_bounds_from_data = (
-            lambda samples, dim: update_score_bounds_from_data(self, samples, dim)
+            lambda samples, dim: self.update_score_bounds_from_data(self, samples, dim)
         )
 
-        self.save_models = lambda: save_models(self)
-        self.load_models = lambda: load_models(self)
-        self.load_models_with_path = lambda: load_models_with_path(self)
-        self.save_metadata = lambda base_dir: save_metadata(self, base_dir)
+        self.save_models = lambda: self.save_models(self)
+        self.load_models = lambda: self.load_models(self)
+        self.load_models_with_path = lambda: self.load_models_with_path(self)
+        self.save_metadata = lambda base_dir: self.save_metadata(self, base_dir)

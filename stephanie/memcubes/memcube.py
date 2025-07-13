@@ -57,7 +57,7 @@ class MemCube:
         self.usage_count = usage_count
         self.extra_data = extra_data or {}
 
-        self.id = f"{hash_text(scorable.text)}_{version}"
+        self.id = self._generate_human_id()
         self._validate_sensitivity()
 
     def _validate_sensitivity(self):
@@ -124,3 +124,10 @@ class MemCube:
 
     def _get_user_role(self, user: str) -> str:
         return "researcher"  # Placeholder for real user role logic
+
+
+    def _generate_human_id(self):
+        ts = self.created_at.strftime("%Y%m%d%H%M%S")
+        target_type = self.scorable.target_type
+        scorable_id = str(self.scorable.id)
+        return f"{ts}_{target_type}_{scorable_id}_{self.version}"

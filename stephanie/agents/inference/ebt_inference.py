@@ -14,6 +14,7 @@ from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_utils import (discover_saved_dimensions,
                                          get_model_path)
+from stephanie.models.score import ScoreORM
 
 
 class EBTInferenceAgent(BaseAgent):
@@ -98,7 +99,7 @@ class EBTInferenceAgent(BaseAgent):
             scorable = Scorable(
                 id=doc_id, text=doc.get("text", ""), target_type=TargetType.DOCUMENT
             )
-            memcube = MemCubeFactory.from_scordable(scorable, version="auto")
+            memcube = MemCubeFactory.from_scorable(scorable, version="auto")
             memcube.extra_data["pipeline"] = "ebt_inference"
 
             ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal_text)).to(
@@ -122,14 +123,22 @@ class EBTInferenceAgent(BaseAgent):
                     final_score = round(real_score, 4)
                     dimension_scores[dim] = final_score
 
+                    normalized_score = torch.sigmoid(torch.tensor(raw_energy)).item()
+                    confidence_penalty = 1 - abs(normalized_score - 0.5) * 2
+                    uncertainty = confidence_penalty * (1 / (1 + abs(raw_energy)))
+
+
                     score_results.append(
                         ScoreResult(
                             dimension=dim,
                             score=final_score,
                             rationale=f"Energy={round(raw_energy, 4)}",
                             weight=1.0,
-                            source=self.model_type,
+                            energy = raw_energy,     
+                            uncertainty = uncertainty, 
+                            source=self.name,
                             target_type=scorable.target_type,
+                            prompt_hash=ScoreORM.compute_prompt_hash(goal_text, scorable),
                         )
                     )
 
@@ -141,7 +150,7 @@ class EBTInferenceAgent(BaseAgent):
                             "raw_energy": round(raw_energy, 4),
                             "final_score": final_score,
                         },
-                    )
+                    ) 
 
             score_bundle = ScoreBundle(results={r.dimension: r for r in score_results})
 
@@ -263,7 +272,7 @@ class EBTInferenceAgent(BaseAgent):
         # Create new MemCube version
         from stephanie.memcubes.memcube_factory import MemCubeFactory
         scorable = Scorable(id=hash(refined_text), text=refined_text, target_type=TargetType.DOCUMENT)
-        memcube = MemCubeFactory.from_scordable(scorable, version="auto")
+        memcube = MemCubeFactory.from_scorable(scorable, version="auto")
         memcube.extra_data["refinement_trace"] = energy_trace
         memcube.sensitivity = "internal"  # Upgrade sensitivity on refinement
         

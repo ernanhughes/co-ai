@@ -98,14 +98,22 @@ class LLMInferenceAgent(ScoringMixin, BaseAgent):
             )
         return scores
 
-    def score(self, goal_text: str, scorable: Scorable) -> dict:
+    def score(self, context: dict, scorable: Scorable) -> dict:
         """
         Score a single text input using the LLM scoring engine across all configured dimensions.
         Returns a dictionary of {dimension: score}.
         """
-        context = {"goal": {"goal_text": goal_text}}
         result = self.scoring_engine.score_item(
             scorable, context, "document"
+        )
+        ScoringManager.save_score_to_memory(
+            result,
+            scorable,
+            context,
+            self.cfg,
+            self.memory,
+            self.logger,
+            source="llm",
         )
 
         return result

@@ -50,7 +50,7 @@ class MemcubeStore:
                 memcube.version = "v1"
 
         # Regenerate ID with version suffix
-        base_id = memcube.id.split("_")[0]
+        base_id = memcube.id.rsplit("_", 1)[0]
         memcube.id = f"{base_id}_{memcube.version}"
 
         insert_query = """

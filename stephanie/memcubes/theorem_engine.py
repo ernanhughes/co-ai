@@ -1,3 +1,7 @@
+from stephanie.memcubes.theorem_validator import TheoremValidator
+from stephanie.memcubes.theorem import Theorem
+
+
 class TheoremEngine:
     def __init__(self, memory, belief_graph):
         self.memory = memory
@@ -33,3 +37,25 @@ class TheoremEngine:
                 theorem.to_dict()
             )
         return theorems
+    
+
+
+    
+    def apply_theorem(self, theorem: Theorem, context: str):
+        # Use theorem to transform context
+        result = context
+        for premise in theorem.premises:
+            if self._is_valid_premise(premise):
+                result = self.world_model.apply_premise(result, premise)
+        
+        # Validate final result
+        energy = self.world_model.ebt.get_energy(result, theorem.conclusion)
+        if energy > 0.8:
+            theorem.strength = max(0.0, theorem.strength - 0.1)
+        
+        return result
+    
+    def _is_valid_premise(self, premise: str) -> bool:
+        # Use EBT to check premise validity
+        energy = self.world_model.ebt.get_energy(self.world_model.goal, premise)
+        return energy < 0.5  # Valid if energy low

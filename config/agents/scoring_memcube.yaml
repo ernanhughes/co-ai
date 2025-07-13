@@ -13,3 +13,40 @@ scoring_memcube:
   output_key: scoring_memcube
   prompt_mode: file
   prompt_file: scoring_memcube.txt
+
+  mrq:
+    model_type: "mrq"
+    evaluator: "mrq"
+    target_type: "document"
+    dimensions: 
+      - "alignment"
+      - "clarity"
+      - "implementability"
+      - "novelty"
+      - "relevance"
+
+  ebt:
+    model_type: "ebt"
+    evaluator: "ebt"
+    target_type: "document"
+    dimensions: 
+      - "alignment"
+      - "clarity"
+      - "implementability"
+      - "novelty"
+      - "relevance"
+
+  llm:
+    model_type: "llm"
+    evaluator: "llm"
+    target_type: "document"
+    model:
+      name: ollama/qwen3
+      api_base: http://localhost:11434
+      api_key: null
+    dimensions: 
+      - "alignment"
+      - "clarity"
+      - "implementability"
+      - "novelty"
+      - "relevance"

@@ -6,7 +6,7 @@ from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
-
+from stephanie.models.score import ScoreORM
 
 class MRQCoreScoring:
     def evaluate(self, prompt, response):
