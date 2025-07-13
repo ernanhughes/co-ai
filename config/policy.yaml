@@ -17,6 +17,7 @@ defaults:
   - agents/document_llm_inference
   - agents/knowledge_db_loader
   - agents/ethics
+  - agents/scoring_memcube
   - agents/scoring_policy
   - agents/pipeline_judge
   - logging/json_logger
@@ -136,5 +137,12 @@ pipeline:
      - name: scoring_policy
        description: "Apply scoring policy to evaluate documents"
        cls: stephanie.agents.inference.scoring_policy.ScoringPolicyAgent
+       enabled: true
+       iterations: 1
+
+
+     - name: scoring_memcube
+       description: "Apply scoring memcube to evaluate documents" 
+       cls: stephanie.agents.inference.scoring_memcube.ScoringMemcubeAgent
        enabled: true
        iterations: 1

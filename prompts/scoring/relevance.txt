@@ -1,12 +1,12 @@
-Evaluate the logical soundness of the following hypothesis.
+Evaluate the relevance of the following document.
 
 ### Goal
 {{ goal.goal_text }}
 
-### Hypothesis
-{{ hypothesis.text }}
+### Document
+{{ scorable.text }}
 
-Is the internal logic of the hypothesis valid and free of contradictions?
+How directly does the document address the stated goal or problem? Does it contribute meaningfully to achieving or clarifying the goal?
 
 Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
 

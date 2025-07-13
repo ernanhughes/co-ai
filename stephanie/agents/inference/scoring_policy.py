@@ -129,7 +129,7 @@ class ScoringPolicyAgent(BaseAgent):
                 u > self.llm_fallback_threshold
                 for u in uncertainty_by_dim.values()
             ):
-                llm_scores = self.llm.score(goal_text, doc)
+                llm_scores = self.llm.score(goal_text, scorable)
                 final_scores = llm_scores
                 source = "llm"
                 self.logger.log(

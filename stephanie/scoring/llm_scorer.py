@@ -96,7 +96,7 @@ class LLMScorer(BaseScorer):
             "scorable": scorable,
         }
         if self.prompt_loader and dim.get("file"):
-            return self.prompt_loader.from_file(
+            return self.prompt_loader.score_prompt(
                 file_name=dim["file"], config=self.cfg, context=context
             )
         else:

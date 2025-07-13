@@ -94,7 +94,7 @@ class MemcubeStore:
         }
 
         self.session.execute(text(insert_query), params)
-
+        self.session.commit() 
         if self.logger:
             self.logger.log("MemCubeSaved", {
                 "id": memcube.id,

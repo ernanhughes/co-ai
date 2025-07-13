@@ -76,12 +76,38 @@ class PromptLoader:
                     },
                 )
 
+    def score_prompt(self, file_name: str, config: dict, context: dict) -> str:
+        """Manually load and render a prompt file."""
+        path = self.get_score_path(file_name, config, context)
+        prompt_text = get_text_from_file(path)
+        merged = self._merge_context(config, context)
+        try:
+            return Template(prompt_text).render(**merged)
+        except KeyError as ke:
+            if self.logger:
+                self.logger.log(
+                    "PromptFormattingError",
+                    {
+                        "exception": ke,
+                        "prompt_text": prompt_text,
+                    },
+                )
+
+
     @staticmethod
     def get_file_path(file_name: str, cfg: dict, context: dict) -> str:
         """Builds full prompt file path."""
         prompts_dir = context.get(PROMPT_DIR, "prompts")
         filename = file_name if file_name.endswith(".txt") else f"{file_name}.txt"
         return os.path.join(prompts_dir, cfg.get("name", "default"), filename)
+
+    @staticmethod
+    def get_score_path(file_name: str, cfg: dict, context: dict) -> str:
+        """Builds full prompt file path."""
+        prompts_dir = context.get(PROMPT_DIR, "prompts")
+        filename = file_name if file_name.endswith(".txt") else f"{file_name}.txt"
+        return os.path.join(prompts_dir, "scoring", filename)
+
 
     def _load_from_file(self, config: dict) -> str:
         """Loads and renders a prompt file based on config."""

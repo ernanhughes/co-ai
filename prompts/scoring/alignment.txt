@@ -1,12 +1,12 @@
-Evaluate the risks or gaps of the following hypothesis.
+Evaluate the alignment of the following document.
 
 ### Goal
 {{ goal.goal_text }}
 
-### Hypothesis
-{{ hypothesis.text }}
+### Document
+{{ scorable.text }}
 
-Does the hypothesis contain major assumptions or missing elements?
+How well does the document align with the goal and any stated preferences?
 
 Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
 

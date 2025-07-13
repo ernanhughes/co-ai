@@ -1,4 +1,4 @@
-Evaluate the refinement opportunity of the following hypothesis.
+Evaluate the feasibility of the following hypothesis.
 
 ### Goal
 {{ goal.goal_text }}
@@ -6,7 +6,7 @@ Evaluate the refinement opportunity of the following hypothesis.
 ### Hypothesis
 {{ hypothesis.text }}
 
-How could this hypothesis be refined to better support the goal?
+Can the hypothesis be practically tested or implemented?
 
 Return your review in the exact structured format below. Do not include headings, markdown, or additional commentary. Use only plain text fields as shown:
 

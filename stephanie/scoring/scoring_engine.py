@@ -100,8 +100,7 @@ class ScoringEngine:
             self.logger.log(
                 "ScoreItemFailed",
                 {
-                    "target_id": scorable.id,
-                    "target_type": scorable.target_type,
+                    "scrable": scorable,
                     "error": str(e),
                 },
             )
