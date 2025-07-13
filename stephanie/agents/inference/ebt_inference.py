@@ -2,7 +2,7 @@
 import os
 
 import torch
-
+from typing import Optional
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.memcubes.memcube_factory import MemCubeFactory
 from stephanie.scoring.model.ebt_model import EBTModel
@@ -248,7 +248,6 @@ class EBTInferenceAgent(BaseAgent):
         
         energy_trace = []
         uncertainty_trace = []
-        
         for _ in range(steps):
             optimizer.zero_grad()
             energy = model(ctx_emb, doc_tensor)
@@ -286,7 +285,8 @@ class EBTInferenceAgent(BaseAgent):
             "final_energy": final_energy,
             "converged": abs(energy_trace[-1] - energy_trace[0]) < 0.05,
             "uncertainty": uncertainty,
-            "dimension": target_dim
+            "dimension": target_dim,
+            "steps_used": len(energy_trace)
         }
     
     def is_uncertain(self, goal: str, text: str, dimension: str, threshold: float = 0.75) -> bool:
@@ -363,3 +363,37 @@ class EBTInferenceAgent(BaseAgent):
         os.makedirs("energy_traces", exist_ok=True)
         plt.savefig(f"energy_traces/{title}.png")
         plt.close()
+
+    def is_unstable(self, goal: str, text: str, dimension: Optional[str] = None) -> bool:
+        target_dim = dimension or next(iter(self.models))
+        model = self.models[target_dim]
+        meta = self.model_meta.get(target_dim, {"min": 40, "max": 100})
+        dim_threshold = self.cfg.get(f"{target_dim}_uncertainty_threshold", self.uncertainty_threshold)
+
+        # Prepare embeddings
+        ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal)).to(self.device)
+        doc_emb = torch.tensor(self.memory.embedding.get_or_create(text)).to(self.device)
+        doc_tensor = doc_emb.clone().detach().requires_grad_(True)
+
+        # Forward pass
+        energy = model(ctx_emb, doc_tensor).squeeze()
+        
+        # Normalize energy using known bounds
+        normalized_energy = (energy.item() - meta["min"]) / (meta["max"] - meta["min"])
+
+        # Compute gradient
+        energy.backward()
+        grad = doc_tensor.grad
+        grad_norm = torch.norm(grad).item() if grad is not None else 0.0
+
+        # Combine to get uncertainty
+        uncertainty_score = normalized_energy + grad_norm
+
+        self.logger.log("EBTUncertaintyCheck", {
+            "dimension": target_dim,
+            "energy": round(energy.item(), 4),
+            "normalized_energy": round(normalized_energy, 4),
+            "grad_norm": round(grad_norm, 4),
+            "uncertainty_score": round(uncertainty_score, 4),
+            "threshold": dim_threshold,
+        })

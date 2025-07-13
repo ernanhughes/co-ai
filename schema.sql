@@ -949,15 +949,17 @@ CREATE TABLE IF NOT EXISTS memcubes (
 );
 
 
--- Add versioning support
-CREATE TABLE memcube_versions (
-    cube_id TEXT REFERENCES memcubes(id),
-    version TEXT NOT NULL,
-    content TEXT NOT NULL,
-    updated_at TIMESTAMP DEFAULT NOW(),
-    PRIMARY KEY (cube_id, version)
-);
 
+
+-- Track transformations between memory types
+CREATE TABLE memcube_transformations (
+    id SERIAL PRIMARY KEY,
+    source_cube_id TEXT NOT NULL,
+    target_cube_id TEXT NOT NULL,
+    transformation_type TEXT,
+    confidence FLOAT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
 
 -- Track belief graph versions
 CREATE TABLE belief_graph_versions (

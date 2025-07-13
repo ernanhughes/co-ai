@@ -23,7 +23,7 @@ defaults:
   - logging/json_logger
 
 goal:
-  goal_text: I want to build an AI that can teach itself to solve complex problems better over time.
+  goal_text: I want to build an AI that can read, refactor, and iteratively improve its own source code to become more efficient, reliable, and aligned with its evolving objectives.
   goal_type: "tactical"
   goal_category: "meta_learning"
   focus_area: "self_improvement"
@@ -37,14 +37,14 @@ goal:
 
 post_judgment:
   name: pipeline_judge
-  enabled: false
+  enabled: true
   cls: stephanie.agents.pipeline_judge.PipelineJudgeAgent
 
 paths:
   prompts: ${hydra:runtime.cwd}/prompts
 
 report:
-  generate_report: false
+  generate_report: true
   path: ${hydra:runtime.cwd}/reports
 
 web_search:
@@ -58,32 +58,32 @@ embeddings:
   endpoint: "http://localhost:11434/api/embeddings"
 
 pipeline:
-  name: rivals
+  name: policy
   tag: "search_arxiv"
   description: "Search Arxiv for papers related to a goal"
   stages:
      - name: document_mrq_trainer
        description: "Build document pairs for training and evaluation" 
        cls: stephanie.agents.maintenance.mrq_trainer.MRQTrainerAgent 
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: document_svm_trainer
        description: "Train a model to predict document values using SVM" 
        cls: stephanie.agents.maintenance.svm_trainer.SVMTrainerAgent 
-       enabled: false
+       enabled: true
        iterations: 1  
 
      - name: document_ebt_trainer
        description: "Train a model to predict document values based on EBT" 
        cls: stephanie.agents.maintenance.ebt_trainer.EBTTrainerAgent 
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: knowledge_loader
        description: "Load knowledge from the scored papers into the system"
        cls: stephanie.agents.knowledge.knowledge_loader.KnowledgeLoaderAgent
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: document_embedding_backfill
@@ -101,19 +101,19 @@ pipeline:
      - name: document_llm_inference
        description: "Infer LLM scores for documents" 
        cls: stephanie.agents.inference.llm_inference.LLMInferenceAgent 
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: document_mrq_inference
        description: "Infer MRQ scores for documents" 
        cls: stephanie.agents.inference.mrq_inference.MRQInferenceAgent 
-       enabled: false
+       enabled: true
        iterations: 
        
      - name: document_svm_inference
        description: "Infer SVM scores for documents" 
        cls: stephanie.agents.inference.svm_inference.SVMInferenceAgent
-       enabled: false
+       enabled: true
        iterations: 
        
      - name: document_ebt_inference
@@ -125,13 +125,13 @@ pipeline:
      - name: document_reward_scorer
        description: "Score the documents based on their relevance and quality"
        cls: stephanie.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: ethics
        description: "Evaluate the ethical soundness of AI-generated advice" 
        cls: stephanie.agents.world.ethics.Ethics  
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: scoring_policy
