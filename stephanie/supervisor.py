@@ -299,11 +299,68 @@ class Supervisor:
         if self.memory and cfg.get(SAVE_CONTEXT, True):
             run_id = context.get(RUN_ID)
             name = cfg.get(NAME, "NoAgentNameInConfig")
-            self.memory.context.save(run_id, name, context, cfg)
+            try:
+                self.memory.context.save(run_id, name, context, cfg)
+            except Exception as e:
+                self.logger.log(
+                    "ContextSaveFailed",
+                    {
+                        "run_id": run_id,
+                        "name": name,
+                        "error": str(e),
+                        "context_keys": list(context.keys()),
+                    },
+                )
+                for k, v in context.items():
+                    self.inspect_context_serializability(v, f"context[{repr(k)}]")
+                    print(f"Context Key: {k}, Type: {type(v)}")
+
+
+
             self.logger.log(
                 "ContextSaved",
                 {NAME: name, RUN_ID: run_id, "context_keys": list(context.keys())},
             )
+
+    def inspect_context_serializability(self, obj, path="context"):
+        try:
+            json.dumps(obj)
+        except TypeError as e:
+            print(f"❌ Non-serializable at {path} → {type(obj)}: {e}")
+
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    self.inspect_context_serializability(v, f"{path}[{repr(k)}]")
+            elif isinstance(obj, list):
+                for i, item in enumerate(obj):
+                    self.inspect_context_serializability(item, f"{path}[{i}]")
+            elif hasattr(obj, "__dict__"):
+                for attr, val in vars(obj).items():
+                    self.inspect_context_serializability(val, f"{path}.{attr}")
+            else:
+                print(f"⚠️ Unknown non-serializable object at {path}: {type(obj)}")
+        else:
+            # Optional: print serializable paths
+            pass
+
+
+    def inspect_non_serializable(self, obj, path="context"):
+        try:
+            json.dumps(obj)
+        except TypeError as e:
+            print(f"❌ Non-serializable at {path} → {type(obj)}: {e}")
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    inspect_non_serializable(v, f"{path}[{repr(k)}]")
+            elif isinstance(obj, list):
+                for i, item in enumerate(obj):
+                    inspect_non_serializable(item, f"{path}[{i}]")
+            elif hasattr(obj, "__dict__"):
+                for attr, val in vars(obj).items():
+                    inspect_non_serializable(val, f"{path}.{attr}")
+
+
+
 
     def load_context(self, cfg: DictConfig, goal_id: int):
         if self.memory and cfg.get(SKIP_IF_COMPLETED, False):

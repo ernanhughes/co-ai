@@ -22,6 +22,7 @@ class TargetType(PyEnum):
     THEOREM = "theorem"
     SYMBOLIC_RULE = "symbolic_rule"
     CUSTOM = "custom"
+    REFINEMENT = "refinement"  # For SRFT-style usage
 
 
 class ScorableFactory:

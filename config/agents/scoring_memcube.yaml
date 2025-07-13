@@ -15,6 +15,7 @@ scoring_memcube:
   prompt_file: scoring_memcube.txt
 
   mrq:
+    name: scoring_memcube_mrq
     model_type: "mrq"
     evaluator: "mrq"
     target_type: "document"
@@ -26,6 +27,7 @@ scoring_memcube:
       - "relevance"
 
   ebt:
+    name: scoring_memcube_ebt
     model_type: "ebt"
     evaluator: "ebt"
     target_type: "document"
@@ -37,6 +39,7 @@ scoring_memcube:
       - "relevance"
 
   llm:
+    name: scoring_memcube_llm
     model_type: "llm"
     evaluator: "llm"
     target_type: "document"

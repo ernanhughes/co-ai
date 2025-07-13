@@ -46,14 +46,29 @@ class ScoringMemcubeAgent(BaseAgent):
             # Refinement if uncertain
             if any(u > self.ebt_refine_threshold for u in uncertainty_by_dim.values()):
                 refinement_result = self.ebt.optimize(goal_text, memcube.scorable.text)
-                memcube.scorable.text = refinement_result["refined_text"]
-                memcube.version = refinement_result["dimension_version"]
-                memcube.metadata["refinement_trace"] = refinement_result["energy_trace"]
-            
+
+                refined_scorable = ScorableFactory.from_dict({
+                    "id":memcube.scorable.id,
+                    "text":refinement_result["refined_text"],
+                    "target_type":TargetType.REFINEMENT}
+                )
+
+                refined_memcube = MemCubeFactory.from_scorable(
+                    refined_scorable,
+                    version="auto"
+                )
+
+                refined_memcube.extra_data.update({
+                    "refinement_trace": refinement_result["energy_trace"],
+                    "original_memcube_id": memcube.id
+                })
+
+                # Now switch to using refined_memcube
+                memcube = refined_memcube
             # LLM fallback if still uncertain
             if any(u > self.llm_fallback_threshold for u in uncertainty_by_dim.values()):
-                llm_scores = self.llm.score(goal_text, memcube.scorable.text)
-                final_scores = llm_scores
+                llm_scores = self.llm.score(context, memcube.scorable)
+                final_scores = llm_scores.to_dict()
                 source = "llm"
             else:
                 final_scores = mrq_scores
@@ -68,7 +83,7 @@ class ScoringMemcubeAgent(BaseAgent):
             }
             
             # Save to memory
-            self.memory.memcube.save_memcube(memcube, result)
+            self.memory.memcube.save_memcube(memcube)
             results.append(result)
         
         context[self.output_key] = results
