@@ -22,13 +22,13 @@ def get_model_path(
 
 
 def discover_saved_dimensions(
-    model_type: str, target_type: str, model_dir: str = "models"
+    model_type: str, target_type: str, model_dir: str = "models", version: str = "v1"
 ) -> list:
     """
     Discover saved dimensions for a given model and target type.
     Filters out scalers and metadata artifacts.
     """
-    path = os.path.join(model_dir, model_type, target_type)
+    path = os.path.join(model_dir, model_type, target_type, version)
     if not os.path.exists(path):
         print(f"[discover_saved_dimensions] Path {path} does not exist.")
         return []
