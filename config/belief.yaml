@@ -18,9 +18,9 @@ defaults:
   - agents/knowledge_db_loader
   - agents/ethics
   - agents/scoring_memcube
+  - agents/idea_extractor
   - agents/scoring_policy
   - agents/pipeline_judge
-  - agents/idea_extractor
   - logging/json_logger
 
 goal:
@@ -150,6 +150,6 @@ pipeline:
 
      - name: idea_extractor
        description: "Extract ideas from the documents"
-       cls: stephanie.agents.idea_extractor.LearnableIdeaExtractorAgent
+       cls: stephanie.agents.knowledge.idea_extractor.LearnableIdeaExtractorAgent
        enabled: true
        iterations: 1

@@ -30,6 +30,7 @@ class IdeaParser:
 
     def __init__(self, cfg, logger=None):
         self.cfg = cfg
+        self.dimensions = cfg.get("dimensions", ["usefulness", "novelty", "alignment", "epistemic_gain"])
         self.logger = logger
         self.prompt_loader = None  # Will be injected by agent
         self.call_llm = None       # Will be injected by agent
@@ -43,10 +44,10 @@ class IdeaParser:
             cfg,
             logger=self.logger,
             memory=self.memory,
-            dimensions=["usefulness", "novelty", "alignment", "epistemic_gain"]
+            dimensions=self.dimensions
         )
 
-    def parse(self, paper_text: str, paper_title: str = "") -> List[Dict]:
+    def parse(self, paper_text: str, paper_title: str = "", context={}) -> List[Dict]:
         """
         Main entry point — takes raw paper text and returns a list of structured ideas.
 
@@ -72,7 +73,8 @@ class IdeaParser:
             prompt_context = {
                 "method_section": method_text[:self.cfg.get("llm_max_chars", 12000)],
                 "results_section": results_text[:self.cfg.get("llm_max_chars", 12000)] if results_text else "",
-                "sections_available": list(paper_sections.keys())
+                "sections_available": list(paper_sections.keys()),
+                **context
             }
 
             prompt = self.prompt_loader.from_file(
@@ -93,7 +95,7 @@ class IdeaParser:
                     "source_section": "methods",
                     "source_paper": paper_title,
                     "tags": self._tag_idea(idea),
-                    "scoring": self._score_idea(idea)
+                    "scoring": self._score_idea(context, idea)
                 })
 
             return enriched
@@ -157,12 +159,12 @@ class IdeaParser:
 
         return list(tags)
 
-    def _score_idea(self, idea: dict) -> dict:
+    def _score_idea(self, context: dict, idea: dict) -> dict:
         """
         Use SVM scorer or other models to score idea along multiple dimensions.
         """
         scorable = Scorable(text=idea.get("description", ""), target_type=TargetType.IDEA)
-        score_bundle = self.scorer.score(scorable=scorable)
+        score_bundle = self.scorer.score(context.get("goal"), scorable=scorable, dimensions=self.dimensions)
 
         return {
             dim: round(score, 2)

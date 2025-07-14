@@ -1,12 +1,12 @@
-from typing import Dict, List, Optional
+# File: stephanie/agents/knowledge/learnable_idea_extractor.py
+
+
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.analysis.domain_classifier import DomainClassifier
 from stephanie.builders.belief_cartridge_builder import BeliefCartridgeBuilder
-from stephanie.models.belief_cartridge import BeliefCartridgeORM
-from stephanie.models.document import DocumentORM
-from stephanie.scoring.scorable_factory import TargetType
 from stephanie.utils.idea_parser import IdeaParser
+from stephanie.scoring.mrq.mrq_scorer import MRQScorer  # or wherever your scorer lives
 
 
 class LearnableIdeaExtractorAgent(BaseAgent):
@@ -21,12 +21,17 @@ class LearnableIdeaExtractorAgent(BaseAgent):
 
         # Components from config
         self.idea_parser = IdeaParser(cfg, logger=logger)
+        self.idea_parser.prompt_loader = self.prompt_loader
+        self.idea_parser.call_llm = self.call_llm
+        self.idea_parser.memory = self.memory
+        
         self.cartridge_builder = BeliefCartridgeBuilder(cfg, memory=memory, logger=logger)
         self.domain_classifier = DomainClassifier(
             memory=memory,
             logger=logger,
             config_path=cfg.get("domain_seed_config_path", "config/domain/seeds.yaml"),
         )
+        self.mrq_scorer = MRQScorer(cfg, memory=memory, logger=logger)  # Replace with your actual scorer
 
         # Settings
         self.top_k_domains = cfg.get("top_k_domains", 3)
@@ -53,14 +58,15 @@ class LearnableIdeaExtractorAgent(BaseAgent):
                 doc_id = doc["id"]
                 title = doc.get("title")
                 summary = doc.get("summary")
-                text = doc.get("text", "")
+                text = doc.get("content", doc.get("text", ""))
 
                 # Skip if already processed
                 if self._is_already_processed(doc_id):
+                    self.logger.log("DocumentAlreadyProcessed", {"doc_id": doc_id})
                     continue
 
                 # Step 1: Parse paper sections
-                parsed_sections = await self._parse_document_sections(text, context)
+                parsed_sections = await self._parse_document_sections(text, title, context)
                 if not parsed_sections:
                     continue
 
@@ -110,11 +116,11 @@ class LearnableIdeaExtractorAgent(BaseAgent):
         """Check if this document has already had ideas extracted."""
         return self.memory.belief_cartridges.exists_by_source(doc_id)
 
-    async def _parse_document_sections(self, text: str, context: dict) -> dict:
+    async def _parse_document_sections(self, text: str, title: str, context: dict) -> dict:
         """Use prompt + parser to extract structured paper content."""
         try:
             # Could also use DocumentProfilerAgent output
-            parsed = self.idea_parser.split_into_sections(text)
+            parsed = self.idea_parser.parse(text, title, context)
             return parsed
         except Exception as e:
             self.logger.log("SectionParsingFailed", {"error": str(e)})
@@ -125,8 +131,9 @@ class LearnableIdeaExtractorAgent(BaseAgent):
         scored = []
         for idea in ideas:
             merged = {"idea_description": idea["description"], **context}
-            score = self.mrq.score(merged)  # Placeholder; could use multiple scorers
-            idea["score"] = score
+            score_bundle = self.mrq_scorer.score(merged)
+            idea["score"] = score_bundle.overall_score()
+            idea["scores"] = score_bundle.to_dict()
             scored.append(idea)
         return scored
 
