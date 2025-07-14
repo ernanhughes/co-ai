@@ -30,7 +30,6 @@ class LLMScorer(BaseScorer):
     def name(self) -> str:
         return "llm"
 
-    @time_function()
     def score(self, context:dict, scorable: Scorable, dimensions: list[dict]) -> ScoreBundle:
         """
         Scores a Scorable across multiple dimensions using an LLM.

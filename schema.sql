@@ -952,7 +952,7 @@ CREATE TABLE IF NOT EXISTS memcubes (
 
 
 -- Track transformations between memory types
-CREATE TABLE memcube_transformations (
+CREATE TABLE IF NOT EXISTS  memcube_transformations (
     id SERIAL PRIMARY KEY,
     source_cube_id TEXT NOT NULL,
     target_cube_id TEXT NOT NULL,
@@ -962,7 +962,7 @@ CREATE TABLE memcube_transformations (
 );
 
 -- Track belief graph versions
-CREATE TABLE belief_graph_versions (
+CREATE TABLE IF NOT EXISTS  belief_graph_versions (
     id SERIAL PRIMARY KEY,
     goal TEXT NOT NULL,
     node_count INT,
@@ -976,7 +976,7 @@ CREATE TABLE belief_graph_versions (
 );
 
 -- Track theorem applications
-CREATE TABLE theorem_applications (
+CREATE TABLE IF NOT EXISTS  theorem_applications (
     id SERIAL PRIMARY KEY,
     theorem_id TEXT NOT NULL,
     context TEXT,
@@ -985,4 +985,31 @@ CREATE TABLE theorem_applications (
     energy FLOAT,
     uncertainty FLOAT,
     applied_at TIMESTAMP DEFAULT NOW()
+);
+
+
+-- Track component versions and performance
+CREATE TABLE IF NOT EXISTS  component_versions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    protocol TEXT NOT NULL,
+    class_path TEXT NOT NULL,
+    version TEXT NOT NULL,
+    config JSONB,
+    performance JSONB,
+    active BOOLEAN DEFAULT TRUE,
+    sensitivity TEXT CHECK(sensitivity IN ('public', 'internal', 'confidential', 'restricted')),
+    created_at TIMESTAMP DEFAULT NOW(),
+    last_used TIMESTAMP,
+    usage_count INT DEFAULT 0,
+    metadata JSONB
+);
+
+
+-- Track interface compliance
+CREATE TABLE IF NOT EXISTS component_interfaces (
+    component_id TEXT REFERENCES component_versions(id),
+    protocol TEXT NOT NULL,
+    implemented BOOLEAN DEFAULT TRUE,
+    last_checked TIMESTAMP DEFAULT NOW()
 );

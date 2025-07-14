@@ -152,8 +152,7 @@ class MRQCoreScoring:
 
         raw_score = self.models[dimension].predict(
             goal.get("goal_text"),
-            scorable.text,
-            embedding_store=self.memory.embedding,
+            scorable.text
         )
 
         norm_score = self.normalize_score(raw_score, dimension)

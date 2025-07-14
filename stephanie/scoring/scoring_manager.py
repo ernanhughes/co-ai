@@ -17,9 +17,9 @@ from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
+from stephanie.agents.base_agent import BaseAgent
 
-
-class ScoringManager:
+class ScoringManager(BaseAgent):
     def __init__(
         self,
         dimensions,
@@ -32,11 +32,9 @@ class ScoringManager:
         scoring_profile=None,
         scorer=None,
     ):
+        super().__init__(cfg, memory, logger)
         self.dimensions = dimensions
         self.prompt_loader = prompt_loader
-        self.cfg = cfg
-        self.logger = logger
-        self.memory = memory
         self.output_format = cfg.get("output_format", "simple")  # default
         self.prompt_renderer = PromptRenderer(prompt_loader, cfg)
         self.calculator = calculator or WeightedAverageCalculator()
@@ -209,17 +207,17 @@ class ScoringManager:
 
         raise ValueError(f"Could not extract numeric score from response: {response}")
 
-    def evaluate(self, scorable: Scorable, context: dict = {}, llm_fn=None):
+    def evaluate(self, context: dict, scorable: Scorable):
         try:
             score = self.scorer.score(
-                context.get("goal"), scorable, self.dimension_names(), llm_fn=llm_fn
+                context, scorable, self.dimensions
             )
         except Exception as e:
             self.logger.log(
                 "MgrScoreParseError",
                 {"scorable": scorable, "error": str(e)},
             )
-            score = self.evaluate_llm(scorable, context, llm_fn)
+            score = self.evaluate_llm(context, scorable, self.call_llm)
         log_key = "CorDimensionEvaluated" if format == "cor" else "DimensionEvaluated"
         self.logger.log(
             log_key,
@@ -228,7 +226,7 @@ class ScoringManager:
 
         return score
 
-    def evaluate_llm(self, scorable: Scorable, context: dict = {}, llm_fn=None):
+    def evaluate_llm(self, context: dict, scorable: Scorable, llm_fn=None):
         if llm_fn is None:
             raise ValueError("You must pass a call_llm function to evaluate")
 
