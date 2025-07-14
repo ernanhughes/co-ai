@@ -111,25 +111,26 @@ class IdeaParser:
                 return sections[sec]
         return None
 
+
     def _parse_idea_response(self, response: str) -> List[Dict]:
         """
         Parses LLM output into structured idea objects.
-        Assumes YAML-like or numbered list format.
+        Cleans up markdown artifacts (like '**Description:**') in keys and values.
         """
         lines = [line.strip() for line in response.splitlines() if line.strip()]
         ideas = []
         current = {}
 
         for line in lines:
-            if re.match(r"^\d+\.", line):  # New idea
+            if re.match(r"^\d+\.", line):  # New idea starts
                 if current:
                     ideas.append(current)
                     current = {}
                 current["title"] = line[2:].strip()
             elif ":" in line:
                 key, val = line.split(":", 1)
-                key = key.strip().lower()
-                val = val.strip()
+                key = re.sub(r'^[\*\s]*|[\*\s:]*$', '', key).strip().lower()
+                val = re.sub(r'^[\*\s]*|[\*\s]*$', '', val).strip()
                 current[key] = val
 
         if current:
@@ -164,6 +165,9 @@ class IdeaParser:
         Use SVM scorer or other models to score idea along multiple dimensions.
         """
         scorable = Scorable(text=idea.get("description", ""), target_type=TargetType.IDEA)
+        self.scorer.logger=self.logger
+        self.scorer.memory=self.memory
+        
         score_bundle = self.scorer.score(context.get("goal"), scorable=scorable, dimensions=self.dimensions)
 
         return {
