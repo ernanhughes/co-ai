@@ -37,6 +37,7 @@ from stephanie.memory.score_store import ScoreStore
 from stephanie.memory.search_result_store import SearchResultStore
 from stephanie.memory.sharpening_store import SharpeningStore
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
+from stephanie.memory.goal_dimensions_store import GoalDimensionsStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
 
 
@@ -92,7 +93,8 @@ class MemoryTool:
         self.register_store(CartridgeTripleStore(self.session, logger))
         self.register_store(MemcubeStore(self.session, logger))
         self.register_store(BeliefCartridgeStore(self.session, logger))
-
+        self.register_store(GoalDimensionsStore(self.session, logger))
+        
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):
             for store_class in cfg.get("extra_stores", []):

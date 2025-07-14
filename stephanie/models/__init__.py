@@ -31,3 +31,4 @@ from .sharpening_result import SharpeningResultORM
 from .symbolic_rule import SymbolicRuleORM
 from .theorem import CartridgeORM, TheoremORM
 from .unified_mrq import UnifiedMRQModelORM
+from .goal_dimension import GoalDimensionORM

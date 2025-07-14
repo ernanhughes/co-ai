@@ -60,3 +60,5 @@ class GoalORM(Base):
             "source": self.source,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+    dimensions = relationship("GoalDimensionORM", back_populates="goal", cascade="all, delete-orphan")

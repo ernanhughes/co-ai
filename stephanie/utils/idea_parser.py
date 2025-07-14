@@ -48,7 +48,7 @@ class IdeaParser:
         )
         self.scorer.models = model_loader.load_all(self.dimensions)
 
-    def parse(self, paper_text: str, paper_title: str = "", context={}) -> List[Dict]:
+    def parse(self, paper_text: str, paper_title: str = "", context={}, override_dimensions: Optional[list] = None) -> List[Dict]:
         """
         Main entry point — takes raw paper text and returns a list of structured ideas.
 
@@ -96,7 +96,8 @@ class IdeaParser:
                     "source_section": "methods",
                     "source_paper": paper_title,
                     "tags": self._tag_idea(idea),
-                    "scoring": self._score_idea(context, idea)
+                    "scoring": self._score_idea(context, idea, override_dimensions),
+                    "dimensions": override_dimensions or self.dimensions
                 })
 
             return enriched
@@ -161,7 +162,7 @@ class IdeaParser:
 
         return list(tags)
 
-    def _score_idea(self, context: dict, idea: dict) -> dict:
+    def _score_idea(self, context: dict, idea: dict, override_dimensions: Optional[list] = None) -> dict:
         """
         Use SVM scorer or other models to score idea along multiple dimensions.
         """
@@ -169,7 +170,8 @@ class IdeaParser:
         self.scorer.logger=self.logger
         self.scorer.memory=self.memory
         
-        score_bundle = self.scorer.score(context.get("goal"), scorable=scorable, dimensions=self.dimensions)
+        score_bundle = self.scorer.score(context.get("goal"), scorable=scorable, 
+                                         dimensions=override_dimensions or self.dimensions)
 
         return {
             dim: round(score, 2)
