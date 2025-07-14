@@ -1,10 +1,12 @@
 # stephanie/agents/inference/document_ebt_inference.py
 import os
+from typing import Optional
 
 import torch
-from typing import Optional
+
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.memcubes.memcube_factory import MemCubeFactory
+from stephanie.models.score import ScoreORM
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
@@ -14,7 +16,6 @@ from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_utils import (discover_saved_dimensions,
                                          get_model_path)
-from stephanie.models.score import ScoreORM
 
 
 class EBTInferenceAgent(BaseAgent):

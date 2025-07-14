@@ -10,10 +10,10 @@ from torch.utils.data import DataLoader
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.ebt_mixin import EBTMixin
-from stephanie.scoring.model.ebt_model import EBTModel
-from stephanie.utils.model_utils import get_model_path
-from stephanie.utils.file_utils import save_json
 from stephanie.scoring.ebt.srft_refinement_dataset import SRFTRefinementDataset
+from stephanie.scoring.model.ebt_model import EBTModel
+from stephanie.utils.file_utils import save_json
+from stephanie.utils.model_utils import get_model_path
 
 
 class SRFTRefinementTrainer(BaseAgent, EBTMixin):

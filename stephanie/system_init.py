@@ -1,5 +1,8 @@
-from stephanie.core.embedding.embedders import StephanieEmbedder, HuggingFaceEmbedder, HNetEmbedder
+from stephanie.core.embedding.embedders import (HNetEmbedder,
+                                                HuggingFaceEmbedder,
+                                                StephanieEmbedder)
 from stephanie.core.embedding.protocols import EmbedderProtocol
+
 
 # In your system initialization
 def initialize_embedding_components(self):

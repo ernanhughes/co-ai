@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
+
 from stephanie.scoring.scorable import Scorable
 from stephanie.utils.file_utils import hash_text
 

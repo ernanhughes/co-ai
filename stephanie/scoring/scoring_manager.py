@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 from sqlalchemy.orm import Session
 
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.score import ScoreORM
 from stephanie.models.score_dimension import ScoreDimensionORM
@@ -17,7 +18,7 @@ from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
-from stephanie.agents.base_agent import BaseAgent
+
 
 class ScoringManager(BaseAgent):
     def __init__(

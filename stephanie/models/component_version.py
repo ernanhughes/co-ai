@@ -1,9 +1,9 @@
 # stephanie/registry/models.py
 
-from sqlalchemy import (
-    Column, String, Boolean, DateTime, Integer, JSON, func, ForeignKey
-)
+from sqlalchemy import (JSON, Boolean, Column, DateTime, ForeignKey, Integer,
+                        String, func)
 from sqlalchemy.orm import relationship
+
 from stephanie.models.base import Base
 
 

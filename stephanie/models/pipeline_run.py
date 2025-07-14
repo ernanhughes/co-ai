@@ -39,6 +39,4 @@ class PipelineRunORM(Base):
         back_populates="pipeline_run",
         cascade="all, delete-orphan",
     )
-    scores = relationship(
-        "EvaluationORM", back_populates="pipeline_run", cascade="all, delete-orphan"
-    )
+    evaluations = relationship("EvaluationORM", back_populates="pipeline_run")

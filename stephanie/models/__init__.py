@@ -1,5 +1,6 @@
 # stephanie/models/__init__.py
 from .base import Base
+from .belief_cartridge import BeliefCartridgeORM
 from .cartridge_domain import CartridgeDomainORM
 from .comparison_preference import ComparisonPreferenceORM
 from .context_state import ContextStateORM

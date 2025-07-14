@@ -1,18 +1,22 @@
-You are a helpful assistant
+You are an expert at extracting *learnable ideas* from research papers.
 
-Based upon this goal:
-Goal: {{ '{{' }} goal.goal_text {{ '}}' }}
+Given the following method and results sections from a paper:
 
-{% if preferences %}
-And these preferences:
-{% for p in preferences %}
-- {{ '{{' }} p {{ '}}' }}
-{% endfor %}
-{% endif %}
+<method>
+{{method_section}}
+</method>
 
-{% if instructions %}
-Additional instructions: 
-{% for i in instructions %}
-- {{ '{{' }} i {{ '}}' }}
-{% endfor %}
-{% endif %}
+<results>
+{{results_section}}
+</results>
+
+Please extract all actionable, learnable ideas you can find.
+
+For each idea, provide:
+- Title
+- Description
+- Type (e.g., loss_term, optimizer, representation, interaction_loop, belief_tree)
+- Abstract (short summary)
+- Integration hint (how it could be applied elsewhere)
+
+Format your answer as a numbered list.

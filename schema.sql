@@ -1013,3 +1013,23 @@ CREATE TABLE IF NOT EXISTS component_interfaces (
     implemented BOOLEAN DEFAULT TRUE,
     last_checked TIMESTAMP DEFAULT NOW()
 );
+
+
+CREATE TABLE belief_cartridges (
+    id TEXT PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW() ON UPDATE NOW(),
+    source_id TEXT,
+    source_type TEXT,
+    markdown_content TEXT NOT NULL,
+    goal_tags JSONB DEFAULT '[]',
+    domain_tags JSONB DEFAULT '[]',
+    idea_payload JSONB,
+    rationale TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    derived_from JSONB DEFAULT '[]',
+    applied_in JSONB DEFAULT '[]',
+    version INTEGER DEFAULT 1,
+    memcube_id TEXT,
+    debug_log JSONB
+    );

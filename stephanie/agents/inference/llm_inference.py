@@ -4,11 +4,10 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.agents.mixins.scoring_mixin import ScoringMixin
 from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.score import ScoreORM
+from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.scoring_engine import ScoringEngine
 from stephanie.scoring.scoring_manager import ScoringManager
-from stephanie.scoring.scorable import Scorable
-
 
 DEFAULT_DIMENSIONS = [
     "alignment",

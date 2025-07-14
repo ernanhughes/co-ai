@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from stephanie.logs import JSONLogger
+from stephanie.memory.belief_cartridge_store import BeliefCartridgeStore
 from stephanie.memory.cartridge_domain_store import CartridgeDomainStore
 from stephanie.memory.cartridge_store import CartridgeStore
 from stephanie.memory.cartridge_triple_store import CartridgeTripleStore
@@ -22,6 +23,7 @@ from stephanie.memory.goal_store import GoalStore
 from stephanie.memory.hypothesis_store import HypothesisStore
 from stephanie.memory.idea_store import IdeaStore
 from stephanie.memory.lookahead_store import LookaheadStore
+from stephanie.memory.memcube_store import MemcubeStore
 from stephanie.memory.method_plan_store import MethodPlanStore
 from stephanie.memory.mrq_store import MRQStore
 from stephanie.memory.pattern_store import PatternStatStore
@@ -36,7 +38,6 @@ from stephanie.memory.search_result_store import SearchResultStore
 from stephanie.memory.sharpening_store import SharpeningStore
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
-from stephanie.memory.memcube_store import MemcubeStore
 
 
 class MemoryTool:
@@ -90,6 +91,7 @@ class MemoryTool:
         self.register_store(CartridgeStore(self.session, logger))
         self.register_store(CartridgeTripleStore(self.session, logger))
         self.register_store(MemcubeStore(self.session, logger))
+        self.register_store(BeliefCartridgeStore(self.session, logger))
 
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):

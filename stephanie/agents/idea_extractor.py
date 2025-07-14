@@ -1,11 +1,12 @@
 from typing import Dict, List, Optional
+
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.models.document import DocumentORM
-from stephanie.models.belief_cartridge import BeliefCartridgeORM
-from stephanie.scoring.scorable_factory import TargetType
 from stephanie.analysis.domain_classifier import DomainClassifier
-from stephanie.utils.idea_parser import IdeaParser
 from stephanie.builders.belief_cartridge_builder import BeliefCartridgeBuilder
+from stephanie.models.belief_cartridge import BeliefCartridgeORM
+from stephanie.models.document import DocumentORM
+from stephanie.scoring.scorable_factory import TargetType
+from stephanie.utils.idea_parser import IdeaParser
 
 
 class LearnableIdeaExtractorAgent(BaseAgent):

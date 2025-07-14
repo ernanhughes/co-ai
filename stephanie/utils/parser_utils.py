@@ -1,4 +1,4 @@
-# stephanie/parsers/utils.py
+# stephanie/utils/parser_utils.py
 import re
 
 

@@ -1,6 +1,7 @@
 # stephanie/embedding/factory.py
-from stephanie.registry.component_registry import ComponentRegistry
 from stephanie.core.embedding.protocols import EmbedderProtocol
+from stephanie.registry.component_registry import ComponentRegistry
+
 
 class EmbedderFactory:
     def __init__(self, registry: ComponentRegistry):

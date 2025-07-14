@@ -1,5 +1,6 @@
 # stephanie/embedding/protocols.py
-from typing import Protocol, List, Tuple
+from typing import List, Protocol, Tuple
+
 
 class EmbedderProtocol(Protocol):
     def get_or_create(self, text: str) -> list[float]:

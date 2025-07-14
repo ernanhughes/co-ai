@@ -1,7 +1,9 @@
 # stephanie/embedding/embedders.py
-from stephanie.memory.embedding_store import EmbeddingStore
-from stephanie.core.embedding.protocols import EmbedderProtocol
 from sentence_transformers import SentenceTransformer
+
+from stephanie.core.embedding.protocols import EmbedderProtocol
+from stephanie.memory.embedding_store import EmbeddingStore
+
 
 class StephanieEmbedder(EmbedderProtocol):
     def __init__(self, embedding_store: EmbeddingStore):
@@ -31,7 +33,7 @@ class HuggingFaceEmbedder(EmbedderProtocol):
     def find_similar(self, embedding: list[float], top_k: int = 5) -> list[tuple[str, float]]:
         import numpy as np
         from scipy.spatial import distance
-        
+
         # Convert input to numpy array
         emb_array = np.array(embedding)
         results = []
