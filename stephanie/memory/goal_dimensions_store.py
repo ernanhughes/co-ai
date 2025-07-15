@@ -2,8 +2,10 @@ from stephanie.models.goal_dimension import GoalDimensionORM
 
 
 class GoalDimensionsStore:
-    def __init__(self, session):
+    def __init__(self, session, logger=None):
         self.session = session
+        self.logger = logger
+        self.name = "goal_dimensions"
 
     def insert(self, row: dict) -> GoalDimensionORM:
         obj = GoalDimensionORM(**row)

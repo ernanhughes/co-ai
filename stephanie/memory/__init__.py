@@ -32,3 +32,4 @@ from .sharpening_store import SharpeningStore
 from .symbolic_rule_store import SymbolicRuleStore
 from .theorem_store import TheoremStore
 from .goal_dimensions_store import GoalDimensionsStore
+from .pipeline_stage_store import PipelineStageStore

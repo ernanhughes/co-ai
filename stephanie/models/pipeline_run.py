@@ -40,3 +40,4 @@ class PipelineRunORM(Base):
         cascade="all, delete-orphan",
     )
     evaluations = relationship("EvaluationORM", back_populates="pipeline_run")
+    stages = relationship("PipelineStageORM", back_populates="pipeline_run")

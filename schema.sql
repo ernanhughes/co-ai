@@ -1033,3 +1033,46 @@ CREATE TABLE belief_cartridges (
     memcube_id TEXT,
     debug_log JSONB
     );
+
+
+CREATE TABLE IF NOT EXISTS pipeline_stages (
+    id SERIAL PRIMARY KEY,
+    stage_name VARCHAR NOT NULL,
+    agent_class VARCHAR NOT NULL,
+    protocol_used VARCHAR NOT NULL,
+    goal_id VARCHAR,
+    run_id VARCHAR NOT NULL,
+    pipeline_run_id INTEGER REFERENCES pipeline_runs(id),
+    parent_stage_id INTEGER REFERENCES pipeline_stages(id),
+    input_context_id INTEGER REFERENCES context_states(id),
+    output_context_id INTEGER REFERENCES context_states(id),
+    timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+    status VARCHAR NOT NULL,
+    score NUMERIC,
+    confidence NUMERIC,
+    symbols_applied JSONB,
+    extra_data JSONB,
+    exportable BOOLEAN,
+    reusable BOOLEAN,
+    invalidated BOOLEAN
+);
+
+CREATE INDEX idx_pipeline_stages_run_id ON pipeline_stages(run_id);
+CREATE INDEX idx_pipeline_stages_status ON pipeline_stages(status);
+CREATE INDEX idx_pipeline_stages_goal_id ON pipeline_stages(goal_id);
+CREATE INDEX idx_pipeline_stages_parent ON pipeline_stages(parent_stage_id);
+CREATE INDEX idx_pipeline_stages_input_context ON pipeline_stages(input_context_id);
+CREATE INDEX idx_pipeline_stages_output_context ON pipeline_stages(output_context_id);
+
+-- Comment descriptions (optional but helpful)
+COMMENT ON TABLE pipeline_stages IS 'Records each step in Stephanie’s reasoning process with full traceability.';
+COMMENT ON COLUMN pipeline_stages.stage_name IS 'Name of this pipeline stage (e.g., "generation", "judge")';
+COMMENT ON COLUMN pipeline_stages.agent_class IS 'Fully qualified name of the agent used';
+COMMENT ON COLUMN pipeline_stages.protocol_used IS 'Protocol type used (e.g., "g3ps_search", "cot")';
+COMMENT ON COLUMN pipeline_stages.goal_id IS 'Optional link to the associated goal ID';
+COMMENT ON COLUMN pipeline_stages.run_id IS 'Unique identifier for the current pipeline run';
+COMMENT ON COLUMN pipeline_stages.pipeline_run_id IS 'Foreign key to pipeline_runs table';
+COMMENT ON COLUMN pipeline_stages.parent_stage_id IS 'Reference to prior stage for tracing reasoning paths';
+COMMENT ON COLUMN pipeline_stages.input_context_id IS 'Context before running this stage';
+COMMENT ON COLUMN pipeline_stages.output_context_id IS 'Context after running this stage';
+COMMENT ON COLUMN pipeline_stages.status IS 'Stage outcome: accepted, rejected, retry, partial, pending';

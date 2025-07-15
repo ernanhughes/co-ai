@@ -24,7 +24,9 @@ from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
 from stephanie.utils import timing
 from stephanie.utils.timing import time_function
-
+from stephanie.memory.pipeline_stage_store import PipelineStageStore
+from stephanie.models.context_state import ContextStateORM
+from stephanie.models.pipeline_stage import PipelineStageORM
 
 class PipelineStage:
     def __init__(self, name: str, config: dict, stage_dict: dict):
@@ -233,54 +235,105 @@ class Supervisor:
     @time_function(logger=None)
     async def _run_single_stage(self, stage: PipelineStage, context: dict) -> dict:
         if not stage.enabled:
-            self.logger.log(
-                "PipelineStageSkipped",
-                {STAGE: stage.name, "reason": "disabled_in_config"},
-            )
+            self.logger.log("PipelineStageSkipped", {STAGE: stage.name, "reason": "disabled_in_config"})
             return context
 
-        cls = hydra.utils.get_class(stage.cls)
-        stage_dict = OmegaConf.to_container(stage.stage_dict, resolve=True)
-        self.rule_applier.apply_to_agent(stage_dict, context)
+        try:
+            cls = hydra.utils.get_class(stage.cls)
+            stage_dict = OmegaConf.to_container(stage.stage_dict, resolve=True)
 
-        saved_context = self.load_context(
-            stage_dict, goal_id=context.get(GOAL).get("id")
-        )
-        if saved_context:
-            self.logger.log(
-                "PipelineStageSkipped", {STAGE: stage.name, "reason": "context_loaded"}
-            )
-            return {**context, **saved_context}
+            self.rule_applier.apply_to_agent(stage_dict, context)
 
-        agent_args = {
-            "cfg": stage_dict,
-            "memory": self.memory,
-            "logger": self.logger,
+            # Try loading saved context
+            goal_id = context.get(GOAL, {}).get("id")
+            saved_context = self.load_context(stage_dict, goal_id=goal_id)
+            if saved_context:
+                self.logger.log("PipelineStageSkipped", {STAGE: stage.name, "reason": "context_loaded"})
+                return {**context, **saved_context}
+
+            agent_args = {
+                "cfg": stage_dict,
+                "memory": self.memory,
+                "logger": self.logger,
+            }
+            if "full_cfg" in cls.__init__.__code__.co_varnames:
+                agent_args["full_cfg"] = self.cfg
+
+            agent = cls(**agent_args)
+
+            self.logger.log("PipelineStageStart", {STAGE: stage.name})
+
+            for i in range(stage.iterations or 1):
+                self.logger.log("PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1})
+                context = await agent.run(context)
+
+                if self.rule_applier.rules:
+                    self.rule_applier.track_pipeline_stage(stage_dict, context)
+
+                self.logger.log("PipelineIterationEnd", {STAGE: stage.name, "iteration": i + 1})
+
+            self.save_context(stage_dict, context)
+            self.logger.log("PipelineStageEnd", {STAGE: stage.name})
+            self.logger.log("ContextAfterStage", {STAGE: stage.name, "context_keys": list(context.keys())})
+
+            self._save_pipeline_stage(stage, context, stage_dict)
+
+            return context
+
+        except Exception as e:
+            self.session.rollback()
+            self.logger.log("PipelineStageFailed", {"error": str(e)})
+            return context
+        
+    def _save_pipeline_stage(self, stage: PipelineStage, context: dict, stage_dict: dict):
+        """
+        Saves the current pipeline stage along with input/output context.
+        """
+        run_id = context.get(RUN_ID)
+        if not run_id:
+            self.logger.log("PipelineStageSkipped", {"reason": "no_run_id_in_context"})
+            return
+
+        # Get input/output context IDs
+        input_context_id = None
+        output_context_id = None
+
+        if hasattr(self.memory, 'context') and self.memory.context:
+            # Get latest saved context ID from memory.context
+            latest_context = self.memory.context.get_latest(run_id=run_id)
+            if latest_context:
+                output_context_id = latest_context.id
+
+            # If this is not the first stage, get previous context
+            prev_context = self.memory.context.get_previous(run_id=run_id)
+            if prev_context:
+                input_context_id = prev_context.id
+
+        # Build stage data
+        stage_data = {
+            "stage_name": stage.name,
+            "agent_class": stage.cls,
+            "protocol_used": context.get("protocol_used", "unknown"),
+            "goal_id": context.get(GOAL, {}).get("id"),
+            "run_id": run_id,
+            "pipeline_run_id": context.get(PIPELINE_RUN_ID),
+            "input_context_id": input_context_id,
+            "output_context_id": output_context_id,
+            "status": "accepted",
+            "score": context.get("score"),
+            "confidence": context.get("confidence"),
+            "symbols_applied": context.get("symbols_applied"),
+            "extra_data": {
+                "model": self.cfg.get("model", {}).get("name"),
+                "agent_config": stage_dict,
+            },
+            "exportable": True,
+            "reusable": True,
+            "invalidated": False,
         }
-        if "full_cfg" in cls.__init__.__code__.co_varnames:
-            agent_args["full_cfg"] = self.cfg
 
-        agent = cls(**agent_args)
 
-        self.logger.log("PipelineStageStart", {STAGE: stage.name})
-        for i in range(stage.iterations or 1):
-            self.logger.log(
-                "PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1}
-            )
-            context = await agent.run(context)
-            if self.rule_applier.rules:
-                self.rule_applier.track_pipeline_stage(stage_dict, context)
-            self.logger.log(
-                "PipelineIterationEnd", {STAGE: stage.name, "iteration": i + 1}
-            )
-
-        self.save_context(stage_dict, context)
-        self.logger.log("PipelineStageEnd", {STAGE: stage.name})
-        self.logger.log(
-            "ContextAfterStage",
-            {STAGE: stage.name, "context_keys": list(context.keys())},
-        )
-        return context
+        return self.memory.pipeline_stages.insert(stage_data)
 
     def generate_report(self, context: dict[str, any], run_id: str) -> str:
         """Generate a report based on the pipeline context."""
@@ -327,7 +380,6 @@ class Supervisor:
             json.dumps(obj)
         except TypeError as e:
             print(f"❌ Non-serializable at {path} → {type(obj)}: {e}")
-
             if isinstance(obj, dict):
                 for k, v in obj.items():
                     self.inspect_context_serializability(v, f"{path}[{repr(k)}]")
@@ -351,13 +403,13 @@ class Supervisor:
             print(f"❌ Non-serializable at {path} → {type(obj)}: {e}")
             if isinstance(obj, dict):
                 for k, v in obj.items():
-                    inspect_non_serializable(v, f"{path}[{repr(k)}]")
+                    self.inspect_non_serializable(v, f"{path}[{repr(k)}]")
             elif isinstance(obj, list):
                 for i, item in enumerate(obj):
-                    inspect_non_serializable(item, f"{path}[{i}]")
+                    self.inspect_non_serializable(item, f"{path}[{i}]")
             elif hasattr(obj, "__dict__"):
                 for attr, val in vars(obj).items():
-                    inspect_non_serializable(val, f"{path}.{attr}")
+                    self.inspect_non_serializable(val, f"{path}.{attr}")
 
 
 
