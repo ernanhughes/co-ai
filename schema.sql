@@ -1116,3 +1116,28 @@ COMMENT ON COLUMN protocols.preferred_for IS 'Goal types where this protocol per
 COMMENT ON COLUMN protocols.avoid_for IS 'Goal types where this protocol should be avoided';
 COMMENT ON COLUMN protocols.created_at IS 'When this protocol was added';
 COMMENT ON COLUMN protocols.updated_at IS 'Last time metadata was changed';
+
+
+CREATE TABLE IF NOT EXISTS goal_dimensions (
+    id SERIAL PRIMARY KEY,
+    goal_id INTEGER NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+    dimension TEXT NOT NULL,
+    rank INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'llm',
+    similarity_score FLOAT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE protocols (
+    name TEXT PRIMARY KEY,
+    description TEXT,
+    input_format JSONB,
+    output_format JSONB,
+    failure_modes JSONB,
+    depends_on JSONB,
+    tags JSONB,
+    capability TEXT,
+    preferred_for JSONB,
+    avoid_for JSONB
+);

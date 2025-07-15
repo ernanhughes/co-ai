@@ -4,6 +4,10 @@ import json
 import os
 from datetime import datetime, timezone
 from uuid import uuid4
+from dependency_injector.wiring import inject, Provide
+from stephanie.models import protocol
+from stephanie.protocols.base import Protocol
+from stephanie.agents.g3ps_solver import G3PSSolverAgent
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -22,11 +26,8 @@ from stephanie.registry.agent_registry import AgentRegistry
 from stephanie.registry.registry import register
 from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
-from stephanie.utils import timing
 from stephanie.utils.timing import time_function
-from stephanie.memory.pipeline_stage_store import PipelineStageStore
-from stephanie.models.context_state import ContextStateORM
-from stephanie.models.pipeline_stage import PipelineStageORM
+from stephanie.containers import AppContainer
 
 class PipelineStage:
     def __init__(self, name: str, config: dict, stage_dict: dict):
@@ -39,9 +40,10 @@ class PipelineStage:
 
 
 class SingleAgentPipeline:
-    def __init__(self, agent_name, config):
+    def __init__(self, agent_name, config, container: AppContainer):
         self.agent = AgentRegistry(config).get(agent_name)
         self.goal_input = config.input_path
+        self.container = container
 
     def run(self):
         pass
@@ -50,10 +52,13 @@ class SingleAgentPipeline:
         #     result = self.agent.run(goal)
         # wrap it in pipeline logs, score evals, etc.
 
+container = AppContainer()
 
 class Supervisor:
-    def __init__(self, cfg, memory=None, logger=None):
+    def __init__(self, cfg, memory=None, logger=None, container: AppContainer = None):
         self.cfg = cfg
+        self.container = container or AppContainer()
+        self.container.init_resources()  # Important!
         self.memory = memory or MemoryTool(cfg=cfg.db, logger=logger)
         self.logger = logger or JSONLogger(log_path=cfg.logger.log_path)
         self.logger.log("SupervisorInit", {"cfg": cfg})
@@ -232,8 +237,50 @@ class Supervisor:
         self.logger.log("PipelineJudgeEnd", {"context_keys": list(context.keys())})
         return context
 
-    @time_function(logger=None)
+
+    @inject
+    async def _run_with_protocol(
+        self,
+        context: dict,
+        protocol_name: str,
+        protocol: Protocol = Provide["container.protocol_selector"]
+    ):
+        """
+        Runs the given protocol.
+        Dependency Injector resolves `protocol` based on `protocol_name`.
+        """
+        result = protocol.run(context)
+        return result
+    
     async def _run_single_stage(self, stage: PipelineStage, context: dict) -> dict:
+
+        # Get protocol name from config or context
+        protocol_name = context.get("protocol_used", "direct_answer")
+
+        output_context = {}
+        model_name = self.container.config.model.name()
+        temperature = self.container.config.model.temperature()
+
+        try:
+            # Injected via wiring
+            output_context = await self._run_with_protocol(context, protocol_name)
+
+            protocol = container.protocol_selector(protocol_name="code_exec")
+            output_context = protocol.run(context)
+
+        except Exception as e:
+            self.logger.log("ProtocolRunFailed", {"error": str(e)})        
+
+        # Save pipeline stage
+        self.container.pipeline_stage_store().insert({
+            "stage_name": stage.name,
+            "protocol_used": context["protocol_used"],
+            "input_context": context,
+            "output_context": output_context,
+            "status": "accepted"
+        })
+
+
         if not stage.enabled:
             self.logger.log("PipelineStageSkipped", {STAGE: stage.name, "reason": "disabled_in_config"})
             return context
@@ -273,10 +320,8 @@ class Supervisor:
                 self.logger.log("PipelineIterationEnd", {STAGE: stage.name, "iteration": i + 1})
 
             self.save_context(stage_dict, context)
-            self.logger.log("PipelineStageEnd", {STAGE: stage.name})
-            self.logger.log("ContextAfterStage", {STAGE: stage.name, "context_keys": list(context.keys())})
-
             self._save_pipeline_stage(stage, context, stage_dict)
+            self.logger.log("PipelineStageEnd", {STAGE: stage.name})
 
             return context
 
@@ -583,3 +628,5 @@ class Supervisor:
                 })
                 # Trigger retraining
                 self._trigger_ebt_retraining(r.dimension)
+
+__all__ = ["Supervisor", "container"]

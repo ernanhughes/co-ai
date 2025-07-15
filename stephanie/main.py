@@ -15,6 +15,8 @@ from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.supervisor import Supervisor
 from stephanie.utils import generate_run_id, get_log_file_path
 
+from stephanie.supervisor import container
+
 
 @hydra.main(config_path="../config", config_name="config", version_base=None)
 def run(cfg: DictConfig):
@@ -27,6 +29,12 @@ def run(cfg: DictConfig):
         logger = JSONLogger(log_path=log_path)
         memory = MemoryTool(cfg=cfg.db, logger=logger)
 
+        # Configure and wire the container
+        container.config.from_yaml("config/app_container.yaml")
+        container.init_resources()
+        container.wire(modules=[__name__, 'stephanie.supervisor'])  # ✅ Pass module name
+
+        # Create supervisor
         supervisor = Supervisor(cfg=cfg, memory=memory, logger=logger)
 
         # ✅ Batch Mode: input_file provided

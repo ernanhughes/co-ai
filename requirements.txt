@@ -11,6 +11,7 @@ ollama
 unstructured
 fuzzywuzzy
 lxml 
+dependency-injector
 
 # web search tools
 requests

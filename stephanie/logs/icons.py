@@ -84,6 +84,7 @@ KNOWLEDGE_OPS = {
 # PIPELINE CONTROL
 # =================
 PIPELINE_FLOW = {
+    "PipelineStageInserted": "📥➕",  # Stage inserted
     "PipelineStart": "🚦▶️",  # Pipeline started
     "PipelineStageStart": "⏩",  # Stage started
     "PipelineStageEnd": "🔚",  # Stage completed
