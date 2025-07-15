@@ -1076,3 +1076,43 @@ COMMENT ON COLUMN pipeline_stages.parent_stage_id IS 'Reference to prior stage f
 COMMENT ON COLUMN pipeline_stages.input_context_id IS 'Context before running this stage';
 COMMENT ON COLUMN pipeline_stages.output_context_id IS 'Context after running this stage';
 COMMENT ON COLUMN pipeline_stages.status IS 'Stage outcome: accepted, rejected, retry, partial, pending';
+
+
+-- File: versions/XXXX_create_protocols_table.sql
+
+-- Up Migration
+CREATE TABLE IF NOT EXISTS protocols (
+    name VARCHAR PRIMARY KEY,
+    description TEXT,
+    input_format JSONB,
+    output_format JSONB,
+    failure_modes JSONB,
+    depends_on JSONB,
+    tags JSONB,
+    capability VARCHAR,
+    preferred_for JSONB,
+    avoid_for JSONB,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX idx_protocol_name ON protocols(name);
+CREATE INDEX idx_protocol_tags ON protocols USING GIN (tags);
+CREATE INDEX idx_protocol_capability ON protocols(capability);
+CREATE INDEX idx_protocol_depends_on ON protocols USING GIN (depends_on);
+
+-- Comment descriptions (optional but helpful)
+COMMENT ON TABLE protocols IS 'Registry of available reasoning protocols used by Stephanie';
+COMMENT ON COLUMN protocols.name IS 'Unique name of the protocol (e.g., "g3ps_search", "cot")';
+COMMENT ON COLUMN protocols.description IS 'Human-readable description of what the protocol does';
+COMMENT ON COLUMN protocols.input_format IS 'JSON schema defining expected input structure';
+COMMENT ON COLUMN protocols.output_format IS 'JSON schema defining expected output structure';
+COMMENT ON COLUMN protocols.failure_modes IS 'Common failure types (e.g., hallucination, syntax error)';
+COMMENT ON COLUMN protocols.depends_on IS 'Other protocols or agents required for this one to work';
+COMMENT ON COLUMN protocols.tags IS 'Tags like ["code", "reasoning", "llm"] for filtering';
+COMMENT ON COLUMN protocols.capability IS 'High-level capability category (e.g., code_generation, qa)';
+COMMENT ON COLUMN protocols.preferred_for IS 'Goal types where this protocol performs well';
+COMMENT ON COLUMN protocols.avoid_for IS 'Goal types where this protocol should be avoided';
+COMMENT ON COLUMN protocols.created_at IS 'When this protocol was added';
+COMMENT ON COLUMN protocols.updated_at IS 'Last time metadata was changed';
