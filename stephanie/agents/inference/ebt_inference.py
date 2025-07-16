@@ -27,6 +27,8 @@ class EBTInferenceAgent(BaseAgent):
         self.model_path = cfg.get("model_path", "models")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
+        self.embedding_type = cfg.get("embedding_type", "default")  # e.g., "hnet", "huggingface"
+    
         self.dimensions = cfg.get("dimensions", [])
         self.models = {}
         self.model_meta = {}
@@ -66,6 +68,7 @@ class EBTInferenceAgent(BaseAgent):
                     self.target_type,
                     dim,
                     self.model_version,
+                    self.embedding_type
                 )
                 infer_path = f"{model_path}/{dim}.pt"
                 meta_path = f"{model_path}/{dim}.meta.json"

@@ -17,9 +17,10 @@ def get_model_path(
     target_type: str,
     dimension: str,
     version: str = "v1",
+    embedding_type: str = "default"
 ):
-    return f"{model_path}/{model_type}/{target_type}/{dimension}/{version}/"
-
+    return f"{model_path}/{embedding_type}/{model_type}/{target_type}/{dimension}/{version}/"
+    
 
 def discover_saved_dimensions(
     model_type: str, target_type: str, model_dir: str = "models", version: str = "v1"

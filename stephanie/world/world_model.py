@@ -33,6 +33,8 @@ class WorldModel:
         self.memory = []          # Short-term belief store
         self.ebt = ebt_scorer
         self.version = "v1"
+        self.embedding_type = "default"
+        
         self.created_at = datetime.utcnow()
         self.last_modified = self.created_at
         self.max_memory_size = 1000  # Max beliefs in short-term memory

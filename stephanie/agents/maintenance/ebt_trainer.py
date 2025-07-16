@@ -57,6 +57,8 @@ class EBTTrainerAgent(BaseAgent):
         self.model_type = cfg.get("model_type", "ebt")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
+        self.embedding_type = cfg.get("embedding_type", "default")  # e.g., "hnet", "huggingface"
+
 
         self.encoder = TextEncoder().to(
             torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -135,6 +137,7 @@ class EBTTrainerAgent(BaseAgent):
                 self.target_type,
                 dim,
                 self.model_version,
+                embedding_type=self.embedding_type
             )
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             predictor_path = f"{model_path}{dim}.pt"

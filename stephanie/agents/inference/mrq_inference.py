@@ -28,6 +28,7 @@ class MRQInferenceAgent(BaseAgent):
         self.evaluator = "mrq"
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
+        self.embedding_type = cfg.get("embedding_type", "default")  # e.g., "hnet", "huggingface"
         self.dimensions = cfg.get("dimensions", [])
         self.models = {}
         self.model_meta = {}
@@ -169,6 +170,7 @@ class MRQInferenceAgent(BaseAgent):
                 self.target_type,
                 dim,
                 version=self.model_version,
+                embedding_type=self.embedding_type
             )
             encoder_path = f"{model_path}/{dim}_encoder.pt"
             predictor_path = f"{model_path}/{dim}.pt"

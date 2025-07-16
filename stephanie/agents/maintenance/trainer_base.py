@@ -22,6 +22,8 @@ class TrainerAgent(BaseAgent):
         self.model_type = cfg.get("model_type", "ebt")
         self.output_key = cfg.get("output_key", "training_pairs")
         self.target_type = cfg.get("target_type", "document")
+        self.model_version = cfg.get("model_version", "v1")
+        self.embedding_type = cfg.get("embedding_type", "default")  # e.g.,
         self.encoder = TextEncoder().to(
             torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
@@ -94,7 +96,7 @@ class TrainerAgent(BaseAgent):
                 )
 
             # Save trained model weights to disk
-            model_path = f"{get_model_path(self.model_type, self.target_type, dim)}.pt"
+            model_path = f"{get_model_path(self.model_type, self.target_type, dim, self.model_version, self.embedding_type)}.pt"
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             print(model.state_dict().keys())
             torch.save(model.state_dict(), model_path)

@@ -18,6 +18,7 @@ class MRQTrainerAgent(BaseAgent):
         self.model_type = cfg.get("model_type", "mrq")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
+        self.embedding_type = cfg.get("embedding_type", "default")  # e.g., "hnet", "huggingface"
         self.dimensions = cfg.get("dimensions", [])
         self.epochs = cfg.get("epochs", 10)
         self.lr = cfg.get("lr", 1e-4)
@@ -87,6 +88,7 @@ class MRQTrainerAgent(BaseAgent):
                 self.target_type,
                 dim,
                 self.model_version,
+                embedding_type=self.embedding_type
             )
             os.makedirs(model_path, exist_ok=True)
 

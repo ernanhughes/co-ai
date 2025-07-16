@@ -20,6 +20,8 @@ class SVMTrainerAgent(BaseAgent):
         self.model_type = cfg.get("model_type", "svm")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
+        self.embedding_type = cfg.get("embedding_type", "default")  # e.g., "hnet", "huggingface"
+
 
         self.models = {}  # dim -> (scaler, model)
         self.regression_tuners = {}
@@ -109,6 +111,7 @@ class SVMTrainerAgent(BaseAgent):
                 self.target_type,
                 dim,
                 self.model_version,
+                embedding_type=self.embedding_type
             )
             os.makedirs(model_path, exist_ok=True)
 
