@@ -45,8 +45,12 @@ class MRQTrainerAgent(BaseAgent):
         goal_text = context.get("goal", {}).get("goal_text")
 
         builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
-        training_pairs_by_dim = builder.get_training_pairs_by_dimension(goal=goal_text, dim=self.dimensions)
+        training_pairs_by_dim = {}
 
+        for dim in self.dimensions:
+            pairs = builder.get_training_pairs_by_dimension(goal=goal_text, dim=[dim])
+            training_pairs_by_dim[dim] = pairs.get(dim, [])
+        
         contrast_pairs = [
             {
                 "title": item["title"],

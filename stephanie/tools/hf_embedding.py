@@ -1,7 +1,7 @@
 # stephanie/embeddings/huggingface_embedder.py
 
-from sentence_transformers import SentenceTransformer
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
 _model_instance = None
 

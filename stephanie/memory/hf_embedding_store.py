@@ -1,6 +1,7 @@
 # stephanie/memory/hf_embedding_store.py
 
 import hashlib
+
 from stephanie.memory import BaseStore
 from stephanie.tools.hf_embedding import get_embedding
 from stephanie.utils.lru_cache import SimpleLRUCache

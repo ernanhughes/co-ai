@@ -23,12 +23,11 @@ class EBTInferenceAgent(BaseAgent):
         super().__init__(cfg, memory, logger)
         self.model_type = "ebt"
         self.evaluator = "ebt"
-
         self.model_path = cfg.get("model_path", "models")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
         self.embedding_type = cfg.get("embedding_type", "default")  # e.g., "hnet", "huggingface"
-    
+
         self.dimensions = cfg.get("dimensions", [])
         self.models = {}
         self.model_meta = {}

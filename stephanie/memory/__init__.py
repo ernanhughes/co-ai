@@ -15,6 +15,7 @@ from .embedding_store import EmbeddingStore
 from .evaluation_store import EvaluationStore
 from .goal_dimensions_store import GoalDimensionsStore
 from .goal_store import GoalStore
+from .hf_embedding_store import HuggingFaceEmbeddingStore
 from .hnet_embedding_store import HNetEmbeddingStore
 from .hypothesis_store import HypothesisStore
 from .idea_store import IdeaStore
@@ -34,4 +35,3 @@ from .search_result_store import SearchResultStore
 from .sharpening_store import SharpeningStore
 from .symbolic_rule_store import SymbolicRuleStore
 from .theorem_store import TheoremStore
-from .hf_embedding_store import HuggingFaceEmbeddingStore

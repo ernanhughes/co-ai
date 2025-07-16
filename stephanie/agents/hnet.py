@@ -19,10 +19,8 @@ class HNetAgent(BaseAgent):
             scorable = Scorable(text=text, target_type=TargetType.DOCUMENT, id=doc_id)
             print(f"Processing document {doc_id} text: {text[:50]}...")
             embedding = self.memory.hnet_embeddings.get_or_create(text)
-            context["hnet_embedding"] = embedding
             print(f"Embedding for hnet document {doc_id} created: {embedding[:10]}...")
             embedding = self.memory.hf_embeddings.get_or_create(text)
-            context["hf_embedding"] = embedding
             print(f"Embedding for hf document {doc_id} created: {embedding[:10]}...")
 
 
