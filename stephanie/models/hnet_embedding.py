@@ -7,8 +7,8 @@ from sqlalchemy.sql import func
 from stephanie.models.base import Base
 
 
-class EmbeddingORM(Base):
-    __tablename__ = "embeddings"
+class HNetEmbeddingORM(Base):
+    __tablename__ = "hnet_embeddings"
 
     id = Column(Integer, primary_key=True)
     text = Column(Text, nullable=True)
@@ -17,4 +17,4 @@ class EmbeddingORM(Base):
     text_hash = Column(Text, nullable=True)
 
     def __repr__(self):
-        return f"<EmbeddingORM(id={self.id}, text_hash={self.text_hash[:10]}...)>"
+        return f"<HNetEmbeddingORM(id={self.id}, text_hash={self.text_hash[:10]}...)>"

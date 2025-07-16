@@ -30,6 +30,25 @@ SYSTEM_INIT = {
 # KNOWLEDGE STORAGE
 # =================
 KNOWLEDGE_OPS = {
+    "SymbolicRulesFound": "🧩🔍",  # Symbolic rules found
+    "MRQTrainingDataLoaded": "📊📥",  # MRQ training data loaded
+    "DuplicateSymbolicRuleSkipped": "🚫🧩",  # Duplicate symbolic rule skipped
+    "EvolvedParsedHypotheses": "🌱💡",  # Evolved hypotheses parsed
+    "EvolutionCompleted": "🌱✅",  # Evolution completed
+    "GenerationStart": "📝▶️",  # Generation started
+    "MetaReviewInput": "📝📋",  # Meta-review input
+    "RawMetaReviewOutput": "📝📄",  # Raw meta-review output
+    "NotEnoughHypothesesForRanking": "❌💡",  # Not enough hypotheses for ranking
+    "PromptLookup": "🔍📝",  # Prompt lookup
+    "RubricClassified": "🏷️📄",  # Rubric classified
+    "PromptGenerated": "📝✨",  # Prompt generated
+    "PatternStatsStored": "📊💾",  # Pattern stats stored
+    "GenerationCompleted": "✅",  # Generation completed
+    "LLMJudgeResults": "📝⚖️",  # LLM judge results
+    "EvaluationCompleted": "✅",  # Evaluation completed
+    "RubricPatternsStored": "📊💾",  # Rubric patterns stored
+    "GenerationStarted": "📝▶️",  # Generation started
+    "EvaluatorInit": "🧑‍🏫",  # Evaluator initialization
     "MRQInferenceAgentInitialized": "📊🤖",  # MRQ inference agent initialized
     "EBTBufferLoaded": "🧪📦",  # EBT buffer loaded
     "EBTInferenceCompleted": "🧪✅",  # EBT inference complete I know what just before I refuse this I just want to kick it off just in case it's not being kicked off seems like it's gone d
@@ -84,20 +103,23 @@ KNOWLEDGE_OPS = {
 # PIPELINE CONTROL
 # =================
 PIPELINE_FLOW = {
-    "PipelineStageInserted": "📥➕",  # Stage inserted
-    "PipelineStart": "🚦▶️",  # Pipeline started
-    "PipelineStageStart": "⏩",  # Stage started
-    "PipelineStageEnd": "🔚",  # Stage completed
-    "PipelineStageSkipped": "⏭️",  # Stage skipped
-    "PipelineIterationStart": "🔄▶️",  # Iteration started
-    "PipelineIterationEnd": "🔄🔚",  # Iteration completed
-    "PipelineSuccess": "✅",  # Pipeline succeeded
-    "PipelineError": "❌",  # Pipeline error
-    "PipelineRunInserted": "🔁💾",  # Pipeline run saved
+    "PipelineStageInserted": "🖇️➕",  # Stage inserted
+    "PipelineStart": "🖇️▶️",  # Pipeline started
+    "PipelineStageStart": "🖇️⏩",  # Stage started
+    "PipelineStageEnd": "🖇️🔚",  # Stage completed
+    "PipelineStageSkipped": "🖇️⏭️",  # Stage skipped
+    "PipelineIterationStart": "🖇️🔄",  # Iteration started
+    "PipelineIterationEnd": "🖇️🔚",  # Iteration completed
+    "PipelineSuccess": "🖇️✅",  # Pipeline succeeded
+    "PipelineRunInserted": "🖇️💾",  # Pipeline run saved
     "AgentRunStarted": "🤖▶️",  # Agent run started
     "AgentRunCompleted": "🤖⏹️",  # Agent run completed
     "AgentRanSuccessfully": "🤖✅",  # Agent succeeded
     "PipelineJudgeAgentEnd": "⚖️🔚",  # Judge agent completed
+    "MRQPipelineSuggested": "🧠💡",  # MRQ pipeline suggested
+    "PipelineStageFailed": "🖇️❌",  # Pipeline stage failed
+    "PipelineScoreSummary": "🖇️📊🧾",  # Pipeline score summary
+    "PipelineError": "🖇️💀",  # Pipeline error
 }
 
 # =====================
@@ -226,7 +248,6 @@ DEBUGGING = {
     "StageContext": "🔧📋",  # Stage context
     "TrimmingSection": "✂️",  # Section trimming
     "ContextAfterStage": "🗃️➡️",  # Post-stage context
-    "PipelineScoreSummary": "📊🧾",  # Pipeline score summary
     "ClassificationStarted": "🏷️▶️",  # Classification started
     "ClassificationCompleted": "🏷️✅",  # Classification completed
 }
@@ -235,7 +256,6 @@ DEBUGGING = {
 # ERROR & WARNING STATES
 # ======================
 ERROR_STATES = {
-    "PipelineError": "💀",  # Pipeline error
     "DocumentLoadFailed": "⚠️📄",  # Document load failed
     "LiteratureQueryFailed": "❌📚",  # Literature query failed
     "HypothesisStoreFailed": "❌💾",  # Hypothesis store failed

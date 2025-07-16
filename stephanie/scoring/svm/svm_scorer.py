@@ -1,4 +1,4 @@
-# stephanie/scoring/svm_scorer.py
+# stephanie/scoring/svm/svm_scorer.py
 
 import json
 import os

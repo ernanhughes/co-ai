@@ -39,6 +39,7 @@ from stephanie.memory.sharpening_store import SharpeningStore
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
 from stephanie.memory.goal_dimensions_store import GoalDimensionsStore
 from stephanie.memory.pipeline_stage_store import PipelineStageStore
+from stephanie.memory.hnet_embedding_store import HNetEmbeddingStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
 
 
@@ -67,6 +68,8 @@ class MemoryTool:
         self.register_store(GoalStore(self.session, logger))
         embedding_store = EmbeddingStore(self.cfg, self.conn, self.session, logger)
         self.register_store(embedding_store)
+        hnet_embedding_store = HNetEmbeddingStore(self.cfg, self.conn, self.session, logger)
+        self.register_store(hnet_embedding_store)
         self.register_store(HypothesisStore(self.session, logger, embedding_store))
         self.register_store(PromptStore(self.session, logger))
         self.register_store(EvaluationStore(self.session, logger))

@@ -2,6 +2,7 @@
 import re
 from pathlib import Path
 
+from git import Optional
 import yaml
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,7 @@ from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
 
+from stephanie.scoring.fallback_scorer import FallbackScorer
 
 class ScoringManager(BaseAgent):
     def __init__(
@@ -30,8 +32,8 @@ class ScoringManager(BaseAgent):
         memory,
         calculator=None,
         dimension_filter_fn=None,
-        scoring_profile=None,
-        scorer=None,
+        scorer: Optional[FallbackScorer] = None,
+        scoring_profile: str = "default",
     ):
         super().__init__(cfg, memory, logger)
         self.dimensions = dimensions
@@ -41,7 +43,24 @@ class ScoringManager(BaseAgent):
         self.calculator = calculator or WeightedAverageCalculator()
         self.dimension_filter_fn = dimension_filter_fn
         self.scoring_profile = scoring_profile
-        self.scorer = scorer
+         # Initialize fallback scorer if not provided
+        if scorer is None:
+            from stephanie.scoring.svm.svm_scorer import SVMScorer
+            from stephanie.scoring.mrq.mrq_scorer import MRQScorer
+            from stephanie.scoring.llm_scorer import LLMScorer
+
+            svm_scorer = SVMScorer(cfg, memory, logger, dimensions=dimensions)
+            mrq_scorer = MRQScorer(cfg, memory, logger, dimensions=dimensions)
+            llm_scorer = LLMScorer(cfg, memory, logger, prompt_loader=prompt_loader, call_llm=self._call_llm)
+
+            self.scorer = FallbackScorer(
+                scorers=[svm_scorer, mrq_scorer, llm_scorer],
+                fallback_order=["svm", "mrq", "llm"],
+                default_fallback="llm",
+                logger=logger
+            )
+        else:
+            self.scorer = scorer
 
     def dimension_names(self):
         """Returns the names of all dimensions."""
@@ -138,7 +157,7 @@ class ScoringManager(BaseAgent):
 
         from stephanie.scoring.llm_scorer import LLMScorer
         from stephanie.scoring.mrq.mrq_scorer import MRQScorer
-        from stephanie.scoring.svm_scorer import SVMScorer
+        from stephanie.scoring.svm.svm_scorer import SVMScorer
 
         if data["scorer"] == "mrq":
             # Use MRQ scoring profile if specified

@@ -5,9 +5,7 @@ import os
 from datetime import datetime, timezone
 from uuid import uuid4
 from dependency_injector.wiring import inject, Provide
-from stephanie.models import protocol
 from stephanie.protocols.base import Protocol
-from stephanie.agents.g3ps_solver import G3PSSolverAgent
 
 import hydra
 from omegaconf import DictConfig, OmegaConf
@@ -253,34 +251,6 @@ class Supervisor:
         return result
     
     async def _run_single_stage(self, stage: PipelineStage, context: dict) -> dict:
-
-        # Get protocol name from config or context
-        protocol_name = context.get("protocol_used", "direct_answer")
-
-        output_context = {}
-        model_name = self.container.config.model.name()
-        temperature = self.container.config.model.temperature()
-
-        try:
-            # Injected via wiring
-            output_context = await self._run_with_protocol(context, protocol_name)
-
-            protocol = container.protocol_selector(protocol_name="code_exec")
-            output_context = protocol.run(context)
-
-        except Exception as e:
-            self.logger.log("ProtocolRunFailed", {"error": str(e)})        
-
-        # Save pipeline stage
-        self.container.pipeline_stage_store().insert({
-            "stage_name": stage.name,
-            "protocol_used": context["protocol_used"],
-            "input_context": context,
-            "output_context": output_context,
-            "status": "accepted"
-        })
-
-
         if not stage.enabled:
             self.logger.log("PipelineStageSkipped", {STAGE: stage.name, "reason": "disabled_in_config"})
             return context
@@ -326,7 +296,6 @@ class Supervisor:
             return context
 
         except Exception as e:
-            self.session.rollback()
             self.logger.log("PipelineStageFailed", {"error": str(e)})
             return context
         
