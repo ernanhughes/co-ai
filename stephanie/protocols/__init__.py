@@ -1,6 +1,7 @@
 # stephanie/protocols/__init__.py
 from stephanie.protocols.registry import ProtocolRegistry
-from stephanie.protocols.sample_protocols import DirectAnswerProtocol, CodeExecutionProtocol
+from stephanie.protocols.sample_protocols import (CodeExecutionProtocol,
+                                                  DirectAnswerProtocol)
 
 protocol_registry = ProtocolRegistry()
 

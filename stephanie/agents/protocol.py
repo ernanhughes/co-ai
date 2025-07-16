@@ -1,6 +1,7 @@
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.protocols import protocol_registry
 
+
 class ProtocolAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)

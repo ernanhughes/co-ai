@@ -1,15 +1,23 @@
 from dependency_injector import containers, providers
-from stephanie.protocols.sample_protocols import DirectAnswerProtocol
-from stephanie.protocols.sample_protocols import CodeExecutionProtocol
-from stephanie.agents.mrq_strategy import MRQStrategyAgent
-from stephanie.memory.pipeline_stage_store import PipelineStageStore
 from sqlalchemy.orm import Session
-from stephanie.agents.g3ps_solver import G3PSSolverAgent
+
+from stephanie.memory.pipeline_stage_store import PipelineStageStore
+from stephanie.protocols.embedding.hnet import HNetEmbeddingProtocol
+from stephanie.protocols.embedding.standard import StandardEmbedderProtocol
 
 
 class AppContainer(containers.DeclarativeContainer):
     # Configuration
     config = providers.Configuration()
+
+    hnet_embedder = providers.Singleton(HNetEmbeddingProtocol)
+    standard_embedder = providers.Singleton(StandardEmbedderProtocol)
+
+    embedder_selector = providers.Selector(
+        lambda ctx: ctx.get("embedder", "standard"),
+        standard=standard_embedder,
+        hnet=hnet_embedder
+    )
 
     # Database session
     session_factory = providers.Factory(Session)
@@ -21,20 +29,3 @@ class AppContainer(containers.DeclarativeContainer):
     )
 
     # Protocols
-    direct_answer_protocol = providers.Singleton(DirectAnswerProtocol)
-    code_execution_protocol = providers.Singleton(CodeExecutionProtocol)
-
-    # Agent factories
-    mrq_strategy_agent = providers.Factory(
-        MRQStrategyAgent,
-        cfg=config.agent.mrq,
-        memory=None,  # You can wire this with MemoryTool if needed
-        logger=None
-    )
-
-    g3ps_solver_agent = providers.Factory(
-        G3PSSolverAgent,
-        protocol=direct_answer_protocol,
-        cfg=config.agent.g3ps,
-        logger=None
-    )

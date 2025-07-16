@@ -1,5 +1,7 @@
-from dependency_injector.wiring import inject, Provide
+from dependency_injector.wiring import Provide, inject
+
 from stephanie.protocols.base import Protocol
+
 
 class G3PSSolverAgent:
     @inject

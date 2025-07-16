@@ -1,15 +1,15 @@
 # File: stephanie/scoring/fallback_scorer.py
 
-from typing import Dict, List, Optional, Union
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Dict, List, Optional, Union
 
-from stephanie.scoring.base_scorer import BaseScorer
-from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.scoring.scorable import Scorable
+from stephanie.constants import GOAL
 from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.score import ScoreORM
-from stephanie.constants import GOAL
+from stephanie.scoring.base_scorer import BaseScorer
+from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.score_bundle import ScoreBundle
 
 
 @dataclass

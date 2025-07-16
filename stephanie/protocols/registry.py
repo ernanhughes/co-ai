@@ -1,4 +1,5 @@
-from typing import Optional, Callable, Union
+from typing import Callable, Optional, Union
+
 from stephanie.protocols.base import Protocol, ProtocolRecord
 
 

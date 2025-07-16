@@ -1,14 +1,16 @@
 import os
+from pathlib import Path
 from typing import Dict, Tuple
 
 from joblib import load
-from sklearn.svm import SVR
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVR
 
-from stephanie.utils.file_utils import load_json
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-from stephanie.utils.model_utils import get_svm_file_paths, discover_saved_dimensions
-from pathlib import Path
+from stephanie.utils.file_utils import load_json
+from stephanie.utils.model_utils import (discover_saved_dimensions,
+                                         get_svm_file_paths)
+
 
 class SVMModelLoader:
     def __init__(self, cfg, logger=None):

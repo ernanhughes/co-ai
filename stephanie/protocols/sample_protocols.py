@@ -1,6 +1,7 @@
 # stephanie/protocols/sample_protocols.py
 from stephanie.protocols.base import Protocol
 
+
 class DirectAnswerProtocol(Protocol):
     def run(self, input_context: dict) -> dict:
         return {"answer": "Yes", "trace": ["answered directly"], "score": 0.85}

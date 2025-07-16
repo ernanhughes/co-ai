@@ -1,8 +1,34 @@
 # stephanie/embeddings/hnet_embedder.py
-import torch.nn as nn
-import torch
+from collections import OrderedDict
+
 import numpy as np
-from stephanie.protocols.embeddings import EmbeddingProtocol
+import torch
+import torch.nn as nn
+
+from stephanie.protocols.embedding.base import EmbeddingProtocol
+
+
+class HNetEmbeddingCache:
+    def __init__(self, max_size=10000):
+        self.cache = OrderedDict()
+        self.max_size = max_size
+
+    def get(self, key):
+        if key in self.cache:
+            # Move to the end to mark as recently used
+            self.cache.move_to_end(key)
+            return self.cache[key]
+        return None
+
+    def set(self, key, value):
+        self.cache[key] = value
+        self.cache.move_to_end(key)
+        if len(self.cache) > self.max_size:
+            self.cache.popitem(last=False)  # Remove least recently used item
+
+
+embedding_cache = HNetEmbeddingCache(max_size=10000)
+
 
 
 class ByteLevelTokenizer:
@@ -11,7 +37,6 @@ class ByteLevelTokenizer:
 
     def decode(self, tokens: list[int]) -> str:
         return bytes(tokens).decode("utf-8", errors="replace")
-    import torch
 
 class ChunkBoundaryPredictor(nn.Module):
     def __init__(self, vocab_size=256, hidden_dim=128):
@@ -35,8 +60,11 @@ class StephanieHNetChunker:
 
      def chunk(self, text: str) -> list:
         tokens = self.tokenizer.tokenize(text)
+        tokens_tensor = torch.tensor(tokens).long()
+
         with torch.no_grad():
-            scores = self.boundary_predictor(torch.tensor(tokens).unsqueeze(0).long())
+            scores = self.boundary_predictor(tokens_tensor)
+
         boundaries = (scores > self.threshold).nonzero(as_tuple=True)[0].tolist()
         chunks = []
         prev = 0
@@ -46,7 +74,6 @@ class StephanieHNetChunker:
             chunks.append(chunk_text)
             prev = b + 1
 
-        # Add final chunk
         if prev < len(tokens):
             final_chunk = self.tokenizer.decode(tokens[prev:])
             chunks.append(final_chunk)

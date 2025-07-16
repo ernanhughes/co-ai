@@ -2,7 +2,7 @@
 import hashlib
 
 from stephanie.memory import BaseStore
-from stephanie.tools import get_embedding
+from stephanie.tools.hnet_embedder import get_embedding
 from stephanie.utils.lru_cache import SimpleLRUCache
 
 
@@ -60,6 +60,17 @@ class HNetEmbeddingStore(BaseStore):
         self._cache.set(text_hash, embedding)
         return embedding
 
+    def save_embedding(self, text: str, embedding: list[float], source: str = "hnet"):
+        from stephanie.models.hnet_embedding import HNetEmbeddingORM
+        emb = HNetEmbeddingORM(
+            text=text,
+            embedding=embedding,
+            source=source
+        )
+        self.session.add(emb)
+        self.session.commit()
+        return emb.id
+    
     def search_related(self, query: str, top_k: int = 5):
         try:
             embedding = get_embedding(query, self.cfg)

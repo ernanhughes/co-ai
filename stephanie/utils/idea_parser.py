@@ -3,13 +3,13 @@
 import re
 from typing import Dict, List, Optional
 
-from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import TargetType
+from stephanie.scoring.svm.svm_model_loader import SVMModelLoader
 from stephanie.scoring.svm.svm_scorer import SVMScorer
-
 # Import the existing document section parser
 from stephanie.utils.document_section_parser import DocumentSectionParser
-from stephanie.scoring.svm.svm_model_loader import SVMModelLoader
+
 
 class IdeaParser:
     """

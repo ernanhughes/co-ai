@@ -12,10 +12,8 @@ from omegaconf import DictConfig, OmegaConf
 from stephanie.logs import JSONLogger
 from stephanie.memory import MemoryTool
 from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.supervisor import Supervisor
+from stephanie.supervisor import Supervisor, container
 from stephanie.utils import generate_run_id, get_log_file_path
-
-from stephanie.supervisor import container
 
 
 @hydra.main(config_path="../config", config_name="config", version_base=None)

@@ -1,9 +1,11 @@
 # stephanie/models/protocol_orm.py
-from sqlalchemy import Column, String, JSON, DateTime, Float, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, String
+from sqlalchemy.dialects.postgresql import JSONB
+
 from stephanie.models.base import Base
+
 
 class ProtocolORM(Base):
     __tablename__ = 'protocols'

@@ -4,15 +4,15 @@ import json
 import os
 from datetime import datetime, timezone
 from uuid import uuid4
-from dependency_injector.wiring import inject, Provide
-from stephanie.protocols.base import Protocol
 
 import hydra
+from dependency_injector.wiring import Provide, inject
 from omegaconf import DictConfig, OmegaConf
 
 from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID,
                                  PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
                                  SKIP_IF_COMPLETED, STAGE)
+from stephanie.containers import AppContainer
 from stephanie.engine.cycle_watcher import CycleWatcher
 from stephanie.engine.meta_confidence import MetaConfidenceTracker
 from stephanie.engine.self_validation import SelfValidationEngine
@@ -20,12 +20,13 @@ from stephanie.engine.state_tracker import StateTracker
 from stephanie.engine.training_controller import TrainingController
 from stephanie.logs.json_logger import JSONLogger
 from stephanie.memory import MemoryTool
+from stephanie.protocols.base import Protocol
 from stephanie.registry.agent_registry import AgentRegistry
 from stephanie.registry.registry import register
 from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
 from stephanie.utils.timing import time_function
-from stephanie.containers import AppContainer
+
 
 class PipelineStage:
     def __init__(self, name: str, config: dict, stage_dict: dict):

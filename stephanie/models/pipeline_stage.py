@@ -1,9 +1,11 @@
 # stephanie/models/pipeline_stage_orm.py
-from sqlalchemy import Column, Integer, String, DateTime, Float, JSON, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
 from datetime import datetime
 from uuid import uuid4
+
+from sqlalchemy import (JSON, Column, DateTime, Float, ForeignKey, Integer,
+                        String)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
 
 from stephanie.models.base import Base
 

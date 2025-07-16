@@ -1,6 +1,7 @@
 # stephanie/embeddings/base_protocol.py
 from abc import ABC, abstractmethod
 
+
 class EmbeddingProtocol(ABC):
     @abstractmethod
     def embed(self, text: str) -> list[float]:

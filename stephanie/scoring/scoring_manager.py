@@ -2,8 +2,8 @@
 import re
 from pathlib import Path
 
-from git import Optional
 import yaml
+from git import Optional
 from sqlalchemy.orm import Session
 
 from stephanie.agents.base_agent import BaseAgent
@@ -14,13 +14,13 @@ from stephanie.prompts.prompt_renderer import PromptRenderer
 from stephanie.scoring.calculations.score_delta import ScoreDeltaCalculator
 from stephanie.scoring.calculations.weighted_average import \
     WeightedAverageCalculator
+from stephanie.scoring.fallback_scorer import FallbackScorer
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
 
-from stephanie.scoring.fallback_scorer import FallbackScorer
 
 class ScoringManager(BaseAgent):
     def __init__(
@@ -45,9 +45,9 @@ class ScoringManager(BaseAgent):
         self.scoring_profile = scoring_profile
          # Initialize fallback scorer if not provided
         if scorer is None:
-            from stephanie.scoring.svm.svm_scorer import SVMScorer
-            from stephanie.scoring.mrq.mrq_scorer import MRQScorer
             from stephanie.scoring.llm_scorer import LLMScorer
+            from stephanie.scoring.mrq.mrq_scorer import MRQScorer
+            from stephanie.scoring.svm.svm_scorer import SVMScorer
 
             svm_scorer = SVMScorer(cfg, memory, logger, dimensions=dimensions)
             mrq_scorer = MRQScorer(cfg, memory, logger, dimensions=dimensions)

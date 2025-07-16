@@ -1,8 +1,9 @@
 # stephanie/agents/knowledge/dimension_generator.py
 
+import re
+
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL
-import re
 
 
 class DimensionGeneratorAgent(BaseAgent):

@@ -3,6 +3,8 @@ from collections import OrderedDict
 
 import requests
 
+from stephanie.protocols.embedding.base import EmbeddingProtocol
+
 
 # Simple in-memory LRU cache
 class EmbeddingCache:
@@ -26,6 +28,16 @@ class EmbeddingCache:
 
 embedding_cache = EmbeddingCache(max_size=10000)
 
+
+class MXBAIEmbedder(EmbeddingProtocol):
+    def __init__(self, embedder: EmbeddingProtocol):
+        self.embedder = embedder
+
+    def embed(self, text: str) -> list[float]:
+        return get_embedding(text, self.embedder.cfg)
+
+    def batch_embed(self, texts: list[str]) -> list[list[float]]:
+        return [self.embed(text) for text in texts]
 
 def get_embedding(text: str, cfg):
     """
