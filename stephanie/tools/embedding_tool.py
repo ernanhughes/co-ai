@@ -30,11 +30,11 @@ embedding_cache = EmbeddingCache(max_size=10000)
 
 
 class MXBAIEmbedder(EmbeddingProtocol):
-    def __init__(self, embedder: EmbeddingProtocol):
-        self.embedder = embedder
+    def __init__(self, cfg):
+        self.cfg = cfg
 
     def embed(self, text: str) -> list[float]:
-        return get_embedding(text, self.embedder.cfg)
+        return get_embedding(text, self.cfg)
 
     def batch_embed(self, texts: list[str]) -> list[list[float]]:
         return [self.embed(text) for text in texts]

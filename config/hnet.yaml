@@ -96,7 +96,7 @@ pipeline:
      - name: knowledge_db_loader
        description: "Load knowledge from the database into the system"
        cls: stephanie.agents.knowledge.knowledge_db_loader.KnowledgeDBLoaderAgent
-       enabled: false
+       enabled: true
        iterations: 1
 
      - name: document_llm_inference

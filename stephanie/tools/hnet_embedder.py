@@ -4,31 +4,7 @@ from collections import OrderedDict
 import numpy as np
 import torch
 import torch.nn as nn
-
-from stephanie.protocols.embedding.base import EmbeddingProtocol
-
-
-class HNetEmbeddingCache:
-    def __init__(self, max_size=10000):
-        self.cache = OrderedDict()
-        self.max_size = max_size
-
-    def get(self, key):
-        if key in self.cache:
-            # Move to the end to mark as recently used
-            self.cache.move_to_end(key)
-            return self.cache[key]
-        return None
-
-    def set(self, key, value):
-        self.cache[key] = value
-        self.cache.move_to_end(key)
-        if len(self.cache) > self.max_size:
-            self.cache.popitem(last=False)  # Remove least recently used item
-
-
-embedding_cache = HNetEmbeddingCache(max_size=10000)
-
+from stephanie.tools.embedding_tool import MXBAIEmbedder
 
 
 class ByteLevelTokenizer:
@@ -37,6 +13,7 @@ class ByteLevelTokenizer:
 
     def decode(self, tokens: list[int]) -> str:
         return bytes(tokens).decode("utf-8", errors="replace")
+
 
 class ChunkBoundaryPredictor(nn.Module):
     def __init__(self, vocab_size=256, hidden_dim=128):
@@ -51,25 +28,30 @@ class ChunkBoundaryPredictor(nn.Module):
         x, _ = self.lstm(x.unsqueeze(1))
         scores = self.boundary_scorer(x)
         return scores.sigmoid().flatten()
-    
+
+
 class StephanieHNetChunker:
-     def __init__(self, boundary_predictor=None, threshold=0.7):
+    def __init__(self, boundary_predictor=None, threshold=0.7):
         self.tokenizer = ByteLevelTokenizer()
-        self.boundary_predictor = boundary_predictor or ChunkBoundaryPredictor()
+        self.boundary_predictor = (
+            boundary_predictor or ChunkBoundaryPredictor()
+        )
         self.threshold = threshold
 
-     def chunk(self, text: str) -> list:
+    def chunk(self, text: str) -> list:
         tokens = self.tokenizer.tokenize(text)
         tokens_tensor = torch.tensor(tokens).long()
 
         with torch.no_grad():
             scores = self.boundary_predictor(tokens_tensor)
 
-        boundaries = (scores > self.threshold).nonzero(as_tuple=True)[0].tolist()
+        boundaries = (
+            (scores > self.threshold).nonzero(as_tuple=True)[0].tolist()
+        )
         chunks = []
         prev = 0
         for b in boundaries:
-            chunk_tokens = tokens[prev:b+1]
+            chunk_tokens = tokens[prev : b + 1]
             chunk_text = self.tokenizer.decode(chunk_tokens)
             chunks.append(chunk_text)
             prev = b + 1
@@ -79,28 +61,45 @@ class StephanieHNetChunker:
             chunks.append(final_chunk)
 
         return chunks
-    
+
+
 class PoolingStrategy:
     @staticmethod
     def mean_pool(embeddings: list[list[float]]) -> list[float]:
         return np.mean(embeddings, axis=0).tolist()
 
     @staticmethod
-    def weighted_mean_pool(embeddings: list[list[float]], weights: list[float]) -> list[float]:
+    def weighted_mean_pool(
+        embeddings: list[list[float]], weights: list[float]
+    ) -> list[float]:
         return np.average(embeddings, weights=weights, axis=0).tolist()
-    
 
 
-class StephanieHNetEmbedder(EmbeddingProtocol):
-    def __init__(self, embedder: EmbeddingProtocol):
+class StephanieHNetEmbedder:
+    def __init__(self, embedder):
         self.chunker = StephanieHNetChunker()
         self.embedder = embedder
         self.pooler = PoolingStrategy()
 
     def embed(self, text: str) -> list[float]:
+        if not text or not text.strip():
+            print("Empty text provided for embedding.")
+            return []
         chunks = self.chunker.chunk(text)
         chunk_embeddings = self.embedder.batch_embed(chunks)
         return self.pooler.mean_pool(chunk_embeddings)
 
     def batch_embed(self, texts: list[str]) -> list[list[float]]:
         return [self.embed(text) for text in texts]
+
+
+_hnet_instance = None
+
+
+def get_embedding(text: str, cfg: dict) -> list[float]:
+    global _hnet_instance
+    if _hnet_instance is None:
+        base_embedder = MXBAIEmbedder(cfg)  # Direct init
+        _hnet_instance = StephanieHNetEmbedder(embedder=base_embedder)
+
+    return _hnet_instance.embed(text)

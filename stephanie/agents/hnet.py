@@ -1,22 +1,12 @@
-from dependency_injector.wiring import Provide, inject
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.memory.hnet_embedding_store import HNetEmbeddingStore
-from stephanie.protocols.embedding.base import EmbeddingProtocol
-from stephanie.protocols.embeddings.embeddings import EmbeddingProtocol
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
-from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.tools.hnet_embedder import (PoolingStrategy,
-                                           StephanieHNetChunker,
-                                           StephanieHNetEmbedder)
 
 
-class HnetAgent(BaseAgent):
-    def __init__(self, cfg, memory=None, logger=None,  embedder: EmbeddingProtocol = Provide["container.embedder_selector"]):
+class HNetAgent(BaseAgent):
+    def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
-        self.embedding_store = HNetEmbeddingStore(cfg, memory.conn, memory.db, logger=logger)
-        embedder: EmbeddingProtocol = Provide["container.embedder_selector"]
 
     async def run(self, context: dict) -> dict:
         documents = context.get(self.input_key, [])
@@ -27,11 +17,10 @@ class HnetAgent(BaseAgent):
             goal = context.get("goal", "")
             text = doc.get("summary") or doc.get("content", "")
             scorable = Scorable(text=text, target_type=TargetType.DOCUMENT, id=doc_id)
-
-            embedding = self.embedder.embed(text)
+            print(f"Processing document {doc_id} text: {text[:50]}...")
+            embedding = self.memory.hnet_embeddings.get_or_create(text)
             context["embedding"] = embedding
-            self.memory.hnet_embedding_store.save_embedding(text, embedding)
-
+            print(f"Embedding for document {doc_id} created: {embedding[:10]}...")
 
 
             results.append(scorable)
@@ -39,16 +28,3 @@ class HnetAgent(BaseAgent):
         context[self.output_key] = results
         return context
 
-        text = context.get("input_text")
-        if not text:
-            return context
-
-        try:
-            embedding = self.embedder.embed(text)
-            context["embedding"] = embedding
-            self.memory.hnet_embedding_store.save_embedding(text, embedding)
-        except Exception as e:
-            context["embedding_error"] = str(e)
-            self.logger.log("HNetEmbeddingFailed", {"error": str(e)})
-
-        return context
