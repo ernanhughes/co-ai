@@ -296,7 +296,7 @@ class Supervisor:
             return context
 
         except Exception as e:
-            self.logger.log("PipelineStageFailed", {"error": str(e)})
+            self.logger.log("PipelineStageFailed", {"stage": stage.name, "error": str(e)})
             return context
         
     def _save_pipeline_stage(self, stage: PipelineStage, context: dict, stage_dict: dict):

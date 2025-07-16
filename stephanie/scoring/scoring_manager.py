@@ -62,6 +62,14 @@ class ScoringManager(BaseAgent):
         else:
             self.scorer = scorer
 
+    async def run(self, context: dict) -> dict:
+        """
+        Main entry point for running the scoring manager.
+        This method can be overridden by subclasses to implement custom logic.
+        """
+        # Default implementation just returns the context
+        return context
+
     def dimension_names(self):
         """Returns the names of all dimensions."""
         return [dim["name"] for dim in self.dimensions]
@@ -227,7 +235,7 @@ class ScoringManager(BaseAgent):
 
         raise ValueError(f"Could not extract numeric score from response: {response}")
 
-    def evaluate(self, context: dict, scorable: Scorable):
+    def evaluate(self, context: dict, scorable: Scorable, llm_fn=None):
         try:
             score = self.scorer.score(
                 context, scorable, self.dimensions
@@ -237,7 +245,7 @@ class ScoringManager(BaseAgent):
                 "MgrScoreParseError",
                 {"scorable": scorable, "error": str(e)},
             )
-            score = self.evaluate_llm(context, scorable, self.call_llm)
+            score = self.evaluate_llm(context, scorable, llm_fn or self.call_llm)
         log_key = "CorDimensionEvaluated" if format == "cor" else "DimensionEvaluated"
         self.logger.log(
             log_key,

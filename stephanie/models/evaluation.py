@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from sqlalchemy import (JSON, Column, DateTime, Enum, ForeignKey, Integer,
                         String)
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from stephanie.models.base import Base
 from stephanie.models.belief_cartridge import BeliefCartridgeORM
@@ -13,7 +13,8 @@ from stephanie.models.hypothesis import HypothesisORM
 from stephanie.models.pipeline_run import PipelineRunORM
 from stephanie.models.symbolic_rule import SymbolicRuleORM
 from stephanie.scoring.scorable_factory import TargetType
-
+from stephanie.models.document import DocumentORM
+from stephanie.models.score import ScoreORM
 
 class EvaluationORM(Base):
     __tablename__ = "evaluations"
@@ -56,8 +57,8 @@ class EvaluationORM(Base):
     hypothesis: Mapped[Optional[HypothesisORM]] = relationship("HypothesisORM", back_populates="evaluations")
     symbolic_rule: Mapped[Optional[SymbolicRuleORM]] = relationship("SymbolicRuleORM", back_populates="evaluations")
     pipeline_run: Mapped[Optional[PipelineRunORM]] = relationship("PipelineRunORM", back_populates="evaluations")
-    document: Mapped[Optional["DocumentORM"]] = relationship("DocumentORM", back_populates="evaluations")
-    dimension_scores: Mapped[List["ScoreORM"]] = relationship(
+    document: Mapped[Optional[DocumentORM]] = relationship("DocumentORM", back_populates="evaluations")
+    dimension_scores: Mapped[List[ScoreORM]] = relationship(
         "ScoreORM", 
         back_populates="evaluation",
         cascade="all, delete-orphan"

@@ -30,6 +30,8 @@ SYSTEM_INIT = {
 # KNOWLEDGE STORAGE
 # =================
 KNOWLEDGE_OPS = {
+    "GoalContextOverride": "🎯🔄",  # Goal context override
+    "MgrScoreParseError": "📊❌",  # Scoring parse error
     "SymbolicRulesFound": "🧩🔍",  # Symbolic rules found
     "MRQTrainingDataLoaded": "📊📥",  # MRQ training data loaded
     "DuplicateSymbolicRuleSkipped": "🚫🧩",  # Duplicate symbolic rule skipped
@@ -126,6 +128,7 @@ PIPELINE_FLOW = {
 # SCORING & EVALUATION
 # =====================
 SCORING = {
+    "LLMJudgeResults": "📝⚖️",  # LLM judge results
     "DocumentScoresAlreadyExist": "📄✅",  # Document scores already exist
     "LLMJudgeScorerDimension": "📝📊",  # LLM judge scoring dimension
     "DocumentScored": "📊✅",  # Document scored
@@ -177,6 +180,7 @@ REASONING = {
 # TRAINING & MODEL OPS
 # =====================
 TRAINING = {
+    "MRQTrainerEpoch": "🏋️📊",  # MRQ training epoch
     "MRQTrainerStart": "🚀🧠",  # MRQ training started
     "MRQTrainerTrainingComplete": "🎓🧠",  # MRQ training completed
     "MRQModelInitializing": "🧠⚙️",  # MRQ model initializing
