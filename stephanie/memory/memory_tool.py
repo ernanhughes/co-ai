@@ -40,6 +40,7 @@ from stephanie.memory.score_store import ScoreStore
 from stephanie.memory.search_result_store import SearchResultStore
 from stephanie.memory.sharpening_store import SharpeningStore
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
+from stephanie.memory.hf_embedding_store import HuggingFaceEmbeddingStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
 
 
@@ -99,6 +100,7 @@ class MemoryTool:
         self.register_store(BeliefCartridgeStore(self.session, logger))
         self.register_store(GoalDimensionsStore(self.session, logger))
         self.register_store(PipelineStageStore(self.session, logger))
+        self.register_store(HuggingFaceEmbeddingStore(self.cfg, self.conn, self.session, logger))
         
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):

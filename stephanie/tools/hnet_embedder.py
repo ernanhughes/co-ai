@@ -1,6 +1,3 @@
-# stephanie/embeddings/hnet_embedder.py
-from collections import OrderedDict
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,15 +13,21 @@ class ByteLevelTokenizer:
 
 
 class ChunkBoundaryPredictor(nn.Module):
-    def __init__(self, vocab_size=256, hidden_dim=128):
+    def __init__(self, vocab_size=256, hidden_dim=128, device="cpu"):
         super().__init__()
-        self.embedding = nn.Embedding(vocab_size, hidden_dim)
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True)
-        self.boundary_scorer = nn.Linear(hidden_dim * 2, 1)
+        self.device = device
+        self.embedding = nn.Embedding(vocab_size, hidden_dim).to(self.device)
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True).to(self.device)
+        self.boundary_scorer = nn.Linear(hidden_dim * 2, 1).to(self.device)
 
     def forward(self, tokens: list[int]) -> torch.Tensor:
-        x = torch.tensor(tokens).long()
-        x = self.embedding(x)
+        if not isinstance(tokens, torch.Tensor):
+            tokens = torch.tensor(tokens, dtype=torch.long)
+        else:
+            tokens = tokens.detach().clone().long()
+
+        tokens = tokens.to(self.device)
+        x = self.embedding(tokens)
         x, _ = self.lstm(x.unsqueeze(1))
         scores = self.boundary_scorer(x)
         return scores.sigmoid().flatten()
@@ -33,25 +36,23 @@ class ChunkBoundaryPredictor(nn.Module):
 class StephanieHNetChunker:
     def __init__(self, boundary_predictor=None, threshold=0.7):
         self.tokenizer = ByteLevelTokenizer()
-        self.boundary_predictor = (
-            boundary_predictor or ChunkBoundaryPredictor()
-        )
+        self.boundary_predictor = boundary_predictor or ChunkBoundaryPredictor()
         self.threshold = threshold
 
-    def chunk(self, text: str) -> list:
+    def chunk(self, text: str) -> list[str]:
         tokens = self.tokenizer.tokenize(text)
-        tokens_tensor = torch.tensor(tokens).long()
+        if not tokens:
+            return []
 
+        tokens_tensor = torch.tensor(tokens).long()
         with torch.no_grad():
             scores = self.boundary_predictor(tokens_tensor)
 
-        boundaries = (
-            (scores > self.threshold).nonzero(as_tuple=True)[0].tolist()
-        )
+        boundaries = (scores > self.threshold).nonzero(as_tuple=True)[0].tolist()
         chunks = []
         prev = 0
         for b in boundaries:
-            chunk_tokens = tokens[prev : b + 1]
+            chunk_tokens = tokens[prev:b + 1]
             chunk_text = self.tokenizer.decode(chunk_tokens)
             chunks.append(chunk_text)
             prev = b + 1
@@ -66,13 +67,11 @@ class StephanieHNetChunker:
 class PoolingStrategy:
     @staticmethod
     def mean_pool(embeddings: list[list[float]]) -> list[float]:
-        return np.mean(embeddings, axis=0).tolist()
+        return np.mean(embeddings, axis=0).tolist() if embeddings else []
 
     @staticmethod
-    def weighted_mean_pool(
-        embeddings: list[list[float]], weights: list[float]
-    ) -> list[float]:
-        return np.average(embeddings, weights=weights, axis=0).tolist()
+    def weighted_mean_pool(embeddings: list[list[float]], weights: list[float]) -> list[float]:
+        return np.average(embeddings, weights=weights, axis=0).tolist() if embeddings else []
 
 
 class StephanieHNetEmbedder:
@@ -84,8 +83,12 @@ class StephanieHNetEmbedder:
     def embed(self, text: str) -> list[float]:
         if not text or not text.strip():
             print("Empty text provided for embedding.")
-            return []
+            return [0.0] * 1024  # fallback vector
+
         chunks = self.chunker.chunk(text)
+        if not chunks:
+            return [0.0] * 1024  # fallback vector if chunking failed
+
         chunk_embeddings = self.embedder.batch_embed(chunks)
         return self.pooler.mean_pool(chunk_embeddings)
 
@@ -93,6 +96,7 @@ class StephanieHNetEmbedder:
         return [self.embed(text) for text in texts]
 
 
+# Singleton instance for reuse
 _hnet_instance = None
 
 
