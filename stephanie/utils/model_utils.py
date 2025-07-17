@@ -51,8 +51,8 @@ def discover_saved_dimensions(
     return sorted(dimension_names)
 
 
-def get_svm_file_paths(model_path, model_type, target_type, dim, model_version="v1"):
-    base = get_model_path(model_path, model_type, target_type, dim, model_version)
+def get_svm_file_paths(model_path, model_type, target_type, dim, model_version="v1", embedding_type="default"):
+    base = get_model_path(model_path, model_type, target_type, dim, model_version, embedding_type)
     return {
         "model": base + f"{dim}.joblib",
         "scaler": base + f"{dim}_scaler.joblib",

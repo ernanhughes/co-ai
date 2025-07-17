@@ -1,0 +1,5 @@
+_target_: stephanie.memory.EmbeddingStore
+name: "mxbai_embeddings"
+type: "default"
+table: "embeddings"
+dimension: 1024

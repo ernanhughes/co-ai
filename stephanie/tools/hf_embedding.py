@@ -1,7 +1,36 @@
 # stephanie/embeddings/huggingface_embedder.py
 
-import numpy as np
 from sentence_transformers import SentenceTransformer
+
+class HuggingFaceEmbedder:
+    _model_instance = None  # class-level singleton
+
+    def __init__(self, cfg: dict):
+        self.cfg = cfg
+        self.model_name = cfg.get("hf_model_name", "Qwen/Qwen3-Embedding-8B")
+
+        if HuggingFaceEmbedder._model_instance is None:
+            HuggingFaceEmbedder._model_instance = SentenceTransformer(self.model_name)
+
+        self.model = HuggingFaceEmbedder._model_instance
+
+    def embed(self, text: str) -> list[float]:
+        if not text.strip():
+            return []
+
+        text = f"passage: {text.strip()}" if "e5" in self.model_name.lower() else text
+        embedding = self.model.encode(text, convert_to_numpy=True, normalize_embeddings=True)
+        return embedding.tolist()
+
+    def batch_embed(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
+        processed = [f"passage: {t.strip()}" if "e5" in self.model_name.lower() else t for t in texts]
+        embeddings = self.model.encode(processed, convert_to_numpy=True, normalize_embeddings=True)
+        return embeddings.tolist()
+
+
 
 _model_instance = None
 

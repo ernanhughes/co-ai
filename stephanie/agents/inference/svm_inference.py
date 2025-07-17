@@ -25,6 +25,7 @@ class SVMInferenceAgent(BaseAgent):
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
         self.dimensions = cfg.get("dimensions", [])
+        self.embedding_type = self.memory.embedding.type
         self.models = {}
         self.model_meta = {}
         self.tuners = {}
@@ -45,6 +46,7 @@ class SVMInferenceAgent(BaseAgent):
                 self.target_type,
                 dim,
                 self.model_version,
+                self.embedding_type
             )
             scaler_path = paths["scaler"]
             model_file = paths["model"]

@@ -28,7 +28,7 @@ class MRQInferenceAgent(BaseAgent):
         self.evaluator = "mrq"
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
-        self.embedding_type = cfg.get("embedding_type", "default")  # e.g., "hnet", "huggingface"
+        self.embedding_type = self.memory.embedding.type
         self.dimensions = cfg.get("dimensions", [])
         self.models = {}
         self.model_meta = {}

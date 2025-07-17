@@ -26,6 +26,14 @@ SYSTEM_INIT = {
     "SeedEmbeddingsPrepared": "🌱🧬",  # Seed embeddings prepared
 }
 
+AGENT_EVENTS = {
+    
+    "MRQInferenceAgentInitialized": "📊🤖",  # MRQ inference agent initialized
+    "AgentInitialized": "ᯓ★",  # Agent initialization
+    "AgentInit": "🤖",  # Agent startup
+    "MRQTrainerAgentInitialized": "📊🤖",  # MRQ trainer agent initialized
+}
+
 # =================
 # KNOWLEDGE STORAGE
 # =================
@@ -99,6 +107,7 @@ KNOWLEDGE_OPS = {
     "CartridgeProcessingCompleted": "🏁",  # Cartridge processing completed
     "DocumentAlreadyProfiled": "📄✅",  # Document already profiled
     "StoreRegistered": "🛒",  # Store registered
+    "PreferencePairBuilder": "💾▶️",  # Preference pair builder started
 }
 
 # =================
@@ -119,7 +128,7 @@ PIPELINE_FLOW = {
     "AgentRanSuccessfully": "🤖✅",  # Agent succeeded
     "PipelineJudgeAgentEnd": "⚖️🔚",  # Judge agent completed
     "MRQPipelineSuggested": "🧠💡",  # MRQ pipeline suggested
-    "PipelineStageFailed": "🖇️❌",  # Pipeline stage failed
+    "PipelineStageFailed": "🖇️⚠️❌💢",  # Pipeline stage failed
     "PipelineScoreSummary": "🖇️📊🧾",  # Pipeline score summary
     "PipelineError": "🖇️💀",  # Pipeline error
 }
@@ -155,11 +164,12 @@ SCORING = {
     "DocumentModelSaved": "📄💾",  # Document model saved
     "ModelSaved": "💾✅",  # Model saved
     "EncoderSaved": "📄💾",  # Encoder saved
+    "MRQInferenceCompleted": "📊✅",  # MRQ inference completed
 }
 
 # =====================
 # REASONING & ANALYSIS
-# =====================
+# ===================== All right
 REASONING = {
     "KeywordsExtracted": "🔑",  # Keywords extracted
     "ProximityAnalysisScored": "📌🗺️",  # Proximity analysis
@@ -196,6 +206,10 @@ TRAINING = {
     "DocumentTrainingProgress": "📈🔄",  # Training progress
     "DocumentMRQTrainDimension": "🧩📊",  # Dimension training
     "DocumentPairBuilderProgress": "📊📑",  # Pair building progress
+    "SVMInferenceInitialized": "📊🤖",  # SVM inference agent initialized
+    "LoadingSVMModel": "📥📊",  # Loading SVM model
+    "SVMInferenceCompleted": "📊✅",  # SVM inference completed
+    "EBTBufferCreated": "🧪📦",  # EBT buffer created
 }
 
 PROMPTS = {
@@ -273,6 +287,7 @@ ERROR_STATES = {
     "DocumentMRQTunerMissing": "❌🔧",  # MRQ tuner missing
     "TunedPromptGenerationFailed": "❌🔄📝",  # Tuned prompt failed
     "InvalidRuleMutation": "❌🧬",  # Invalid rule mutation
+    "DocumentFilterSkipped": "⏭️📄",  # Document filter skipped
 }
 
 # =============
@@ -286,6 +301,14 @@ SPECIAL = {
     "SharpenedHypothesisSaved": "💎💾",  # Sharpened hypothesis saved
     "CoTGenerated": "⛓️💭",  # Chain-of-Thought generated
     "LLMCacheHit": "💾⚡",  # LLM cache hit
+}
+
+MODELS = {
+    "SVMModelSaved": "💾📊",  # SVM model saved
+    "SVMModelLoaded": "📥📊",  # SVM model load
+    "SVMModelTrainingStarted": "🏋️📊",
+    "SVMTrainingStarted": "🏋️📊"
+
 }
 
 # Combine all categories into a single dictionary
@@ -302,4 +325,5 @@ EVENT_ICONS = {
     **ERROR_STATES,
     **SPECIAL,
     **PROMPTS,
+    **MODELS,
 }

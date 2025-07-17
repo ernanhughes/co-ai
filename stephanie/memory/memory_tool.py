@@ -45,7 +45,7 @@ from stephanie.models.base import engine  # From your SQLAlchemy setup
 
 
 class MemoryTool:
-    def __init__(self, cfg, logger: Optional[JSONLogger] = None):
+    def __init__(self, cfg: dict, logger: Optional[JSONLogger] = None):
         self.cfg = cfg
         self.logger = logger
         self._stores = {}  # name -> Store instance
@@ -54,24 +54,37 @@ class MemoryTool:
         self.session_maker = sessionmaker(bind=engine)
         self.session: Session = self.session_maker()
 
+        db_cfg = self.cfg.get("db", {})
         # Create connection
         self.conn = psycopg2.connect(
-            dbname=self.cfg.get("db").get("name"),
-            user=self.cfg.get("db").get("user"),
-            password=self.cfg.get("db").get("password"),
-            host=self.cfg.get("db").get("host"),
-            port=self.cfg.get("db").get("port"),
+            dbname=db_cfg.get("name"),
+            user=db_cfg.get("user"),
+            password=db_cfg.get("password"),
+            host=db_cfg.get("host"),
+            port=db_cfg.get("port"),
         )
         self.conn.autocommit = True
         register_vector(self.conn)  # Register pgvector extension
 
+        embedding_cfg = self.cfg.get("embeddings", {})
+        # Register stores
+        mxbai = EmbeddingStore(embedding_cfg, self.conn, self.session, logger)
+        hnet = HNetEmbeddingStore(embedding_cfg, self.conn, self.session, logger)
+        hf = HuggingFaceEmbeddingStore(embedding_cfg, self.conn, self.session, logger)
+
+        # Choose embedding backend based on config
+        selected_backend = embedding_cfg.get("backend", "mxbai")
+        if selected_backend == "hnet":
+            self.embedding = hnet
+        elif selected_backend == "huggingface":
+            self.embedding = hf
+        else:
+            self.embedding = mxbai
+
+
         # Register stores
         self.register_store(GoalStore(self.session, logger))
-        embedding_store = EmbeddingStore(self.cfg, self.conn, self.session, logger)
-        self.register_store(embedding_store)
-        hnet_embedding_store = HNetEmbeddingStore(self.cfg, self.conn, self.session, logger)
-        self.register_store(hnet_embedding_store)
-        self.register_store(HypothesisStore(self.session, logger, embedding_store))
+        self.register_store(HypothesisStore(self.session, logger, self.embedding))
         self.register_store(PromptStore(self.session, logger))
         self.register_store(EvaluationStore(self.session, logger))
         self.register_store(PipelineRunStore(self.session, logger))

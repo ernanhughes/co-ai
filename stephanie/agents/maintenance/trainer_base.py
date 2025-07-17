@@ -23,7 +23,7 @@ class TrainerAgent(BaseAgent):
         self.output_key = cfg.get("output_key", "training_pairs")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
-        self.embedding_type = cfg.get("embedding_type", "default")  # e.g.,
+        self.embedding_type = self.memory.embedding.type
         self.encoder = TextEncoder().to(
             torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )

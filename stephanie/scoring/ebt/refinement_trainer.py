@@ -102,7 +102,7 @@ class EBTRefinementTrainer(BaseAgent, EBTMixin):
         self.model_type = "ebt"
         self.target_type = "document"
         self.model_version = cfg.get("model_version", "v1")
-        self.embedding_type = cfg.get("embedding_type", "default")  # e.g.,
+        self.embedding_type = self.memory.embedding.type
         
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         

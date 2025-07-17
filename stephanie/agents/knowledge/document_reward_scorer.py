@@ -73,6 +73,7 @@ class DocumentRewardScorerAgent(BaseAgent):
             pipeline_run_id=context.get("pipeline_run_id"),
             agent_name=self.name,
             model_name=self.model_name,
+            embedding_type=self.memory.embedding.type,
             evaluator_name=self.scorer.name,
             strategy=self.strategy,
         )

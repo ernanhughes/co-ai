@@ -13,6 +13,8 @@ class HuggingFaceEmbeddingStore(BaseStore):
         self.cfg = cfg
         self.conn = conn
         self.name = "hf_embeddings"
+        self.type = "huggingface"
+        self.dimensions = cfg.get("dimensions", 4096)  # Default to 4096 if not specified
         self._cache = SimpleLRUCache(max_size=cache_size)
 
     def __repr__(self):

@@ -29,6 +29,8 @@ class EvaluationORM(Base):
     target_type: Mapped[TargetType] = Column(Enum(TargetType), nullable=False)
     target_id: Mapped[int] = Column(Integer, nullable=False)
     
+    embedding_type: Mapped[Optional[str]] = Column(String, nullable=True)
+
     # Optional references to other entities
     hypothesis_id: Mapped[Optional[int]] = Column(Integer, ForeignKey("hypotheses.id"))
     document_id: Mapped[Optional[int]] = Column(Integer, ForeignKey("documents.id"))

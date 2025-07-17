@@ -11,14 +11,16 @@ class EmbeddingStore(BaseStore):
         super().__init__(db, logger)
         self.cfg = cfg
         self.conn = conn
-        self.name = "embedding"
+        self.name = "ollama_embeddings"
+        self.type = "ollama"
+        self.dimensions = cfg.get("dimensions", 1024)  # Default to 1536 if not specified
         self._cache = SimpleLRUCache(max_size=cache_size)
 
     def __repr__(self):
         return f"<{self.name} connected={self.db is not None} cfg={self.cfg}>"
 
     def name(self) -> str:
-        return "embedding"
+        return self.name
 
     def get_or_create(self, text: str):
         text_hash = self.get_text_hash(text)

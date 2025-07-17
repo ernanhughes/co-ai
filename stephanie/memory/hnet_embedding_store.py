@@ -12,6 +12,9 @@ class HNetEmbeddingStore(BaseStore):
         self.cfg = cfg
         self.conn = conn
         self.name = "hnet_embeddings"
+        self.type = "hnet"
+        self.dimensions = cfg.get("dimensions", 1024) # note Please match underlying model
+
         self._cache = SimpleLRUCache(max_size=cache_size)
 
     def __repr__(self):

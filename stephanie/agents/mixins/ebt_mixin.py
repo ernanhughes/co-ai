@@ -41,7 +41,7 @@ class EBTMixin:
         self.model_type = ebt_cfg.get("model_type", "ebt")
         self.target_type = ebt_cfg.get("target_type", "document")
         self.model_version = ebt_cfg.get("model_version", "v1")
-        self.embedding_type = ebt_cfg.get("embedding_type", "default")  # e.g., "hnet", "huggingface"
+        self.embedding_type = self.memory.embedding.type
         self.dimensions = ebt_cfg.get("dimensions", [])
         self.uncertainty_threshold = ebt_cfg.get("uncertainty_threshold", 0.75)
         

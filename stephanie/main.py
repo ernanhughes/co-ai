@@ -25,7 +25,7 @@ def run(cfg: DictConfig):
         run_id = generate_run_id(cfg.goal.goal_text if "goal" in cfg else "batch")
         log_path = get_log_file_path(run_id, cfg)
         logger = JSONLogger(log_path=log_path)
-        memory = MemoryTool(cfg=cfg.db, logger=logger)
+        memory = MemoryTool(cfg=cfg, logger=logger)
 
         # Configure and wire the container
         container.config.from_yaml("config/app_container.yaml")
