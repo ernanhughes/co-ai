@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from stephanie.tools.embedding_tool import MXBAIEmbedder
+from stephanie.tools.hf_embedding import HuggingFaceEmbedder
 
 
 class ByteLevelTokenizer:
@@ -104,7 +104,7 @@ _hnet_instance = None
 def get_embedding(text: str, cfg: dict) -> list[float]:
     global _hnet_instance
     if _hnet_instance is None:
-        base_embedder = MXBAIEmbedder(cfg)  # Direct init
+        base_embedder = HuggingFaceEmbedder(cfg)  # Direct init
         _hnet_instance = StephanieHNetEmbedder(embedder=base_embedder)
 
     return _hnet_instance.embed(text)
