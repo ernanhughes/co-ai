@@ -1,9 +1,9 @@
 # stephanie/scoring/scoring_manager.py
 import re
 from pathlib import Path
+from typing import Optional
 
 import yaml
-from git import Optional
 from sqlalchemy.orm import Session
 
 from stephanie.agents.base_agent import BaseAgent

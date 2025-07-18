@@ -5,6 +5,7 @@ import time
 import numpy as np
 import torch
 
+
 class HuggingFaceEmbedder:
     _model_instance = None  # class-level singleton
 

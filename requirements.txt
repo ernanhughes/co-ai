@@ -22,6 +22,7 @@ beautifulsoup4
 arxiv
 gradio_client
 torch
+sentence_transformers
 
 # Hugging face tool
 huggingface_hub
