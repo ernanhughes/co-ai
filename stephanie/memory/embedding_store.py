@@ -13,7 +13,8 @@ class EmbeddingStore(BaseStore):
         self.conn = conn
         self.name = "ollama_embeddings"
         self.type = "ollama"
-        self.dimensions = cfg.get("dimensions", 1024)  # Default to 1536 if not specified
+        self.dim = cfg.get("dim", 1024)  # Default to 1024 if not specified
+        self.hdim = self.dim // 2
         self._cache = SimpleLRUCache(max_size=cache_size)
 
     def __repr__(self):

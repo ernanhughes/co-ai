@@ -14,14 +14,16 @@ from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 class MRQTrainerEngine:
     def __init__(self, memory, logger, device="cpu"):
         self.memory = memory
+        self.dim = self.memory.embedding.dim
+        self.hdim = self.memory.embedding.hdim
         self.logger = logger
         self.device = device
 
     def build_encoder(self):
-        return TextEncoder().to(self.device)
+        return TextEncoder(dim=self.dim, hdim=self.hdim).to(self.device)
 
     def build_predictor(self):
-        return ValuePredictor(4096, 2048).to(self.device)
+        return ValuePredictor(zsa_dim=self.dim, hdim=self.hdim).to(self.device)
 
     def prepare_training_data(self, encoder, samples):
         inputs, labels = [], []

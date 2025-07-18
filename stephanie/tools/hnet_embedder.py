@@ -14,7 +14,7 @@ class ByteLevelTokenizer:
 
 
 class ChunkBoundaryPredictor(nn.Module):
-    def __init__(self, vocab_size=256, hidden_dim=128, device="cpu"):
+    def __init__(self, vocab_size=256, hidden_dim=1280, device="cuda"):
         super().__init__()
         self.device = device
         self.embedding = nn.Embedding(vocab_size, hidden_dim).to(self.device)
@@ -23,16 +23,17 @@ class ChunkBoundaryPredictor(nn.Module):
 
     def forward(self, tokens: list[int]) -> torch.Tensor:
         if not isinstance(tokens, torch.Tensor):
-            tokens = torch.tensor(tokens, dtype=torch.long)
+            tokens = torch.tensor(tokens, dtype=torch.long).to(self.device)
         else:
-            tokens = tokens.detach().clone().long()
+            tokens = tokens.detach().clone().long().to(self.device)
 
-        tokens = tokens.to(self.device)
-        x = self.embedding(tokens)
-        x, _ = self.lstm(x.unsqueeze(1))
+        x = self.embedding(tokens).float()  # [seq_len] → [seq_len, hidden_dim]
+        x = x.unsqueeze(1)  # Add batch dimension → [seq_len, 1, hidden_dim]
+        x = x.contiguous()  # ← Ensure contiguous layout
+        print(f"Input shape: {x.shape}")
+        x, _ = self.lstm(x)  # Now this works on CPU or GPU
         scores = self.boundary_scorer(x)
         return scores.sigmoid().flatten()
-
 
 class StephanieHNetChunker:
     def __init__(self, boundary_predictor=None, threshold=0.7):
