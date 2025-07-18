@@ -59,13 +59,11 @@ class EBTTrainerAgent(BaseAgent):
         self.model_version = cfg.get("model_version", "v1")
         self.embedding_type = self.memory.embedding.type
         self.dimensions = cfg.get("dimensions", [])
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.encoder = TextEncoder().to(
-            torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
-        self.value_predictor = ValuePredictor().to(
-            torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
+
+        self.encoder = TextEncoder().to(self.device)
+        self.value_predictor = ValuePredictor().to(self.device)
         self.evolution_manager = ModelEvolutionManager(
             self.cfg, self.memory, self.logger
         )

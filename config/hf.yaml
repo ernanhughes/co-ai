@@ -24,7 +24,7 @@ defaults:
   - logging/json_logger
 
 embeddings:
-  backend: mxbai
+  backend: huggingface
 
 goal:
   goal_text: I want to build an AI that can read, refactor, and iteratively improve its own source code to become more efficient, reliable, and aligned with its evolving objectives.
@@ -40,7 +40,7 @@ goal:
 
 post_judgment:
   name: pipeline_judge
-  enabled: true
+  enabled: false
   cls: stephanie.agents.pipeline_judge.PipelineJudgeAgent
 
 paths:
@@ -62,7 +62,7 @@ pipeline:
     - name: document_mrq_trainer
       description: "Build document pairs for training and evaluation"
       cls: stephanie.agents.maintenance.mrq_trainer.MRQTrainerAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_svm_trainer
@@ -92,13 +92,13 @@ pipeline:
     - name: knowledge_db_loader
       description: "Load knowledge from the database into the system"
       cls: stephanie.agents.knowledge.knowledge_db_loader.KnowledgeDBLoaderAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_llm_inference
       description: "Infer LLM scores for documents"
       cls: stephanie.agents.inference.llm_inference.LLMInferenceAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: document_mrq_inference

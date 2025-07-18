@@ -660,6 +660,7 @@ CREATE TABLE IF NOT EXISTS comparison_preferences (
 
 CREATE TABLE IF NOT EXISTS documents (
     id SERIAL PRIMARY KEY,
+    embedding_id INTEGER REFERENCES embeddings(id) ON DELETE NO ACTION, 
 
     -- Metadata
     title TEXT NOT NULL,

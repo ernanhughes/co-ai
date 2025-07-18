@@ -25,12 +25,9 @@ class TrainerAgent(BaseAgent):
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
         self.embedding_type = self.memory.embedding.type
-        self.encoder = TextEncoder().to(
-            torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
-        self.value_predictor = ValuePredictor().to(
-            torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.encoder = TextEncoder().to(self.device)
+        self.value_predictor = ValuePredictor().to(self.device)
         self.evolution_manager = ModelEvolutionManager(
             self.cfg, self.memory, self.logger
         )
@@ -42,8 +39,6 @@ class TrainerAgent(BaseAgent):
         # Build contrastive training pairs grouped by scoring dimension
         builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
         training_pairs = builder.get_training_pairs_by_dimension(goal=goal_text)
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Train one model per scoring dimension (e.g. clarity, novelty, etc.)
         for dim, pairs in training_pairs.items():
@@ -61,12 +56,12 @@ class TrainerAgent(BaseAgent):
                 batch_size=8,
                 shuffle=True,
                 collate_fn=lambda b: collate_ebt_batch(
-                    b, self.memory.embedding, device
+                    b, self.memory.embedding, self.device
                 ),
             )
 
             # Create model for this dimension
-            model = EBTModel().to(device)
+            model = EBTModel().to(self.device)
             optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
             loss_fn = nn.MSELoss()
 

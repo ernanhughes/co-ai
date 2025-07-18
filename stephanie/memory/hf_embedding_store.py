@@ -145,3 +145,50 @@ class HuggingFaceEmbeddingStore(BaseStore):
             else:
                 print(f"[EmbeddingStore] find_neighbors failed: {e}")
             return []
+
+
+    def search_related_documents(self, query: str, top_k: int = 10):
+        try:
+            embedding = self.get_or_create(query)
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT 
+                        d.id,
+                        d.title,
+                        d.summary,
+                        d.content,
+                        d.embedding_id,
+                        1 - (e.embedding <-> %s::vector) AS score  -- cosine similarity proxy
+                    FROM documents d
+                    JOIN hf_embeddings e ON d.embedding_id = e.id
+                    WHERE d.embedding_id IS NOT NULL
+                    ORDER BY e.embedding <-> %s::vector
+                    LIMIT %s;
+                    """,
+                    (embedding, embedding, top_k),
+                )
+                results = cur.fetchall()
+
+            return [
+                {
+                    "id": row[0],
+                    "title": row[1],
+                    "summary": row[2],
+                    "content": row[3],
+                    "embedding_id": row[4],
+                    "score": float(row[5]),
+                    "text": row[2] or row[3],  # Default to summary, fallback to content
+                    "source": "document",
+                }
+                for row in results
+            ]
+
+        except Exception as e:
+            if self.logger:
+                self.logger.log(
+                    "DocumentSearchFailed", {"error": str(e), "query": query}
+                )
+            else:
+                print(f"[VectorMemory] Document search failed: {e}")
+            return []
