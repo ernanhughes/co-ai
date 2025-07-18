@@ -313,6 +313,7 @@ MODELS = {
 
 # Combine all categories into a single dictionary
 EVENT_ICONS = {
+    **AGENT_EVENTS,
     **SYSTEM_INIT,
     **KNOWLEDGE_OPS,
     **PIPELINE_FLOW,

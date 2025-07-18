@@ -2,6 +2,7 @@
 
 from sentence_transformers import SentenceTransformer
 
+
 class HuggingFaceEmbedder:
     _model_instance = None  # class-level singleton
 

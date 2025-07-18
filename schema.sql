@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     pipeline TEXT NOT NULL, -- list of agent names
     name TEXT,
     tag TEXT,
+    embedding_type TEXT,
+    embedding_dimensions int, 
     description TEXT,
     strategy TEXT,
     model_name TEXT,
