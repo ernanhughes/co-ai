@@ -2,8 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from stephanie.tools.hf_embedding import HuggingFaceEmbedder
-
+from stephanie.tools.embedding_tool import MXBAIEmbedder
 
 class ByteLevelTokenizer:
     def tokenize(self, text: str) -> list[int]:
@@ -12,26 +11,37 @@ class ByteLevelTokenizer:
     def decode(self, tokens: list[int]) -> str:
         return bytes(tokens).decode("utf-8", errors="replace")
 
-
 class ChunkBoundaryPredictor(nn.Module):
-    def __init__(self, vocab_size=256, hidden_dim=1280, device="cuda"):
+    def __init__(self, vocab_size=256, hidden_dim=128, device="cpu"):
         super().__init__()
         self.device = device
         self.embedding = nn.Embedding(vocab_size, hidden_dim).to(self.device)
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True).to(self.device)
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True, batch_first=False).to(self.device)
         self.boundary_scorer = nn.Linear(hidden_dim * 2, 1).to(self.device)
 
     def forward(self, tokens: list[int]) -> torch.Tensor:
         if not isinstance(tokens, torch.Tensor):
-            tokens = torch.tensor(tokens, dtype=torch.long).to(self.device)
+            tokens = torch.tensor(tokens, dtype=torch.long)
         else:
-            tokens = tokens.detach().clone().long().to(self.device)
+            tokens = tokens.detach().clone().long()
 
-        x = self.embedding(tokens).float()  # [seq_len] → [seq_len, hidden_dim]
-        x = x.unsqueeze(1)  # Add batch dimension → [seq_len, 1, hidden_dim]
-        x = x.contiguous()  # ← Ensure contiguous layout
-        print(f"Input shape: {x.shape}")
-        x, _ = self.lstm(x)  # Now this works on CPU or GPU
+        tokens = tokens.to(self.device)
+        x = self.embedding(tokens).float()
+        
+        # Handle sequences of length 1 separately
+        if x.size(0) == 1:
+            # Directly use embedding for single-token sequences
+            x = torch.cat([x, torch.zeros_like(x)], dim=-1)  # Simulate bidirectional output
+        else:
+            x = x.unsqueeze(1)  # [seq_len, 1, hidden_dim]
+            # Ensure memory layout is contiguous
+            if not x.is_contiguous():
+                x = x.contiguous()
+            # Disable cuDNN for sequences of length > 1 to avoid compatibility issues
+            with torch.backends.cudnn.flags(enabled=False):
+                x, _ = self.lstm(x)
+            x = x.squeeze(1)  # Remove batch dimension
+        
         scores = self.boundary_scorer(x)
         return scores.sigmoid().flatten()
 
@@ -107,7 +117,7 @@ _hnet_instance = None
 def get_embedding(text: str, cfg: dict) -> list[float]:
     global _hnet_instance
     if _hnet_instance is None:
-        base_embedder = HuggingFaceEmbedder(cfg)  # Direct init
+        base_embedder = MXBAIEmbedder(cfg)  # Direct init
         _hnet_instance = StephanieHNetEmbedder(embedder=base_embedder)
 
     return _hnet_instance.embed(text)

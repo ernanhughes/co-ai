@@ -11,7 +11,7 @@ class HNetEmbeddingStore(BaseStore):
         super().__init__(db, logger)
         self.cfg = cfg
         self.conn = conn
-        self.dim = cfg.get("dim", 2560)  # Default to 2560 if not specified
+        self.dim = cfg.get("dim", 1024)  # Default to 2560 if not specified
         self.hdim = self.dim // 2
         self.name = "hnet_embeddings"
         self.type = "hnet"
