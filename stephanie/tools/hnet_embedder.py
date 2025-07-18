@@ -37,7 +37,7 @@ class ChunkBoundaryPredictor(nn.Module):
 class StephanieHNetChunker:
     def __init__(self, boundary_predictor=None, threshold=0.7):
         self.tokenizer = ByteLevelTokenizer()
-        self.boundary_predictor = boundary_predictor or ChunkBoundaryPredictor()
+        self.boundary_predictor = boundary_predictor or ChunkBoundaryPredictor(device="cuda" if torch.cuda.is_available() else "cpu")
         self.threshold = threshold
 
     def chunk(self, text: str) -> list[str]:
@@ -79,16 +79,18 @@ class StephanieHNetEmbedder:
     def __init__(self, embedder):
         self.chunker = StephanieHNetChunker()
         self.embedder = embedder
+        self.dim = self.embedder.dim
+        self.hdim = self.embedder.dim / 2
         self.pooler = PoolingStrategy()
 
     def embed(self, text: str) -> list[float]:
         if not text or not text.strip():
             print("Empty text provided for embedding.")
-            return [0.0] * 1024  # fallback vector
+            return [0.0] * self.dim  # fallback vector
 
         chunks = self.chunker.chunk(text)
         if not chunks:
-            return [0.0] * 1024  # fallback vector if chunking failed
+            return [0.0] * self.dim  # fallback vector if chunking failed
 
         chunk_embeddings = self.embedder.batch_embed(chunks)
         return self.pooler.mean_pool(chunk_embeddings)

@@ -3,9 +3,10 @@ import os
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 
 from stephanie.agents.base_agent import BaseAgent
+from stephanie.agents.maintenance.ebt_trainer import EBTDataset
 from stephanie.agents.maintenance.model_evolution_manager import \
     ModelEvolutionManager
 from stephanie.scoring.model.ebt_model import EBTModel
@@ -37,8 +38,6 @@ class TrainerAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
 
-        from stephanie.scoring.mrq.preference_pair_builder import \
-            PreferencePairBuilder
 
         # Build contrastive training pairs grouped by scoring dimension
         builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
@@ -56,7 +55,7 @@ class TrainerAgent(BaseAgent):
             )
 
             # Construct dataset and dataloader; normalize scores between 50–100
-            ds = DocumentEBTDataset(pairs, min_score=50, max_score=100)
+            ds = EBTDataset(pairs, min_score=50, max_score=100)
             dl = DataLoader(
                 ds,
                 batch_size=8,

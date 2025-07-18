@@ -32,6 +32,8 @@ embedding_cache = EmbeddingCache(max_size=10000)
 class MXBAIEmbedder(EmbeddingProtocol):
     def __init__(self, cfg):
         self.cfg = cfg
+        self.dim = cfg.get("dim", 1024)
+        self.hdim = self.dim / 2
 
     def embed(self, text: str) -> list[float]:
         return get_embedding(text, self.cfg)

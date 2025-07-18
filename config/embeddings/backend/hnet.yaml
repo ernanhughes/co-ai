@@ -2,5 +2,5 @@ _target_: stephanie.memory.HNetEmbeddingStore
 name: "hnet_embeddings"
 type: "hnet"
 table: "hnet_embeddings"
-hf_model_name: "Qwen/Qwen3-Embedding-8B"
-dimension: 4096
+hf_model_name: "Qwen/Qwen3-Embedding-4B"
+dimension: 2560

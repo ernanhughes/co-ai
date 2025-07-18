@@ -23,6 +23,8 @@ from stephanie.utils.model_utils import (discover_saved_dimensions,
 class MRQInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
+        self.dim = memory.embedding.dim
+        self.hdim = memory.embedding.hdim
         self.model_path = cfg.get("model_path", "models")
         self.model_type = "mrq"
         self.evaluator = "mrq"
@@ -177,8 +179,8 @@ class MRQInferenceAgent(BaseAgent):
             meta_path = f"{model_path}/{dim}.meta.json"
             tuner_path = f"{model_path}/{dim}_model.tuner.json"
 
-            encoder = TextEncoder()
-            predictor = HypothesisValuePredictor(512, 1024)
+            encoder = TextEncoder(self.dim, self.hdim)
+            predictor = HypothesisValuePredictor(self.dim, self.hdim)
             model = MRQModel(
                 encoder, predictor, self.memory.embedding, device=self.device
             )

@@ -25,7 +25,7 @@ class DocumentMRQTrainer:
         self.value_predictor = (
             value_predictor.to(device)
             if value_predictor
-            else ValuePredictor(512, 1024).to(device)
+            else ValuePredictor(4096, 2048).to(device)
         )
         self.regression_tuners = {}
         self.engine = MRQTrainerEngine(memory, logger, device)
