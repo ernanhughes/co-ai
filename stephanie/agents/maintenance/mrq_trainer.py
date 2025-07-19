@@ -20,6 +20,9 @@ class MRQTrainerAgent(BaseAgent):
         self.model_version = cfg.get("model_version", "v1")
         self.embedding_type = self.memory.embedding.type
         self.dimensions = cfg.get("dimensions", [])
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
         self.epochs = cfg.get("epochs", 10)
         self.lr = cfg.get("lr", 1e-4)
         self.patience = cfg.get("patience", 2)  

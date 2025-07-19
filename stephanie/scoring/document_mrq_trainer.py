@@ -18,10 +18,13 @@ class DocumentMRQTrainer:
         self, memory, logger, encoder=None, value_predictor=None, device="cpu"
     ):
         self.memory = memory
+        self.dim = memory.embedding.dim
+        self.hdim = memory.embedding.hdim
         self.logger = logger
         self.device = device
         self.dim = memory.embedding.dim
         self.hdim = memory.embedding.hdim
+
 
         self.encoder = encoder.to(device) if encoder else TextEncoder().to(device)
         self.value_predictor = (
