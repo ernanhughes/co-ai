@@ -98,7 +98,7 @@ pipeline:
     - name: document_llm_inference
       description: "Infer LLM scores for documents"
       cls: stephanie.agents.inference.llm_inference.LLMInferenceAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_mrq_inference
@@ -110,13 +110,13 @@ pipeline:
     - name: document_svm_inference
       description: "Infer SVM scores for documents"
       cls: stephanie.agents.inference.svm_inference.SVMInferenceAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_ebt_inference
       description: "Infer EBT scores for documents"
       cls: stephanie.agents.inference.ebt_inference.EBTInferenceAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_reward_scorer

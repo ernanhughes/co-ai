@@ -165,11 +165,14 @@ SCORING = {
     "ModelSaved": "💾✅",  # Model saved
     "EncoderSaved": "📄💾",  # Encoder saved
     "MRQInferenceCompleted": "📊✅",  # MRQ inference completed
+    "SVMScoringFinished": "📊🏁",  # SVM scoring finished
+    "SVMScoringStarted": "📊▶️",  # SVM scoring started
+    "SVMScoreComputed": "📊✅",  # SVM score computed
 }
 
 # =====================
 # REASONING & ANALYSIS
-# ===================== All right
+# =====================
 REASONING = {
     "KeywordsExtracted": "🔑",  # Keywords extracted
     "ProximityAnalysisScored": "📌🗺️",  # Proximity analysis
