@@ -69,8 +69,11 @@ class MemoryTool:
         embedding_cfg = self.cfg.get("embeddings", {})
         # Register stores
         mxbai = EmbeddingStore(embedding_cfg, self.conn, self.session, logger)
+        self.register_store(mxbai)
         hnet = HNetEmbeddingStore(embedding_cfg, self.conn, self.session, logger)
+        self.register_store(hnet)
         hf = HuggingFaceEmbeddingStore(embedding_cfg, self.conn, self.session, logger)
+        self.register_store(hf)
 
         # Choose embedding backend based on config
         selected_backend = embedding_cfg.get("backend", "mxbai")
@@ -113,7 +116,6 @@ class MemoryTool:
         self.register_store(BeliefCartridgeStore(self.session, logger))
         self.register_store(GoalDimensionsStore(self.session, logger))
         self.register_store(PipelineStageStore(self.session, logger))
-        self.register_store(HuggingFaceEmbeddingStore(self.cfg, self.conn, self.session, logger))
         
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):

@@ -24,6 +24,7 @@ class MRQTrainerAgent(BaseAgent):
         self.lr = cfg.get("lr", 1e-4)
         self.patience = cfg.get("patience", 2)  
         self.min_delta = cfg.get("min_delta", 0.001)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
         self.logger.log(
@@ -35,7 +36,7 @@ class MRQTrainerAgent(BaseAgent):
                 "model_version": self.model_version,
                 "model_path": self.model_path,
                 "epochs": self.epochs,
-                "lr": self.lr,  
+                "lr": self.lr,
                 "patience": self.patience,
                 "min_delta": self.min_delta,
             },
@@ -75,7 +76,7 @@ class MRQTrainerAgent(BaseAgent):
         trainer = MRQTrainerEngine(
             memory=self.memory,
             logger=self.logger,
-            device="cuda" if torch.cuda.is_available() else "cpu",
+            device=self.device
         )
 
 

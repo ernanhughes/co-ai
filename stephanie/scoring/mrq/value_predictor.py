@@ -1,6 +1,10 @@
 # stephanie/scoring/mrq/value_predictor.py
 from torch import nn
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class ValuePredictor(nn.Module):
     """Predicts a quality score for a document given its contextual embedding."""
@@ -15,5 +19,4 @@ class ValuePredictor(nn.Module):
         assert len(zsa_embedding.shape) == 2, (
             f"Expected 2D input, got {zsa_embedding.shape}"
         )
-        print(f"[ValuePredictor] Input shape: {zsa_embedding.shape}")  # 
         return self.value_net(zsa_embedding)

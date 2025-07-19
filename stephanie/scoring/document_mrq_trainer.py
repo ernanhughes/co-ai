@@ -20,12 +20,14 @@ class DocumentMRQTrainer:
         self.memory = memory
         self.logger = logger
         self.device = device
+        self.dim = memory.embedding.dim
+        self.hdim = memory.embedding.hdim
 
         self.encoder = encoder.to(device) if encoder else TextEncoder().to(device)
         self.value_predictor = (
             value_predictor.to(device)
             if value_predictor
-            else ValuePredictor(4096, 2048).to(device)
+            else ValuePredictor(self.dim, self.hdim).to(device)
         )
         self.regression_tuners = {}
         self.engine = MRQTrainerEngine(memory, logger, device)

@@ -38,23 +38,23 @@ class MRQTrainerEngine:
             a_tensor = torch.tensor(doc_a_emb).unsqueeze(0).to(self.device)
             b_tensor = torch.tensor(doc_b_emb).unsqueeze(0).to(self.device)
 
-            print(f"[{idx}] context_tensor shape: {context_tensor.shape}")
-            print(f"[{idx}] a_tensor shape: {a_tensor.shape}")
-            print(f"[{idx}] b_tensor shape: {b_tensor.shape}")
+            # print(f"[{idx}] context_tensor shape: {context_tensor.shape}")
+            # print(f"[{idx}] a_tensor shape: {a_tensor.shape}")
+            # print(f"[{idx}] b_tensor shape: {b_tensor.shape}")
 
             with torch.no_grad():
                 zsa_a = encoder(context_tensor, a_tensor)
                 zsa_b = encoder(context_tensor, b_tensor)
 
-            print(f"[{idx}] zsa_a shape: {zsa_a.shape}")
-            print(f"[{idx}] zsa_b shape: {zsa_b.shape}")
+            # print(f"[{idx}] zsa_a shape: {zsa_a.shape}")
+            # print(f"[{idx}] zsa_b shape: {zsa_b.shape}")
 
             diff = (
                 zsa_a - zsa_b if item["value_a"] >= item["value_b"] else zsa_b - zsa_a
             )
 
             diff_squeezed = diff.squeeze(0).detach()
-            print(f"[{idx}] diff_squeezed shape: {diff_squeezed.shape}")
+            # print(f"[{idx}] diff_squeezed shape: {diff_squeezed.shape}")
 
             inputs.append(diff_squeezed)
             labels.append(torch.tensor([1.0], device=self.device))

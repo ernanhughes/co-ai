@@ -1,19 +1,19 @@
 {
   "total_documents": 50,
-  "refined_documents": 34,
-  "llm_fallback_rate": 0.0,
+  "refined_documents": 43,
+  "llm_fallback_rate": 0.02,
   "average_uncertainty": {
-    "alignment": 0.6018849968910217,
-    "clarity": 0.7133273816108704,
-    "implementability": 0.6578061711788178,
-    "novelty": 0.5622496366500854,
-    "relevance": 0.5852773916721344
+    "alignment": 0.7563606119155883,
+    "clarity": 0.4733929497003555,
+    "implementability": 0.5219297075271606,
+    "novelty": 0.6537536728382111,
+    "relevance": 0.621871018409729
   },
   "dimension_refinement_rate": {
-    "alignment": 0.1,
-    "clarity": 0.62,
-    "implementability": 0.26,
-    "novelty": 0.02,
-    "relevance": 0.04
+    "alignment": 0.8,
+    "clarity": 0.0,
+    "implementability": 0.0,
+    "novelty": 0.3,
+    "relevance": 0.1
   }
 }

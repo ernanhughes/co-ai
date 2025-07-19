@@ -329,7 +329,7 @@ class ScoringManager(BaseAgent):
         cfg: dict,
         memory,
         logger,
-        source="ScoreEvaluator",
+        source=None,
         model_name=None,
     ):
         goal = context.get("goal")
