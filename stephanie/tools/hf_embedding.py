@@ -1,9 +1,10 @@
 # stephanie/embeddings/huggingface_embedder.py
 
-from sentence_transformers import SentenceTransformer
 import time
+
 import numpy as np
 import torch
+from sentence_transformers import SentenceTransformer
 
 
 class HuggingFaceEmbedder:

@@ -22,7 +22,7 @@ class KnowledgeDBLoaderAgent(BaseAgent):
             self.logger.log("KnowledgeDBLoadSkipped", {"reason": "Missing goal"})
             return context
 
-        docs = self.memory.embedding.search_related_documents(goal_text, 50)
+        docs = self.memory.ollama_embeddings.search_related_documents(goal_text, 100)
 
         context[self.output_key] = docs
         context["retrieved_ids"] = [d["id"] for d in docs]

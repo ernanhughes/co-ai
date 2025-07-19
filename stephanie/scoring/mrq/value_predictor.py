@@ -1,7 +1,7 @@
 # stephanie/scoring/mrq/value_predictor.py
-from torch import nn
-
 import logging
+
+from torch import nn
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

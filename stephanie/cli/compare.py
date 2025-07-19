@@ -1,10 +1,13 @@
 # stephanie/cli/compare.py
-import click
 import json
-from stephanie.reports.comparison import ComparisonReporter
-from stephanie.memory.memory_tool import MemoryTool
-from stephanie.logs.json_logger import JSONLogger
+
+import click
 from omegaconf import OmegaConf
+
+from stephanie.logs.json_logger import JSONLogger
+from stephanie.memory.memory_tool import MemoryTool
+from stephanie.reports.comparison import ComparisonReporter
+
 
 @click.command()
 @click.argument("run_a_id", type=str)

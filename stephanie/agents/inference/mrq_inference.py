@@ -19,6 +19,8 @@ from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_utils import (discover_saved_dimensions,
                                          get_model_path)
 
+from stephanie.scoring.scorable_factory import ScorableFactory
+
 
 class MRQInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -65,11 +67,7 @@ class MRQInferenceAgent(BaseAgent):
             doc_id = doc.get("id")
             self.logger.log("MRQScoringStarted", {"document_id": doc_id})
 
-            scorable = Scorable(
-                id=doc_id,
-                text=doc.get("text", ""),
-                target_type=TargetType.DOCUMENT,
-            )
+            scorable = ScorableFactory.from_dict(doc, TargetType.DOCUMENT)
 
             dimension_scores = {}
             score_results = []  # For storing ScoreResult objects per dimension

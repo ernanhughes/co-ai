@@ -1,8 +1,10 @@
+from typing import Dict, List
+
 from sqlalchemy.orm import Session
-from stephanie.models.pipeline_run import PipelineRunORM
+
 from stephanie.models.evaluation import EvaluationORM
+from stephanie.models.pipeline_run import PipelineRunORM
 from stephanie.models.score import ScoreORM
-from typing import List, Dict
 
 
 class ComparisonReporter:

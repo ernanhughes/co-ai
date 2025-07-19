@@ -4,6 +4,7 @@ import torch.nn as nn
 
 from stephanie.tools.embedding_tool import MXBAIEmbedder
 
+
 class ByteLevelTokenizer:
     def tokenize(self, text: str) -> list[int]:
         return list(text.encode("utf-8"))  # Raw byte tokenization

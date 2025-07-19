@@ -9,7 +9,7 @@ from stephanie.memcubes.memcube_factory import MemCubeFactory
 from stephanie.models.score import ScoreORM
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.scorable import Scorable
-from stephanie.scoring.scorable_factory import TargetType
+from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
@@ -98,10 +98,7 @@ class EBTInferenceAgent(BaseAgent):
         for doc in context.get(self.input_key, []):
             doc_id = doc.get("id")
             self.logger.log("EBTScoringStarted", {"document_id": doc_id})
-
-            scorable = Scorable(
-                id=doc_id, text=doc.get("text", ""), target_type=TargetType.DOCUMENT
-            )
+            scorable = ScorableFactory.from_dict(doc, TargetType.DOCUMENT)
             memcube = MemCubeFactory.from_scorable(scorable, version="auto")
             memcube.extra_data["pipeline"] = "ebt_inference"
 

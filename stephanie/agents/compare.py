@@ -1,6 +1,8 @@
+import json
+
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.reports.comparison import ComparisonReporter
-import json
+
 
 class CompareAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
