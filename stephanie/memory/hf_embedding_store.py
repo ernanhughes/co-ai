@@ -8,15 +8,16 @@ from stephanie.utils.lru_cache import SimpleLRUCache
 
 
 class HuggingFaceEmbeddingStore(BaseStore):
-    def __init__(self, cfg, conn, db, logger=None, cache_size=10000):
+    def __init__(self, cfg, conn, db, logger=None):
         super().__init__(db, logger)
         self.cfg = cfg
         self.conn = conn
         self.name = "hf_embeddings"
         self.type = "huggingface"
-        self.dim = cfg.get("dim", 2560)  # Default to 2560 if not specified
+        self.dim = cfg.get("dim", 1024)  # Default to 1024 if not specified
         self.hdim = self.dim // 2
-        self._cache = SimpleLRUCache(max_size=cache_size)
+        self.cache_size = cfg.get("cache_size", 10000)  # Default cache size
+        self._cache = SimpleLRUCache(max_size=self.cache_size)
 
     def __repr__(self):
         return f"<{self.name} connected={self.db is not None} cfg={self.cfg}>"

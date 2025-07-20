@@ -1146,7 +1146,7 @@ CREATE TABLE protocols (
 );
 
 CREATE TABLE IF NOT EXISTS embeddings (
-    id SERIAL PRIMARY KEY,
+id SERIAL PRIMARY KEY,
     text TEXT NOT NULL,
     embedding VECTOR(1024),
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -1183,23 +1183,5 @@ CREATE INDEX IF NOT EXISTS idx_hnet_embedding_vector
 ON hnet_embeddings
 USING ivfflat (embedding vector_cosine_ops);
 ALTER TABLE hnet_embeddings ADD CONSTRAINT unique_text_hash_hnet UNIQUE (text_hash);
-
-
-
-CREATE TABLE IF NOT EXISTS hnet_embeddings (
-    id SERIAL PRIMARY KEY,
-    text TEXT,
-    embedding VECTOR(2560),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    text_hash TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_hnet_embedding_vector
-ON hnet_embeddings
-USING ivfflat (embedding vector_cosine_ops);
-ALTER TABLE hnet_embeddings ADD CONSTRAINT unique_text_hash_hnet UNIQUE (text_hash);
-
-
-
 
 

@@ -12,14 +12,36 @@ class KnowledgeDBLoaderAgent(BaseAgent):
         self.search_method = cfg.get(
             "search_method", "document"
         )  # or "section"
+        self.doc_ids_scoring = cfg.get("doc_ids_scoring", False)
+        self.doc_ids = cfg.get("doc_ids", [])   
 
     async def run(self, context: dict) -> dict:
         goal = context.get(GOAL)
         goal_text = goal.get("goal_text", "")
 
-        docs = self.memory.ollama_embeddings.search_related_documents(
-            goal_text, self.top_k
-        )
+
+        if self.doc_ids_scoring:
+            if not self.doc_ids:
+                self.logger.log("NoDocumentIdsProvided", "No document ids to score.")
+                return context
+
+            docs = self.memory.document.get_by_ids(self.doc_ids)
+            if not docs:
+                self.logger.log("NoDocumentsFound", {"ids": self.doc_ids})
+                return context
+            self.logger.log(
+                "DocumentsLoadedByIds",
+                {"count": len(docs), "ids": self.doc_ids},
+            )
+            docs = [d.to_dict() for d in docs]
+        else: 
+            docs = self.memory.ollama_embeddings.search_related_documents(
+                goal_text, self.top_k
+            )
+            self.logger.log(
+                "DocumentsSearched",
+                {"count": len(docs), "goal_text": goal_text, "top_k": self.top_k},
+            )
 
         context[self.output_key] = docs
         context["retrieved_ids"] = [d["id"] for d in docs]

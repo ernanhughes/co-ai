@@ -43,8 +43,7 @@ class ComparisonReporter:
 
         # Compare scores by stage
         stage_scores = []
-        for stage in run_a["pipeline"]:
-            stage_name = stage["name"]
+        for stage_name in run_a["pipeline"]:
             score_a = scores_a.get(stage_name, 0)
             score_b = scores_b.get(stage_name, 0)
             if score_a or score_b:
@@ -106,6 +105,8 @@ class ComparisonReporter:
             return f"{run_b['embedding_type']} has higher dimension ({run_b['embedding_dim']})"
 
     def _compare_convergence(self, run_a: dict, run_b: dict) -> str:
+        if run_a.get("converged") is None or run_b.get("converged") is None:
+            return "unknown convergence status"    
         if run_a["converged"] and not run_b["converged"]:
             return "run_a converged; run_b did not"
         elif not run_a["converged"] and run_b["converged"]:

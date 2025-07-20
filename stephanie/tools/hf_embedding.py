@@ -2,7 +2,6 @@
 
 import time
 
-import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 
@@ -12,13 +11,13 @@ class HuggingFaceEmbedder:
 
     def __init__(self, cfg: dict):
         self.cfg = cfg
-        self.model_name = cfg.get("hf_model_name", "Qwen/Qwen3-Embedding-4B")
+        self.model_name = cfg.get("hf_model_name", "BAAI/bge-large-en")
 
         if HuggingFaceEmbedder._model_instance is None:
             HuggingFaceEmbedder._model_instance = SentenceTransformer(self.model_name)
 
         self.model = HuggingFaceEmbedder._model_instance
-        self.dim = self.model.get_sentence_embedding_dimension()
+        self.dim = 1024
         self.hdim = self.dim / 2
 
     def embed(self, text: str) -> list[float]:
@@ -62,7 +61,7 @@ class HuggingFaceEmbedder:
 _model_instance = None
 
 
-def load_model(model_name="Qwen/Qwen3-Embedding-4B"):
+def load_model(model_name="BAAI/bge-large-en"):
     global _model_instance
     if _model_instance is None:
         _model_instance = SentenceTransformer(model_name)
@@ -74,7 +73,7 @@ def get_embedding(text: str, cfg: dict) -> list[float]:
     """
     Embed a single piece of text using HuggingFace model.
     """
-    model_name = cfg.get("hf_model_name", "Qwen/Qwen3-Embedding-4B")
+    model_name = cfg.get("hf_model_name", "BAAI/bge-large-en")
     model = load_model(model_name)
 
     if not text.strip():

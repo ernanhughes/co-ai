@@ -27,6 +27,9 @@ from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
 from stephanie.utils.timing import time_function
 
+from tabulate import tabulate
+import time
+
 
 class PipelineStage:
     def __init__(self, name: str, config: dict, stage_dict: dict):
@@ -216,7 +219,7 @@ class Supervisor:
             # Post-judgment hook
             if self.cfg.get("post_judgment", {}).get("enabled", False):
                 context = await self._maybe_run_pipeline_judge(context)
-
+        self._print_pipeline_summary(context)
         return context
 
     async def _maybe_run_pipeline_judge(self, context: dict) -> dict:
@@ -254,14 +257,20 @@ class Supervisor:
         return result
     
     async def _run_single_stage(self, stage: PipelineStage, context: dict) -> dict:
+        stage_details = {
+            STAGE: stage.name,
+        }
+        start_time = time.time()
+        context.setdefault("STAGE_DETAILS", []).append(stage_details)
         if not stage.enabled:
             self.logger.log("PipelineStageSkipped", {STAGE: stage.name, "reason": "disabled_in_config"})
+            stage_details["status"] = "⏭️ skipped"
             return context
 
         try:
             cls = hydra.utils.get_class(stage.cls)
             stage_dict = OmegaConf.to_container(stage.stage_dict, resolve=True)
-
+            stage_details["stage_dict"] = stage.stage_dict.name
             self.rule_applier.apply_to_agent(stage_dict, context)
 
             # Try loading saved context
@@ -296,10 +305,14 @@ class Supervisor:
             self._save_pipeline_stage(stage, context, stage_dict)
             self.logger.log("PipelineStageEnd", {STAGE: stage.name})
 
+            stage_details["status"] = "✅ completed"
+            stage_details["duration"] = time.time() - start_time
             return context
 
         except Exception as e:
             self.logger.log("PipelineStageFailed", {"stage": stage.name, "error": str(e)})
+            stage_details["duration"] = time.time() - start_time
+            stage_details["status"] = "💀 failed"
             return context
         
     def _save_pipeline_stage(self, stage: PipelineStage, context: dict, stage_dict: dict):
@@ -600,5 +613,18 @@ class Supervisor:
                 })
                 # Trigger retraining
                 self._trigger_ebt_retraining(r.dimension)
+
+    def _print_pipeline_summary(self, context:dict):
+        print("\n🧠 Pipeline Execution Summary:\n")
+        print(f"\n📊 Pipeline: {context.get(PIPELINE)}")
+        print(f"🆔 Run ID: {context.get(RUN_ID)}")
+        summary = context.get("STAGE_DETAILS", {})
+        table = tabulate(
+            summary,
+            headers="keys",
+            tablefmt="fancy_grid"
+        )
+        print(table)
+        self.logger.log("PipelineSummaryPrinted", {"summary": summary})    
 
 __all__ = ["Supervisor", "container"]

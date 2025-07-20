@@ -14,7 +14,7 @@ class CompareAgent(BaseAgent):
         reporter = ComparisonReporter(session=self.memory.session)
 
 
-        report = reporter.compare_runs(3648, 3647)
+        report = reporter.compare_runs(3670, 3669)
 
         print(f"🎯 Goal: {report['goal']}")
         print(f"Preferred Run: {report['delta']['preferred']}")

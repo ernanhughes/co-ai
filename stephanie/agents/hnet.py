@@ -1,7 +1,7 @@
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
-
+from stephanie.scoring.scorable_factory import TargetType
+from stephanie.scoring.scorable_factory import ScorableFactory
 
 class HNetAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -18,7 +18,6 @@ class HNetAgent(BaseAgent):
             print(f"Embedding for hnet document {doc_id} created: {embedding[:10]}...")
             embedding = self.memory.hf_embeddings.get_or_create(scorable.text)
             print(f"Embedding for hf document {doc_id} created: {embedding[:10]}...")
-
 
             results.append(scorable.to_dict())
 

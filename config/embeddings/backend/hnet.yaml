@@ -1,6 +1,10 @@
+# config/embeddings/backend/hnet.yaml
 _target_: stephanie.memory.HNetEmbeddingStore
 name: "hnet_embeddings"
 type: "hnet"
 table: "hnet_embeddings"
-hf_model_name: "Qwen/Qwen3-Embedding-4B"
-dimension: 2560
+underlying_model_name: "ollama/mxbai-embed-large"
+dim: 1024
+hdim: 512
+cache_size: 10000
+

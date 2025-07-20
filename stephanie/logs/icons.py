@@ -130,7 +130,7 @@ PIPELINE_FLOW = {
     "MRQPipelineSuggested": "🧠💡",  # MRQ pipeline suggested
     "PipelineStageFailed": "🖇️⚠️❌💢",  # Pipeline stage failed
     "PipelineScoreSummary": "🖇️📊🧾",  # Pipeline score summary
-    "PipelineError": "🖇️💀",  # Pipeline error
+    "PipelineError": "🖇️ OK so I have to do a force rescue and really annoying",  # Pipeline error
 }
 
 # =====================
