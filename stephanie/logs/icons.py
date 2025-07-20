@@ -114,6 +114,7 @@ KNOWLEDGE_OPS = {
 # PIPELINE CONTROL
 # =================
 PIPELINE_FLOW = {
+    "PipelineSummaryPrinted": "🖇️📄",  # Pipeline summary printed
     "PipelineStageInserted": "🖇️➕",  # Stage inserted
     "PipelineStart": "🖇️▶️",  # Pipeline started
     "PipelineStageStart": "🖇️⏩",  # Stage started
@@ -130,7 +131,7 @@ PIPELINE_FLOW = {
     "MRQPipelineSuggested": "🧠💡",  # MRQ pipeline suggested
     "PipelineStageFailed": "🖇️⚠️❌💢",  # Pipeline stage failed
     "PipelineScoreSummary": "🖇️📊🧾",  # Pipeline score summary
-    "PipelineError": "🖇️ OK so I have to do a force rescue and really annoying",  # Pipeline error
+    "PipelineError": "🖇️❌",  # Pipeline error
 }
 
 # =====================
