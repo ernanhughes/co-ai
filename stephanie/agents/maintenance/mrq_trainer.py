@@ -1,6 +1,5 @@
 # stephanie/agents/maintenance/mrq_trainer.py
 
-import os
 
 import torch
 
@@ -8,14 +7,15 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 from stephanie.utils.file_utils import save_json
-from stephanie.utils.model_utils import get_model_path
+from stephanie.utils.model_locater import ModelLocator
 
 
 class MRQTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_path = cfg.get("model_path", "models")
-        self.model_type = cfg.get("model_type", "mrq")
+        self.use_sicql = cfg.get("use_sicql_style", False)
+        self.model_type = "sicql" if self.use_sicql else "mrq"
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
         self.embedding_type = self.memory.embedding.type
@@ -89,21 +89,22 @@ class MRQTrainerAgent(BaseAgent):
             contrast_pairs, cfg=self.cfg
         )
 
-        for dim in trained_models:
-            model_path = get_model_path(
-                self.model_path,
-                self.model_type,
-                self.target_type,
-                dim,
-                self.model_version,
-                embedding_type=self.embedding_type
-            )
-            os.makedirs(model_path, exist_ok=True)
 
-            predictor_path = os.path.join(model_path, f"{dim}.pt")
-            encoder_path = os.path.join(model_path, f"{dim}_encoder.pt")
-            tuner_path = os.path.join(model_path, f"{dim}_model.tuner.json")
-            meta_path = os.path.join(model_path, f"{dim}.meta.json")
+        for dim in trained_models:
+            locater = ModelLocator(
+                root_dir=self.model_path,
+                embedding_type=self.embedding_type,
+                model_type=self.model_type,
+                target_type=self.target_type,
+                dimension=dim,
+                version=self.model_version,
+            )
+            locater.ensure_dirs()
+
+            predictor_path = locater.meta_file()
+            encoder_path = locater.encoder_file()
+            tuner_path = locater.tuner_file()
+            meta_path = locater.meta_file()
 
             # Save model weights
             torch.save(trained_models[dim], predictor_path)
@@ -135,9 +136,21 @@ class MRQTrainerAgent(BaseAgent):
                 {
                     "min_score": float(min(flat_values)),
                     "max_score": float(max(flat_values)),
+                    "sicql": self.use_sicql,
                 },
                 meta_path,
             )
+
+            if self.use_sicql:
+                if hasattr(trained_models[dim], "q_head"):
+                    torch.save(trained_models[dim].q_head.state_dict(), locater.get_q_head_path())
+                    self.logger.log("SICQLQHeadSaved", {"dimension": dim, "path": locater.get_q_head_path()})
+                if hasattr(trained_models[dim], "pi_head"):
+                    torch.save(trained_models[dim].pi_head.state_dict(), locater.get_pi_head_path())
+                    self.logger.log("SICQLPiHeadSaved", {"dimension": dim, "path": locater.get_pi_head_path()})
+                if hasattr(trained_models[dim], "v_head"):
+                    torch.save(trained_models[dim].v_head.state_dict(), locater.get_v_head_path())
+                    self.logger.log("SICQLVHeadSaved", {"dimension": dim, "path": locater.get_v_head_path()})
 
             self.logger.log(
                 "DocumentModelSaved",

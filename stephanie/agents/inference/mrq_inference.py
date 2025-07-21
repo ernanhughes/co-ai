@@ -18,6 +18,7 @@ from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_utils import (discover_saved_dimensions,
                                          get_model_path)
+from stephanie.utils.model_locater import ModelLocator
 
 from stephanie.scoring.scorable_factory import ScorableFactory
 
@@ -40,6 +41,7 @@ class MRQInferenceAgent(BaseAgent):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
         )
+        self.use_sicql = cfg.get("use_sicql_style", False)
 
         if not self.dimensions:
             self.dimensions = discover_saved_dimensions(
@@ -73,7 +75,17 @@ class MRQInferenceAgent(BaseAgent):
             score_results = []  # For storing ScoreResult objects per dimension
 
             for dim, model in self.models.items():
-                q_value = model.predict(goal_text, scorable.text)
+
+                if self.use_sicql:
+                    prompt_emb = torch.tensor(
+                        self.memory.embedding.get_or_create(goal_text), device=self.device
+                    ).unsqueeze(0)
+                    output_emb = torch.tensor(
+                        self.memory.embedding.get_or_create(scorable.text), device=self.device
+                    ).unsqueeze(0)
+                    q_value = model(prompt_emb, output_emb)["q_value"].item()
+                else:
+                    q_value = model.predict(goal_text, scorable.text)
 
                 if dim in self.tuners:
                     scaled_score = self.tuners[dim].transform(q_value)
@@ -172,28 +184,28 @@ class MRQInferenceAgent(BaseAgent):
                 version=self.model_version,
                 embedding_type=self.embedding_type
             )
-            encoder_path = f"{model_path}/{dim}_encoder.pt"
-            predictor_path = f"{model_path}/{dim}.pt"
-            meta_path = f"{model_path}/{dim}.meta.json"
-            tuner_path = f"{model_path}/{dim}_model.tuner.json"
 
-            encoder = TextEncoder(self.dim, self.hdim)
-            predictor = HypothesisValuePredictor(self.dim, self.hdim)
-            model = MRQModel(
-                encoder, predictor, self.memory.embedding, device=self.device
-            )
-            model.load_weights(encoder_path, predictor_path)
-            self.models[dim] = model
-
-            if os.path.exists(meta_path):
-                self.model_meta[dim] = load_json(meta_path)
-            else:
+            if self.use_sicql:
+                from stephanie.models.incontext_q_model import InContextQModel
+                model = InContextQModel.load_from_path(model_path, dim, self.device)
+                self.models[dim] = model
                 self.model_meta[dim] = {"min": 0, "max": 100}
+            else:
+                encoder = TextEncoder(self.dim, self.hdim)
+                predictor = HypothesisValuePredictor(self.dim, self.hdim)
+                model = MRQModel(encoder, predictor, self.memory.embedding, device=self.device)
+                encoder_path = f"{model_path}/{dim}_encoder.pt"
+                predictor_path = f"{model_path}/{dim}.pt"
+                model.load_weights(encoder_path, predictor_path)
+                self.models[dim] = model
 
-            if os.path.exists(tuner_path):
-                tuner = RegressionTuner(dimension=dim)
-                tuner.load(tuner_path)
-                self.tuners[dim] = tuner
+                meta_path = f"{model_path}/{dim}.meta.json"
+                tuner_path = f"{model_path}/{dim}_model.tuner.json"
+                self.model_meta[dim] = load_json(meta_path) if os.path.exists(meta_path) else {"min": 0, "max": 100}
+                if os.path.exists(tuner_path):
+                    tuner = RegressionTuner(dimension=dim)
+                    tuner.load(tuner_path)
+                    self.tuners[dim] = tuner
 
         self.logger.log("AllMRQModelsLoaded", {"dimensions": dimensions})
 
@@ -206,7 +218,16 @@ class MRQInferenceAgent(BaseAgent):
         dimension_scores = {}
 
         for dim, model in self.models.items():
-            q_value = model.predict(goal_text, scorable.text)
+            if self.use_sicql:
+                prompt_emb = torch.tensor(
+                    self.memory.embedding.get_or_create(goal_text), device=self.device
+                ).unsqueeze(0)
+                output_emb = torch.tensor(
+                    self.memory.embedding.get_or_create(scorable.text), device=self.device
+                ).unsqueeze(0)
+                q_value = model(prompt_emb, output_emb)["q_value"].item()
+            else:
+                q_value = model.predict(goal_text, scorable.text)
 
             if dim in self.tuners:
                 scaled_score = self.tuners[dim].transform(q_value)
