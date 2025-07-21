@@ -13,7 +13,7 @@ from stephanie.agents.mixins.ebt_mixin import EBTMixin
 from stephanie.scoring.ebt.srft_refinement_dataset import SRFTRefinementDataset
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.utils.file_utils import save_json
-from stephanie.utils.model_locater import ModelLocator
+from stephanie.utils.model_locator import ModelLocator
 
 
 class SRFTRefinementTrainer(BaseAgent, EBTMixin):

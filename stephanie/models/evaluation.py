@@ -15,6 +15,7 @@ from stephanie.models.pipeline_run import PipelineRunORM
 from stephanie.models.score import ScoreORM
 from stephanie.models.symbolic_rule import SymbolicRuleORM
 from stephanie.scoring.scorable_factory import TargetType
+from stephanie.models.evaluation_attribute import EvaluationAttributeORM
 
 
 class EvaluationORM(Base):
@@ -71,6 +72,12 @@ class EvaluationORM(Base):
         back_populates="evaluations"
     )
 
+    attributes: Mapped[List[EvaluationAttributeORM]] = relationship(
+        "EvaluationAttributeORM",
+        back_populates="evaluation",
+        cascade="all, delete-orphan"
+    )
+
     def to_dict(self, include_relationships: bool = False) -> dict:
         data = {
             "id": self.id,
@@ -87,6 +94,11 @@ class EvaluationORM(Base):
             "scores": self.scores,
             "extra_data": self.extra_data,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "target_type": self.target_type.value,
+            "target_id": self.target_id,
+            "embedding_type": self.embedding_type,
+            "belief_cartridge_id": self.belief_cartridge_id,
+            "attributes": [attr.to_dict() for attr in self.attributes] if self.attributes else []    
         }
 
         if include_relationships:

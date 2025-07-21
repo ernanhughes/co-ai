@@ -7,7 +7,7 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 from stephanie.utils.file_utils import save_json
-from stephanie.utils.model_locater import ModelLocator
+from stephanie.utils.model_locator import ModelLocator
 
 
 class MRQTrainerAgent(BaseAgent):

@@ -43,7 +43,7 @@ from stephanie.memory.search_result_store import SearchResultStore
 from stephanie.memory.sharpening_store import SharpeningStore
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
-
+from stephanie.memory.evaluation_attribute_store import EvaluationAttributeStore
 
 class MemoryTool:
     def __init__(self, cfg: dict, logger: Optional[JSONLogger] = None):
@@ -118,6 +118,7 @@ class MemoryTool:
         self.register_store(GoalDimensionsStore(self.session, logger))
         self.register_store(PipelineStageStore(self.session, logger))
         self.register_store(ScoringStore(self.session, logger))
+        self.register_store(EvaluationAttributeStore(self.session, logger))
 
         # Register extra stores if defined in config
         if cfg.get("extra_stores"):
