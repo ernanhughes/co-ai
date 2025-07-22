@@ -1,281 +1,412 @@
 # stephanie/scoring/mrq/trainer_engine.py
-
-from collections import defaultdict
-
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-
-from stephanie.scoring.mrq.encoder import TextEncoder
+import torch.optim as optim
+from torch.nn import functional as F
 from stephanie.scoring.mrq.value_predictor import ValuePredictor
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
+from collections import defaultdict
+import os
+import numpy as np
+from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.models.incontext_q_model import InContextQModel
+from stephanie.utils.file_utils import save_json
+from stephanie.utils.metrics import EpistemicMetrics
 
 
 class MRQTrainerEngine:
     def __init__(self, memory, logger, device="cpu"):
         self.memory = memory
-        self.dim = self.memory.embedding.dim
-        self.hdim = self.memory.embedding.hdim
         self.logger = logger
-        self.device = device
+        self.device = device if torch.cuda.is_available() else "cpu"
+        self.dim = memory.embedding.dim
+        self.hdim = memory.embedding.hdim
+
+        # Loss weights (configurable)
+        self.q_weight = 1.0
+        self.v_weight = 0.5
+        self.pi_weight = 0.2
+        self.expectile_weight = 0.8  # For V-loss
+        self.entropy_weight = 0.1  # For policy regularization
+
+        # Training parameters
+        self.lr = 1e-4
+        self.lr_v = 5e-5
+        self.lr_pi = 3e-5
+        self.epochs = 50
+        self.batch_size = 32
+        self.patience = 3
+        self.min_delta = 0.001
+        self.uncertainty_threshold = 0.3
+        self.gamma = 0.95  # Discount factor
 
     def build_encoder(self):
+        """Build text encoder for context-document fusion"""
         return TextEncoder(dim=self.dim, hdim=self.hdim).to(self.device)
 
     def build_predictor(self):
+        """Build value predictor for MRQ compatibility"""
         return ValuePredictor(zsa_dim=self.dim, hdim=self.hdim).to(self.device)
 
-    def prepare_training_data(self, encoder, samples):
-        inputs, labels = [], []
+    def build_sicql_model(self, action_dim=1):
+        """Build SICQL model with Q/V/π heads"""
+        return InContextQModel(
+            dim=self.dim,
+            hdim=self.hdim,
+            action_dim=action_dim,
+            device=self.device,
+        ).to(self.device)
+
+    def _create_dataloader(self, encoder, samples):
+        """Convert samples to PyTorch DataLoader"""
+        context_embs, doc_embs, scores = [], [], []
 
         for idx, item in enumerate(samples):
+            # Get context and document embeddings
             context = item.get("title", "")
             context_emb = self.memory.embedding.get_or_create(context)
-            doc_a_emb = self.memory.embedding.get_or_create(item["output_a"])
-            doc_b_emb = self.memory.embedding.get_or_create(item["output_b"])
 
-            context_tensor = torch.tensor(context_emb).unsqueeze(0).to(self.device)
-            a_tensor = torch.tensor(doc_a_emb).unsqueeze(0).to(self.device)
-            b_tensor = torch.tensor(doc_b_emb).unsqueeze(0).to(self.device)
+            # Process both A and B samples
+            for side in ["a", "b"]:
+                doc_text = item[f"output_{side}"]
+                doc_emb = self.memory.embedding.get_or_create(doc_text)
 
-            # print(f"[{idx}] context_tensor shape: {context_tensor.shape}")
-            # print(f"[{idx}] a_tensor shape: {a_tensor.shape}")
-            # print(f"[{idx}] b_tensor shape: {b_tensor.shape}")
+                # Store data
+                context_embs.append(torch.tensor(context_emb))
+                doc_embs.append(torch.tensor(doc_emb))
+                scores.append(float(item[f"value_{side}"]))
 
-            with torch.no_grad():
-                zsa_a = encoder(context_tensor, a_tensor)
-                zsa_b = encoder(context_tensor, b_tensor)
+        # Convert to tensors
+        context_tensors = torch.stack(context_embs).to(self.device)
+        doc_tensors = torch.stack(doc_embs).to(self.device)
+        score_tensors = torch.tensor(scores).float().to(self.device)
 
-            # print(f"[{idx}] zsa_a shape: {zsa_a.shape}")
-            # print(f"[{idx}] zsa_b shape: {zsa_b.shape}")
+        # Create dataset and dataloader
+        dataset = TensorDataset(context_tensors, doc_tensors, score_tensors)
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
-            diff = (
-                zsa_a - zsa_b if item["value_a"] >= item["value_b"] else zsa_b - zsa_a
+    def _compute_losses(self, outputs, scores, next_values=None):
+        """Compute all SICQL losses"""
+        losses = {}
+
+        # Q-loss: MSE vs LLM scores
+        if next_values is not None:
+            # Use Bellman target with gamma
+            q_target = scores + self.gamma * next_values
+        else:
+            q_target = scores
+
+        losses["q"] = nn.MSELoss()(outputs["q_value"].squeeze(), q_target)
+
+        # V-loss: Expectile regression between Q and V
+        with torch.no_grad():
+            advantage = (
+                outputs["q_value"].detach() - outputs["state_value"].detach()
             )
+            expectile_mask = (advantage > 0).float()
 
-            diff_squeezed = diff.squeeze(0).detach()
-            # print(f"[{idx}] diff_squeezed shape: {diff_squeezed.shape}")
+        losses["v"] = torch.mean(
+            self.expectile_weight
+            * torch.abs(outputs["state_value"].squeeze() - q_target.detach())
+            * expectile_mask
+        )
 
-            inputs.append(diff_squeezed)
-            labels.append(torch.tensor([1.0], device=self.device))
+        # Policy loss: Advantage-weighted regression (AWR)
+        action_probs = F.softmax(outputs["action_probabilities"], dim=-1)
+        advantage = (outputs["q_value"] - outputs["state_value"]).detach()
+        losses["pi"] = -torch.mean(
+            torch.log(action_probs) * advantage.unsqueeze(-1)
+        )
 
-        stacked_inputs = torch.stack(inputs)
-        stacked_labels = torch.stack(labels)
-        print(f"Final input batch shape: {stacked_inputs.shape}")
-        print(f"Final label batch shape: {stacked_labels.shape}")
+        # Entropy regularization
+        dist = torch.distributions.Categorical(
+            logits=outputs["action_probabilities"]
+        )
+        losses["entropy"] = -self.entropy_weight * dist.entropy().mean()
 
-        dataset = TensorDataset(stacked_inputs, stacked_labels)
-        return DataLoader(dataset, batch_size=16, shuffle=True)
+        # Total loss
+        losses["total"] = (
+            self.q_weight * losses["q"]
+            + self.v_weight * losses["v"]
+            + self.pi_weight * losses["pi"]
+            + losses["entropy"]
+        )
 
-    def train_predictor(self, predictor, dataloader, cfg):
-        epochs = cfg.get("epochs", 20)
-        lr = cfg.get("lr", 1e-4)
-        patience = cfg.get("patience", 3)
-        min_delta = cfg.get("min_delta", 0.0001)
+        return losses
 
-        optimizer = torch.optim.Adam(predictor.parameters(), lr=lr)
-        criterion = nn.BCEWithLogitsLoss()
-        predictor.train()
-
-        best_loss, epochs_no_improve = float("inf"), 0
-
-        for epoch in range(epochs):
-            total_loss = 0.0
-            for x_batch, y_batch in dataloader:
-                preds = predictor(x_batch)
-                loss = criterion(preds, y_batch)
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-
-            avg_loss = total_loss / len(dataloader)
-            self.logger.log(
-                "MRQTrainerEpoch", {"epoch": epoch + 1, "avg_loss": avg_loss}
-            )
-
-            if best_loss - avg_loss > min_delta:
-                best_loss = avg_loss
-                epochs_no_improve = 0
-            else:
-                epochs_no_improve += 1
-                if epochs_no_improve >= patience:
-                    break
-
-    def train_sicql(self, model: InContextQModel, contrast_pairs: list, cfg: dict):
-        """
-        Trains an InContextQModel using SICQL-style multi-head loss:
-        - Q-head: supervised MSE against LLM scores
-        - V-head: expectile regression between Q and V
-        - π-head: advantage-weighted regression from Q - V
-
-        Args:
-            model (InContextQModel): the SICQL-style model with Q/V/π heads
-            contrast_pairs (list): contrastive examples with LLM scores
-            cfg (dict): training config (lr, tau, epochs, etc.)
-        """
+    def _train_epoch(self, model, dataloader, optimizers):
+        """Train for one epoch"""
         model.train()
-        lr = cfg.get("lr", 1e-4)
-        tau = cfg.get("tau", 0.7)
+        epoch_losses = defaultdict(list)
 
-        optimizer = torch.optim.Adam(
-            list(model.q_head.parameters()) +
-            list(model.v_head.parameters()) +
-            list(model.pi_head.parameters()),
-            lr=lr,
-        )
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=2
-        )
-        mse = torch.nn.MSELoss()
+        for context_emb, doc_emb, scores in tqdm(dataloader, desc="Training"):
+            # Forward pass
+            outputs = model(context_emb, doc_emb)
 
-        epochs = cfg.get("epochs", 10)
-        patience = cfg.get("patience", 2)
-        min_delta = cfg.get("min_delta", 0.001)
+            # Compute losses
+            losses = self._compute_losses(outputs, scores)
+
+            # Backward pass
+            optimizers["q"].zero_grad()
+            optimizers["v"].zero_grad()
+            optimizers["pi"].zero_grad()
+
+            losses["total"].backward()
+
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+
+            # Update weights
+            optimizers["q"].step()
+            optimizers["v"].step()
+            optimizers["pi"].step()
+
+            # Record losses
+            for k, v in losses.items():
+                epoch_losses[k].append(v.item())
+
+        return {k: np.mean(v) for k, v in epoch_losses.items()}
+
+    def _validate(self, model, val_loader):
+        """Validation phase"""
+        model.eval()
+        val_losses = defaultdict(list)
+
+        with torch.no_grad():
+            for context_emb, doc_emb, scores in val_loader:
+                outputs = model(context_emb, doc_emb)
+                losses = self._compute_losses(outputs, scores)
+
+                for k, v in losses.items():
+                    val_losses[k].append(v.item())
+
+        return {f"val_{k}": np.mean(v) for k, v in val_losses.items()}
+
+    def _setup_optimizers(self, model):
+        """Initialize optimizers for all heads"""
+        return {
+            "q": optim.Adam(model.q_head.parameters(), lr=self.lr),
+            "v": optim.Adam(model.v_head.parameters(), lr=self.lr_v),
+            "pi": optim.Adam(model.pi_head.parameters(), lr=self.lr_pi),
+        }
+
+    def _setup_schedulers(self, optimizers):
+        """Initialize learning rate schedulers"""
+        return {
+            "q": ReduceLROnPlateau(
+                optimizers["q"], mode="min", factor=0.5, patience=2
+            ),
+            "v": ReduceLROnPlateau(
+                optimizers["v"], mode="min", factor=0.5, patience=2
+            ),
+            "pi": ReduceLROnPlateau(
+                optimizers["pi"], mode="min", factor=0.5, patience=2
+            ),
+        }
+
+    def train_sicql(
+        self, model, dataloader, val_loader=None, output_dir="models"
+    ):
+        """Main training loop with SICQL enhancements"""
+        # Setup optimizers and schedulers
+        optimizers = self._setup_optimizers(model)
+        schedulers = self._setup_schedulers(optimizers)
 
         best_loss = float("inf")
-        epochs_no_improve = 0
+        patience_counter = 0
 
-        def expectile_loss(diff, tau):
-            weight = torch.where(diff > 0, tau, 1 - tau)
-            return (weight * diff.pow(2)).mean()
+        for epoch in range(self.epochs):
+            # Training phase
+            train_losses = self._train_epoch(model, dataloader, optimizers)
 
-        for epoch in range(epochs):
-            total_loss = 0.0
-
-            for idx, item in enumerate(contrast_pairs):
-                context = item["title"]
-                for side in ["a", "b"]:
-                    doc_text = item[f"output_{side}"]
-                    target_score = torch.tensor(
-                        [item[f"value_{side}"]], dtype=torch.float32, device=self.device
-                    )
-
-                    prompt_emb = torch.tensor(
-                        self.memory.embedding.get_or_create(context),
-                        dtype=torch.float32, device=self.device
-                    ).unsqueeze(0)
-
-                    output_emb = torch.tensor(
-                        self.memory.embedding.get_or_create(doc_text),
-                        dtype=torch.float32, device=self.device
-                    ).unsqueeze(0)
-
-                    # Forward pass through model
-                    result = model(prompt_emb, output_emb)
-                    q = result["q_value"].squeeze(0)
-                    v = result["state_value"].squeeze(0)
-                    pi = result["action_probabilities"].squeeze(0)
-
-                    # Loss terms
-                    loss_q = mse(q, target_score)
-                    loss_v = expectile_loss(q.detach() - v, tau)
-                    advantage = (q - v).detach()
-                    loss_pi = -(pi * advantage).mean()  # Advantage-weighted regression
-
-                    loss = loss_q + loss_v + loss_pi
-
-                    # Backpropagation
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-
-                    total_loss += loss.item()
-
-            avg_loss = total_loss / (2 * len(contrast_pairs))  # two samples per pair
-            scheduler.step(avg_loss)
+            # Validation phase
+            val_metrics = {}
+            if val_loader:
+                val_metrics = self._validate(model, val_loader)
+                val_loss = val_metrics["val_total"]
+            else:
+                val_loss = train_losses["total"]
 
             # Logging
-            self.logger.log("SICQLTrainerEpoch", {
-                "epoch": epoch + 1,
-                "avg_loss": avg_loss,
-                "loss_q": loss_q.item(),
-                "loss_v": loss_v.item(),
-                "loss_pi": loss_pi.item(),
-                "lr": optimizer.param_groups[0]["lr"]
-            })
-
-            if best_loss - avg_loss > min_delta:
-                best_loss = avg_loss
-                epochs_no_improve = 0
-            else:
-                epochs_no_improve += 1
-                if epochs_no_improve >= patience:
-                    self.logger.log("SICQLTrainerEarlyStopping", {"epoch": epoch + 1})
-                    break
-
-    
-    def train_all(self, contrast_pairs, cfg):
-        use_sicql = cfg.get("use_sicql_style", False)
-        by_dimension = defaultdict(list)
-        for p in contrast_pairs:
-            dim = p.get("dimension", "default")
-            by_dimension[dim].append(p)
-
-        encoders, predictors, tuners = {}, {}, {}
-
-        for dim, samples in by_dimension.items():
-            if use_sicql:
-                model = self.build_sicql_model()
-                encoder = model.encoder
-                self.train_sicql(model, samples, cfg)
-
-                encoders[dim] = encoder.state_dict()
-                predictors[dim] = model  # full model returned
-                tuners[dim] = None  # optional: tuner not used in SICQL
-            else:
-                encoder = self.build_encoder()
-                model = self.build_predictor()
-                tuner = RegressionTuner(dimension=dim, logger=self.logger)
-
-                dataloader = self.prepare_training_data(encoder, samples)
-                self.train_predictor(model, dataloader, cfg)
-
-                for s in samples:
-                    for side in ["a", "b"]:
-                        llm_score = s[f"value_{side}"]
-                        doc_text = s[f"output_{side}"]
-                        context_text = s.get("title", "")
-
-                        context_emb = torch.tensor(
-                            self.memory.embedding.get_or_create(context_text)
-                        ).unsqueeze(0).to(self.device)
-                        doc_emb = torch.tensor(
-                            self.memory.embedding.get_or_create(doc_text)
-                        ).unsqueeze(0).to(self.device)
-
-                        with torch.no_grad():
-                            zsa = encoder(context_emb, doc_emb)
-                            mrq_score = model(zsa).item()
-
-                        tuner.train_single(mrq_score, llm_score)
-
-                encoders[dim] = encoder.state_dict()
-                predictors[dim] = model.state_dict()
-                tuners[dim] = tuner
-
-        return encoders, predictors, tuners
-
-    def build_sicql_model(self) -> InContextQModel:
-        return InContextQModel(dim=self.dim, hdim=self.hdim, device=self.device).to(self.device)
-
-
-    def get_closest_llm_scores(
-        self, hypothesis_text: str, dimension: str, top_k: int = 5
-    ) -> list[float]:
-        query_emb = self.memory.embedding.get_or_create(hypothesis_text)
-        similar_items = self.memory.embedding.search_similar_prompts_with_scores(
-            query_emb, top_k
-        )
-
-        scores = []
-        for item in similar_items:
-            matched_text = item.get("text")
-            score_entry = self.memory.score.find_by_text_and_dimension(
-                matched_text, dimension=dimension, source="llm"
+            self.logger.log(
+                "SICQLTrainingEpoch",
+                {
+                    "epoch": epoch + 1,
+                    "train_loss": train_losses["total"],
+                    "val_loss": val_loss,
+                    "q_loss": train_losses["q"],
+                    "v_loss": train_losses["v"],
+                    "pi_loss": train_losses["pi"],
+                    "entropy": train_losses["entropy"],
+                    "lr": optimizers["q"].param_groups[0]["lr"],
+                },
             )
-            if score_entry:
-                scores.append(score_entry.score)
-        return scores
+
+            # Early stopping
+            if val_loss < best_loss - self.min_delta:
+                best_loss = val_loss
+                patience_counter = 0
+                torch.save(model.state_dict(), f"{output_dir}/best_model.pt")
+            else:
+                patience_counter += 1
+
+            if patience_counter >= self.patience:
+                self.logger.log(
+                    "SICQLEarlyStopping",
+                    {"epoch": epoch + 1, "best_loss": best_loss},
+                )    
+                break
+
+            # Update learning rates
+            for name in ["q", "v", "pi"]:
+                if val_loader:
+                    schedulers[name].step(val_loss)
+                else:
+                    schedulers[name].step(train_losses["total"])
+
+        # Final model save
+        torch.save(model.state_dict(), f"{output_dir}/final_model.pt")
+        self.logger.log("SICQLTrainingComplete", {"best_loss": best_loss})
+
+        return model
+
+    def detect_epistemic_gaps(self, model, dataloader):
+        """Identify areas where model uncertainty is high"""
+        model.eval()
+        gaps = []
+
+        with torch.no_grad():
+            for context_emb, doc_emb, scores in dataloader:
+                outputs = model(context_emb, doc_emb)
+
+                # Compute uncertainty
+                uncertainties = EpistemicMetrics.compute_uncertainty(
+                    outputs["q_value"], outputs["state_value"]
+                )
+
+                # Find high-uncertainty samples
+                for i in range(len(uncertainties)):
+                    if uncertainties[i] > self.uncertainty_threshold:
+                        gaps.append(
+                            {
+                                "sample_idx": i,
+                                "uncertainty": uncertainties[i].item(),
+                                "predicted_score": outputs["q_value"][
+                                    i
+                                ].item(),
+                                "llm_score": scores[i].item(),
+                                "document_text": doc_emb[
+                                    i
+                                ].tolist(),  # Convert to list for JSON
+                            }
+                        )
+
+        # Log gaps
+        for gap in gaps:
+            EpistemicMetrics.log_epistemic_gap(gap)
+
+        return gaps
+
+    def train_all(self, contrast_pairs, cfg=None):
+        """Train models for all dimensions"""
+        if cfg:
+            self._update_config(cfg)
+
+        trained_models = {}
+        trained_encoders = {}
+        regression_tuners = {}
+
+        # Group pairs by dimension
+        pairs_by_dim = defaultdict(list)
+        for item in contrast_pairs:
+            pairs_by_dim[item["dimension"]].append(item)
+
+        # Train for each dimension
+        for dim, samples in pairs_by_dim.items():
+            self.logger.log(
+                "SICQLTrainingDimension",
+                {"dimension": dim, "sample_count": len(samples)},
+            )
+
+            # Build dataloader
+            dataloader = self._create_dataloader(self.build_encoder(), samples)
+
+            # Initialize model
+            model = self.build_sicql_model(action_dim=1)
+
+            # Create output directory
+            output_dir = f"{self.cfg.get('model_path', 'models')}/{dim}"
+            os.makedirs(output_dir, exist_ok=True)
+
+            # Train
+            trained_model = self.train_sicql(
+                model, dataloader, output_dir=output_dir
+            )
+
+            # Save components
+            trained_models[dim] = trained_model.state_dict()
+            trained_encoders[dim] = trained_model.encoder.state_dict()
+
+            # Save heads separately
+            torch.save(
+                trained_model.q_head.state_dict(), f"{output_dir}/q_head.pt"
+            )
+            torch.save(
+                trained_model.v_head.state_dict(), f"{output_dir}/v_head.pt"
+            )
+            torch.save(
+                trained_model.pi_head.state_dict(), f"{output_dir}/pi_head.pt"
+            )
+
+            # Save metadata
+            meta = {
+                "dim": self.dim,
+                "hdim": self.hdim,
+                "dimension": dim,
+                "model_type": "sicql",
+                "target_type": self.cfg.get("target_type", "document"),
+                "embedding_type": self.cfg.get("embedding_type", "hnet"),
+                "version": self.cfg.get("model_version", "v1"),
+                "training_params": {
+                    "epochs": self.epochs,
+                    "batch_size": self.batch_size,
+                    "learning_rate": self.lr,
+                    "gamma": self.gamma,
+                },
+            }
+            save_json(meta, f"{output_dir}/meta.json")
+
+            # Build regression tuner
+            regression_tuners[dim] = RegressionTuner.from_dataloader(
+                dataloader,
+                model=trained_model,
+                dimension=dim,
+                logger=self.logger,
+            )
+
+        return trained_encoders, trained_models, regression_tuners
+
+    def _update_config(self, cfg):
+        """Update training parameters from config"""
+        self.cfg = cfg
+        self.lr = cfg.get("lr", self.lr)
+        self.lr_v = cfg.get("lr_v", self.lr_v)
+        self.lr_pi = cfg.get("lr_pi", self.lr_pi)
+        self.epochs = cfg.get("epochs", self.epochs)
+        self.batch_size = cfg.get("batch_size", self.batch_size)
+        self.patience = cfg.get("patience", self.patience)
+        self.min_delta = cfg.get("min_delta", self.min_delta)
+        self.uncertainty_threshold = cfg.get(
+            "uncertainty_threshold", self.uncertainty_threshold
+        )
+        self.gamma = cfg.get("gamma", self.gamma)
+        self.q_weight = cfg.get("q_weight", self.q_weight)
+        self.v_weight = cfg.get("v_weight", self.v_weight)
+        self.pi_weight = cfg.get("pi_weight", self.pi_weight)
+        self.expectile_weight = cfg.get(
+            "expectile_weight", self.expectile_weight
+        )
+        self.entropy_weight = cfg.get("entropy_weight", self.entropy_weight)
