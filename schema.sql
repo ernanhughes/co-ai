@@ -1189,14 +1189,18 @@ CREATE TABLE evaluation_attributes (
     evaluation_id INTEGER NOT NULL,
     dimension TEXT NOT NULL,
     source TEXT NOT NULL,
-    raw_score REAL,
-    energy REAL,
-    uncertainty REAL,
-    advantage REAL,
-    pi_value REAL,
-    q_value REAL,
-    v_value REAL,
+    raw_score FLOAT,
+    energy FLOAT,
+    uncertainty FLOAT,
+    advantage FLOAT,
+    pi_value FLOAT,
+    q_value FLOAT,
+    v_value FLOAT,
     extra JSON,
+    entropy FLOAT,
+    td_error FLOAT, 
+    expected_return FLOAT,
+
     FOREIGN KEY (evaluation_id) REFERENCES evaluations(id) ON DELETE CASCADE
 );
 
