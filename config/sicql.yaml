@@ -21,6 +21,8 @@ defaults:
   - agents/ethics
   - agents/scoring_memcube
   - agents/scoring_policy
+  - agents/policy_analyzer
+  - agents/pipeline_comparison
   - agents/pipeline_judge
   - agents/hnet
   - logging/json_logger
@@ -124,13 +126,13 @@ pipeline:
     - name: document_svm_inference
       description: "Infer SVM scores for documents"
       cls: stephanie.agents.inference.svm_inference.SVMInferenceAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_ebt_inference
       description: "Infer EBT scores for documents"
       cls: stephanie.agents.inference.ebt_inference.EBTInferenceAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_reward_scorer
@@ -161,4 +163,10 @@ pipeline:
       description: "HNet agent for handling knowledge and scoring"
       cls: stephanie.agents.hnet.HNetAgent
       enabled: false
+      iterations: 1
+
+    - name: policy_analyzer
+      description: "Analyze the policy and its effectiveness"
+      cls: stephanie.agents.policy_analyzer.PolicyAnalysisAgent
+      enabled: true
       iterations: 1

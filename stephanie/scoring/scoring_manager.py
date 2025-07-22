@@ -299,7 +299,7 @@ class ScoringManager(BaseAgent):
                 rationale=response,
                 prompt_hash=prompt_hash,
                 source="llm",
-                target_type=scorable.target_type,
+                target_type=scorable.target_type.value,
             )
             results.append(result)
 
@@ -349,7 +349,7 @@ class ScoringManager(BaseAgent):
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
-            target_type=scorable.target_type,
+            target_type=scorable.target_type.value,
             target_id=scorable.id,
             agent_name=cfg.get("name"),
             model_name=model_name,
@@ -385,16 +385,15 @@ class ScoringManager(BaseAgent):
                 raw_score=score_result.score,
                 energy=score_result.energy,
                 uncertainty=score_result.uncertainty,
+                pi_value=score_result.policy_logits,
+                entropy=score_result.entropy,
                 advantage=score_result.advantage,
-                pi_value=score_result.pi_value,
                 q_value=score_result.q_value,
-                v_value=score_result.v_value,
-                extra=score_result.extra,
+                v_value=score_result.state_value,
+                policy_logits=score_result.policy_logits,
+                extra=score_result.to_dict(),
             )
             memory.session.add(attribute)
-
-
-
 
         memory.session.commit()
 
@@ -411,6 +410,7 @@ class ScoringManager(BaseAgent):
             scorable, weighted_score, goal.get("id")
         )
         ScoreDisplay.show(scorable, bundle.to_dict(), weighted_score)
+
 
     @staticmethod
     def save_document_score_to_memory(
@@ -435,7 +435,7 @@ class ScoringManager(BaseAgent):
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
-            target_type=TargetType.DOCUMENT,
+            target_type=TargetType.DOCUMENT.value,
             target_id=document_id,
             agent_name=cfg.get("name"),
             model_name=cfg.get("model", {}).get("name"),

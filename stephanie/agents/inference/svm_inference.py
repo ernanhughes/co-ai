@@ -102,6 +102,7 @@ class SVMInferenceAgent(BaseAgent):
                         score=final_score,
                         rationale=f"SVM raw={round(raw_score, 4)}",
                         weight=1.0,
+                        energy=0.0,  # Placeholder, adjust as needed
                         source=self.model_type,
                         target_type=scorable.target_type,
                         prompt_hash = ScoreORM.compute_prompt_hash(goal_text, scorable)

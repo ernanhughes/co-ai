@@ -14,6 +14,9 @@ from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_locator import ModelLocator
+import torch.nn.functional as F
+
+
 
 class MRQInferenceAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -70,7 +73,24 @@ class MRQInferenceAgent(BaseAgent):
                     output_emb = torch.tensor(
                         self.memory.embedding.get_or_create(scorable.text), device=self.device
                     ).unsqueeze(0)
-                    q_value = model(prompt_emb, output_emb)["q_value"].item()
+                    result = model(prompt_emb, output_emb)
+
+
+                    q_value = result["q_value"].item()
+                    v_value = result["state_value"].item()
+                    policy_logits = result["action_logits"].cpu().detach().numpy().tolist()
+
+                     # Calculate uncertainty (|Q - V|)
+                    uncertainty = abs(q_value - v_value)
+                    
+                    # Calculate entropy from policy logits
+                    policy_tensor = torch.tensor(policy_logits)
+                    action_probs = F.softmax(policy_tensor, dim=-1)
+                    entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-8)).item()
+                    
+                    # Calculate advantage
+                    advantage = q_value - v_value
+
                 else:
                     q_value = model.predict(goal_text, scorable.text)
 
@@ -91,10 +111,16 @@ class MRQInferenceAgent(BaseAgent):
                         score=final_score,
                         rationale=f"Q={round(q_value, 4)}",
                         weight=1.0,
+                        q_value=q_value,
                         energy=q_value,
                         source=self.name,
                         target_type=scorable.target_type,
-                        prompt_hash=prompt_hash
+                        prompt_hash=prompt_hash,
+                        state_value=v_value if self.use_sicql else None,
+                        policy_logits=policy_logits if self.use_sicql else None,
+                        uncertainty=uncertainty if self.use_sicql else None,
+                        entropy=entropy if self.use_sicql else None,
+                        advantage=advantage if self.use_sicql else None,
                     )
                 )
 

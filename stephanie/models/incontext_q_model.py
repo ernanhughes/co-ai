@@ -1,6 +1,7 @@
 from streamlit import json
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import json
 import os
 from stephanie.scoring.mrq.encoder import TextEncoder
@@ -51,15 +52,19 @@ class InContextQModel(nn.Module):
         prompt_emb = prompt_emb.to(self.device)
         output_emb = output_emb.to(self.device)
 
-        zsa = self.encoder(prompt_emb, output_emb)  # shape: [batch, hdim]
-        q_value = self.q_head(zsa)
-        state_value = self.v_head(zsa)
-        action_probabilities = self.pi_head(zsa)
-
+        zsa = self.encoder(prompt_emb, output_emb)
+        q_value = self.q_head(zsa).squeeze()
+        state_value = self.v_head(zsa).squeeze()
+        action_logits = self.pi_head(zsa).squeeze()
+        
+        # Add softmax for policy interpretation
+        action_probs = F.softmax(action_logits, dim=-1) if action_logits.dim() > 0 else F.softmax(action_logits.unsqueeze(0), dim=-1)
+        
         return {
             "q_value": q_value,
             "state_value": state_value,
-            "action_probabilities": action_probabilities,
+            "action_logits": action_logits,
+            "action_probs": action_probs,
         }
 
     @classmethod
