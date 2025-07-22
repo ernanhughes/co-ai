@@ -1,6 +1,5 @@
 # stephanie/utils/model_locator.py
 import os
-import torch
 from typing import Dict
 from stephanie.models.incontext_q_model import InContextQModel
 

@@ -106,23 +106,31 @@ class MRQTrainerEngine:
 
     def train_sicql(self, model: InContextQModel, contrast_pairs: list, cfg: dict):
         """
-        Trains an InContextQModel using SICQL-style loss:
-        - Q-head: MSE with LLM scores
-        - V-head: expectile regression on (Q - V)
-        - π-head: advantage-weighted regression
+        Trains an InContextQModel using SICQL-style multi-head loss:
+        - Q-head: supervised MSE against LLM scores
+        - V-head: expectile regression between Q and V
+        - π-head: advantage-weighted regression from Q - V
+
+        Args:
+            model (InContextQModel): the SICQL-style model with Q/V/π heads
+            contrast_pairs (list): contrastive examples with LLM scores
+            cfg (dict): training config (lr, tau, epochs, etc.)
         """
         model.train()
         lr = cfg.get("lr", 1e-4)
         tau = cfg.get("tau", 0.7)
+
         optimizer = torch.optim.Adam(
-            list(model.q_head.parameters())
-            + list(model.v_head.parameters())
-            + list(model.pi_head.parameters()),
+            list(model.q_head.parameters()) +
+            list(model.v_head.parameters()) +
+            list(model.pi_head.parameters()),
             lr=lr,
         )
-        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=2)
-
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode="min", factor=0.5, patience=2
+        )
         mse = torch.nn.MSELoss()
+
         epochs = cfg.get("epochs", 10)
         patience = cfg.get("patience", 2)
         min_delta = cfg.get("min_delta", 0.001)
@@ -147,45 +155,46 @@ class MRQTrainerEngine:
 
                     prompt_emb = torch.tensor(
                         self.memory.embedding.get_or_create(context),
-                        dtype=torch.float32,
-                        device=self.device,
+                        dtype=torch.float32, device=self.device
                     ).unsqueeze(0)
 
                     output_emb = torch.tensor(
                         self.memory.embedding.get_or_create(doc_text),
-                        dtype=torch.float32,
-                        device=self.device,
+                        dtype=torch.float32, device=self.device
                     ).unsqueeze(0)
 
-                    # Forward pass
+                    # Forward pass through model
                     result = model(prompt_emb, output_emb)
                     q = result["q_value"].squeeze(0)
                     v = result["state_value"].squeeze(0)
                     pi = result["action_probabilities"].squeeze(0)
 
-                    # Compute losses
+                    # Loss terms
                     loss_q = mse(q, target_score)
                     loss_v = expectile_loss(q.detach() - v, tau)
                     advantage = (q - v).detach()
-                    loss_pi = -pi * advantage  # AWR loss
+                    loss_pi = -(pi * advantage).mean()  # Advantage-weighted regression
 
                     loss = loss_q + loss_v + loss_pi
 
-                    # Backprop
+                    # Backpropagation
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
 
                     total_loss += loss.item()
-            scheduler.step(total_loss / len(contrast_pairs))
-            self.logger.log("SICQL_LR", {"epoch": epoch + 1, "lr": optimizer.param_groups[0]["lr"]})
-            avg_loss = total_loss / (2 * len(contrast_pairs))  # two examples per pair
+
+            avg_loss = total_loss / (2 * len(contrast_pairs))  # two samples per pair
+            scheduler.step(avg_loss)
+
+            # Logging
             self.logger.log("SICQLTrainerEpoch", {
                 "epoch": epoch + 1,
                 "avg_loss": avg_loss,
                 "loss_q": loss_q.item(),
                 "loss_v": loss_v.item(),
                 "loss_pi": loss_pi.item(),
+                "lr": optimizer.param_groups[0]["lr"]
             })
 
             if best_loss - avg_loss > min_delta:
@@ -197,7 +206,7 @@ class MRQTrainerEngine:
                     self.logger.log("SICQLTrainerEarlyStopping", {"epoch": epoch + 1})
                     break
 
-
+    
     def train_all(self, contrast_pairs, cfg):
         use_sicql = cfg.get("use_sicql_style", False)
         by_dimension = defaultdict(list)
