@@ -13,12 +13,11 @@ class PolicyAnalyzer:
         self.logger = logger
         self.uncertainty_threshold = 0.3  # From config
 
-    def analyze_dimension(self, dimension: str) -> Dict[str, Any]:
+    def analyze_dimension(self, dimension: str, pipeline_run_id: int = None) -> Dict[str, Any]:
         """Analyze policy behavior for a specific dimension"""
         try:
-            # Get policy data from database
-            sicql_data = self._get_sicql_data(dimension)
-            mrq_data = self._get_mrq_data(dimension)
+            sicql_data = self._get_sicql_data(dimension, pipeline_run_id)
+            mrq_data = self._get_mrq_data(dimension, pipeline_run_id)
             
             # Process and compare
             results = {
@@ -38,27 +37,50 @@ class PolicyAnalyzer:
             self.logger.log("PolicyAnalysisFailed", {"error": str(e)})
             raise
 
-    def _get_sicql_data(self, dimension: str) -> List[Dict]:
-        """Get SICQL policy data from database"""
+    def _get_sicql_data(self, dimension: str, pipeline_run_id: int = None) -> List[Dict]:
+        """Get SICQL policy data from database with optional pipeline run filter"""
         query = (
             self.session.query(EvaluationAttributeORM)
             .join(EvaluationORM)
             .filter(
                 EvaluationAttributeORM.dimension == dimension,
-                EvaluationORM.evaluator_name == "sicql"
+                EvaluationORM.agent_name.contains("sicql"),  # More flexible matching
+                EvaluationORM.pipeline_run_id == pipeline_run_id if pipeline_run_id else True
             )
         )
         
-        return [self._format_attribute(attr) for attr in query.all()]
+        # Add pipeline run filter if available
+        if pipeline_run_id:
+            query = query.filter(EvaluationORM.pipeline_run_id == pipeline_run_id)
+        
+        # Add data quality filter
+        query = query.filter(
+            EvaluationAttributeORM.q_value.isnot(None),
+            EvaluationAttributeORM.v_value.isnot(None),
+            EvaluationAttributeORM.policy_logits.isnot(None)
+        )
+        
+        results = query.all()
+        
+        # Debugging: Add data validation
+        if not results:
+            self.logger.log("NoSICQLDataFound", {
+                "dimension": dimension,
+                "pipeline_run_id": pipeline_run_id,
+                "sample_query": str(query)
+            })
+        
+        return [self._format_attribute(attr) for attr in results]
 
-    def _get_mrq_data(self, dimension: str) -> List[Dict]:
+    def _get_mrq_data(self, dimension: str, pipeline_run_id: int = None) -> List[Dict]:
         """Get MRQ scores for comparison"""
         query = (
             self.session.query(ScoreORM)
             .join(EvaluationORM)
             .filter(
                 ScoreORM.dimension == dimension,
-                EvaluationORM.evaluator_name == "mrq"
+                EvaluationORM.evaluator_name == "mrq",
+                EvaluationORM.pipeline_run_id == pipeline_run_id if pipeline_run_id else True
             )
         )
         
@@ -74,7 +96,7 @@ class PolicyAnalyzer:
             "uncertainty": attr.uncertainty,
             "advantage": attr.advantage,
             "dimension": attr.dimension,
-            "timestamp": attr.created_at
+            "source": attr.source
         }
 
     def _format_score(self, score: ScoreORM) -> Dict:
@@ -88,22 +110,20 @@ class PolicyAnalyzer:
 
     def _analyze_policy_patterns(self, sicql_data: List[Dict]) -> Dict[str, Any]:
         """Analyze policy patterns across samples"""
-        if not sicql_data or not any(d["policy_logits"] is not None for d in sicql_data):
+        valid_logits = [d["policy_logits"] for d in sicql_data if d["policy_logits"] is not None and len(d["policy_logits"]) > 1]
+        
+        if not valid_logits:
             return {"available": False}
-            
-        # Calculate action probabilities
-        all_logits = np.stack([d["policy_logits"] for d in sicql_data if d["policy_logits"] is not None])
-        action_probs = np.exp(all_logits) / np.exp(all_logits).sum(axis=1, keepdims=True)
-        
-        # Calculate entropy
+
+        all_logits = np.stack(valid_logits)
+
+        from scipy.special import softmax
+        action_probs = softmax(all_logits, axis=1)
+
         entropy = -np.sum(action_probs * np.log(action_probs + 1e-8), axis=1)
-        
-        # Get most probable actions
         most_probable_actions = np.argmax(action_probs, axis=1)
-        
-        # Action distribution
         action_counts = np.bincount(most_probable_actions, minlength=action_probs.shape[1])
-        
+
         return {
             "available": True,
             "action_distribution": action_counts.tolist(),
@@ -241,10 +261,10 @@ class PolicyAnalyzer:
             "sample_count": len(actions)
         }
 
-    def generate_policy_report(self, dimension: str) -> Dict[str, Any]:
+    def generate_policy_report(self, dimension: str, pipeline_run_id: int = None) -> Dict[str, Any]:
         """Generate comprehensive policy report with flattened structure"""
-        analysis = self.analyze_dimension(dimension)
-        
+        analysis = self.analyze_dimension(dimension, pipeline_run_id=pipeline_run_id)
+
         # Extract policy stats
         policy_stats = analysis.get("policy_stats", {})
         policy_consistency = policy_stats.get("policy_consistency", {})
@@ -407,19 +427,4 @@ class PolicyAnalyzer:
             return "uncertainty_analysis"
         return "standard_view"
     
-    def _generate_insights(self, report):
-        # Add retraining 
-        if report.get("uncertainty_count", 0) > 30:
-            yield {
-                "action": "retrain",
-                "reason": "High uncertainty in policy decisions",
-                "urgency": 2
-            }
-        # Add policy smoothing recommendations
-        if report.get("policy_stability", 1) < 0.7:
-            yield {
-                "action": "policy_smoothing",
-                "reason": "Policy instability detected",
-                "urgency": 1
-            }
 

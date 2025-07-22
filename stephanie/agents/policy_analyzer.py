@@ -11,8 +11,10 @@ class PolicyAnalysisAgent(BaseAgent):
     async def run(self, context: dict) -> dict:
         reports = {}
         
+        pipeline_run_id = context.get("pipeline_run_id", None)
         for dim in self.dimensions:
-            report = self.analyzer.generate_policy_report(dim)
+
+            report = self.analyzer.generate_policy_report(dim, pipeline_run_id=pipeline_run_id)
             reports[dim] = report
             
             # Log insights
@@ -27,6 +29,7 @@ class PolicyAnalysisAgent(BaseAgent):
                 viz_paths = self.analyzer.visualize_policy(dim)
                 if viz_paths:
                     report["visualizations"] = viz_paths
+        
                     
         # context["policy_analysis"] = reports
         return context
