@@ -20,6 +20,7 @@ from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
+from stephanie.models.evaluation_attribute import EvaluationAttributeORM
 
 
 class ScoringManager(BaseAgent):
@@ -375,6 +376,25 @@ class ScoringManager(BaseAgent):
                 or ScoreORM.compute_prompt_hash(goal.get("goal_text", ""), scorable),
             )
             memory.session.add(score)
+
+            # After inserting ScoreORM
+            attribute = EvaluationAttributeORM(
+                evaluation_id=eval_orm.id,
+                dimension=score_result.dimension,
+                source=score_result.source,
+                raw_score=score_result.score,
+                energy=score_result.energy,
+                uncertainty=score_result.uncertainty,
+                advantage=score_result.advantage,
+                pi_value=score_result.pi_value,
+                q_value=score_result.q_value,
+                v_value=score_result.v_value,
+                extra=score_result.extra,
+            )
+            memory.session.add(attribute)
+
+
+
 
         memory.session.commit()
 

@@ -19,6 +19,11 @@ class ScoreResult:
     source: str
     energy: Optional[float] = None
     uncertainty: Optional[float] = None  # Added uncertainty field
+    advantage: Optional[float] = None
+    pi_value: Optional[float] = None
+    q_value: Optional[float] = None
+    v_value: Optional[float] = None
+    extra: Optional[dict] = None
     target_type: str = "custom"
     prompt_hash: Optional[str] = None
     parser_error: Optional[str] = None

@@ -5,11 +5,8 @@ import torch
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
 from stephanie.models.score import ScoreORM
-from stephanie.models.evaluation_attribute import EvaluationAttributeORM
-from stephanie.memory.evaluation_attribute_store import EvaluationAttributeStore
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.model import MRQModel
-from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType, ScorableFactory
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
@@ -57,7 +54,6 @@ class MRQInferenceAgent(BaseAgent):
         results = []
         docs = context.get(self.input_key, [])
         self.load_models(self.dimensions)
-        attr_store = EvaluationAttributeStore(self.memory.session, logger=self.logger)
 
         for doc in docs:
             doc_id = doc.get("id")
@@ -95,22 +91,10 @@ class MRQInferenceAgent(BaseAgent):
                         score=final_score,
                         rationale=f"Q={round(q_value, 4)}",
                         weight=1.0,
+                        energy=q_value,
                         source=self.name,
                         target_type=scorable.target_type,
                         prompt_hash=prompt_hash
-                    )
-                )
-
-                # Save evaluation attribute
-                attr_store.insert(
-                    EvaluationAttributeORM(
-                        dimension=dim,
-                        score=final_score,
-                        energy=q_value,
-                        uncertainty=None,
-                        weight=1.0,
-                        prompt_hash=prompt_hash,
-                        source=self.name,
                     )
                 )
 
@@ -161,8 +145,7 @@ class MRQInferenceAgent(BaseAgent):
             )
 
             if self.use_sicql:
-                from stephanie.models.incontext_q_model import InContextQModel
-                model = InContextQModel.load_from_path(locator.base_path, dim, self.device)
+                model = locator.load_sicql_model(self.device)
                 self.models[dim] = model
                 self.model_meta[dim] = {"min": 0, "max": 100}
             else:

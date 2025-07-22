@@ -8,7 +8,7 @@ from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 from stephanie.utils.file_utils import save_json
 from stephanie.utils.model_locator import ModelLocator
-
+from stephanie.models.incontext_q_model import InContextQModel
 
 class MRQTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
@@ -19,6 +19,8 @@ class MRQTrainerAgent(BaseAgent):
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
         self.embedding_type = self.memory.embedding.type
+        self.dim = self.memory.embedding.dim
+        self.hdim = self.memory.embedding.hdim
         self.dimensions = cfg.get("dimensions", [])
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
@@ -101,7 +103,7 @@ class MRQTrainerAgent(BaseAgent):
             )
             locater.ensure_dirs()
 
-            predictor_path = locater.meta_file()
+            predictor_path = locater.model_file()
             encoder_path = locater.encoder_file()
             tuner_path = locater.tuner_file()
             meta_path = locater.meta_file()
@@ -134,24 +136,37 @@ class MRQTrainerAgent(BaseAgent):
             flat_values = [v for pair in values for v in pair]
             save_json(
                 {
+                    "dim": self.dim,
+                    "hdim": self.hdim,
                     "min_score": float(min(flat_values)),
                     "max_score": float(max(flat_values)),
                     "sicql": self.use_sicql,
+                    "model_type": self.model_type,
+                    "target_type": self.target_type,
+                    "embedding_type": self.embedding_type,
+                    "version": self.model_version,
+                    "dimensions": self.dimensions,
+                    "epochs": self.epochs,  
+                    "learning_rate": self.lr,
+                    "patience": self.patience,
+                    "min_delta": self.min_delta,
+                    "device": str(self.device),
+                    "model_name": f"{self.target_type}_{self.model_type}_{self.model_version}",
                 },
                 meta_path,
             )
 
-            if self.use_sicql:
-                if hasattr(trained_models[dim], "q_head"):
-                    torch.save(trained_models[dim].q_head.state_dict(), locater.get_q_head_path())
-                    self.logger.log("SICQLQHeadSaved", {"dimension": dim, "path": locater.get_q_head_path()})
-                if hasattr(trained_models[dim], "pi_head"):
-                    torch.save(trained_models[dim].pi_head.state_dict(), locater.get_pi_head_path())
-                    self.logger.log("SICQLPiHeadSaved", {"dimension": dim, "path": locater.get_pi_head_path()})
-                if hasattr(trained_models[dim], "v_head"):
-                    torch.save(trained_models[dim].v_head.state_dict(), locater.get_v_head_path())
-                    self.logger.log("SICQLVHeadSaved", {"dimension": dim, "path": locater.get_v_head_path()})
+            if self.use_sicql and isinstance(trained_models[dim], InContextQModel):
+                model = trained_models[dim]
+                torch.save(model.q_head.state_dict(), locater.get_q_head_path())
+                self.logger.log("SICQLQHeadSaved", {"dimension": dim, "path": locater.get_q_head_path()})
 
+                torch.save(model.pi_head.state_dict(), locater.get_pi_head_path())
+                self.logger.log("SICQLPiHeadSaved", {"dimension": dim, "path": locater.get_pi_head_path()})
+
+                torch.save(model.v_head.state_dict(), locater.get_v_head_path())
+                self.logger.log("SICQLVHeadSaved", {"dimension": dim, "path": locater.get_v_head_path()})
+                 
             self.logger.log(
                 "DocumentModelSaved",
                 {

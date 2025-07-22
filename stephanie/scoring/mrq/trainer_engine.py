@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.value_predictor import ValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
+from stephanie.models.incontext_q_model import InContextQModel
 
 
 class MRQTrainerEngine:
@@ -102,7 +103,73 @@ class MRQTrainerEngine:
                 if epochs_no_improve >= patience:
                     break
 
+    def train_sicql(self, model, contrast_pairs: list, cfg: dict):
+        """
+        Trains an InContextQModel using contrastive preference pairs and LLM scores as targets.
+        Trains the Q-head via supervised regression.
+        """
+        model.train()
+        optimizer = torch.optim.Adam(model.q_head.parameters(), lr=cfg.get("lr", 1e-4))
+        criterion = torch.nn.MSELoss()
+
+        epochs = cfg.get("epochs", 10)
+        patience = cfg.get("patience", 2)
+        min_delta = cfg.get("min_delta", 0.001)
+
+        best_loss = float("inf")
+        epochs_no_improve = 0
+
+        for epoch in range(epochs):
+            total_loss = 0.0
+
+            for idx, item in enumerate(contrast_pairs):
+                context = item["title"]
+                for side in ["a", "b"]:
+                    doc_text = item[f"output_{side}"]
+                    target_score = torch.tensor(
+                        [item[f"value_{side}"]], dtype=torch.float32, device=self.device
+                    )
+
+                    prompt_emb = torch.tensor(
+                        self.memory.embedding.get_or_create(context),
+                        dtype=torch.float32,
+                        device=self.device,
+                    ).unsqueeze(0)
+
+                    output_emb = torch.tensor(
+                        self.memory.embedding.get_or_create(doc_text),
+                        dtype=torch.float32,
+                        device=self.device,
+                    ).unsqueeze(0)
+
+                    # Forward through model
+                    result = model(prompt_emb, output_emb)
+                    q_value = result["q_value"].squeeze(0)  # shape: [1] → scalar
+
+                    loss = criterion(q_value, target_score)
+
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+
+                    total_loss += loss.item()
+
+            avg_loss = total_loss / (2 * len(contrast_pairs))  # two samples per pair
+
+            self.logger.log("SICQLTrainerEpoch", {"epoch": epoch + 1, "avg_loss": avg_loss})
+
+            if best_loss - avg_loss > min_delta:
+                best_loss = avg_loss
+                epochs_no_improve = 0
+            else:
+                epochs_no_improve += 1
+                if epochs_no_improve >= patience:
+                    self.logger.log("SICQLTrainerEarlyStopping", {"epoch": epoch + 1})
+                    break
+
+
     def train_all(self, contrast_pairs, cfg):
+        use_sicql = cfg.get("use_sicql_style", False)
         by_dimension = defaultdict(list)
         for p in contrast_pairs:
             dim = p.get("dimension", "default")
@@ -111,41 +178,50 @@ class MRQTrainerEngine:
         encoders, predictors, tuners = {}, {}, {}
 
         for dim, samples in by_dimension.items():
-            encoder = self.build_encoder()
-            predictor = self.build_predictor()
-            tuner = RegressionTuner(dimension=dim, logger=self.logger)
+            if use_sicql:
+                model = self.build_sicql_model()
+                encoder = model.encoder
+                self.train_sicql(model, samples, cfg)
 
-            dataloader = self.prepare_training_data(encoder, samples)
-            self.train_predictor(predictor, dataloader, cfg)
+                encoders[dim] = encoder.state_dict()
+                predictors[dim] = model  # full model returned
+                tuners[dim] = None  # optional: tuner not used in SICQL
+            else:
+                encoder = self.build_encoder()
+                model = self.build_predictor()
+                tuner = RegressionTuner(dimension=dim, logger=self.logger)
 
-            for s in samples:
-                for side in ["a", "b"]:
-                    llm_score = s[f"value_{side}"]
-                    doc_text = s[f"output_{side}"]
-                    context_text = s.get("title", "")
+                dataloader = self.prepare_training_data(encoder, samples)
+                self.train_predictor(model, dataloader, cfg)
 
-                    context_emb = (
-                        torch.tensor(self.memory.embedding.get_or_create(context_text))
-                        .unsqueeze(0)
-                        .to(self.device)
-                    )
-                    doc_emb = (
-                        torch.tensor(self.memory.embedding.get_or_create(doc_text))
-                        .unsqueeze(0)
-                        .to(self.device)
-                    )
+                for s in samples:
+                    for side in ["a", "b"]:
+                        llm_score = s[f"value_{side}"]
+                        doc_text = s[f"output_{side}"]
+                        context_text = s.get("title", "")
 
-                    with torch.no_grad():
-                        zsa = encoder(context_emb, doc_emb)
-                        mrq_score = predictor(zsa).item()
+                        context_emb = torch.tensor(
+                            self.memory.embedding.get_or_create(context_text)
+                        ).unsqueeze(0).to(self.device)
+                        doc_emb = torch.tensor(
+                            self.memory.embedding.get_or_create(doc_text)
+                        ).unsqueeze(0).to(self.device)
 
-                    tuner.train_single(mrq_score, llm_score)
+                        with torch.no_grad():
+                            zsa = encoder(context_emb, doc_emb)
+                            mrq_score = model(zsa).item()
 
-            encoders[dim] = encoder.state_dict()
-            predictors[dim] = predictor.state_dict()
-            tuners[dim] = tuner
+                        tuner.train_single(mrq_score, llm_score)
+
+                encoders[dim] = encoder.state_dict()
+                predictors[dim] = model.state_dict()
+                tuners[dim] = tuner
 
         return encoders, predictors, tuners
+
+    def build_sicql_model(self):
+        return InContextQModel(dim=self.dim, hdim=self.hdim, device=self.device).to(self.device)
+
 
     def get_closest_llm_scores(
         self, hypothesis_text: str, dimension: str, top_k: int = 5

@@ -1184,4 +1184,24 @@ ON hnet_embeddings
 USING ivfflat (embedding vector_cosine_ops);
 ALTER TABLE hnet_embeddings ADD CONSTRAINT unique_text_hash_hnet UNIQUE (text_hash);
 
+CREATE TABLE evaluation_attributes (
+    id SERIAL PRIMARY KEY,
+    evaluation_id INTEGER NOT NULL,
+    dimension TEXT NOT NULL,
+    source TEXT NOT NULL,
+    raw_score REAL,
+    energy REAL,
+    uncertainty REAL,
+    advantage REAL,
+    pi_value REAL,
+    q_value REAL,
+    v_value REAL,
+    extra JSON,
+    FOREIGN KEY (evaluation_id) REFERENCES evaluations(id) ON DELETE CASCADE
+);
+
+
+
+
+
 

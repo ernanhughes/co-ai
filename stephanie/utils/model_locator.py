@@ -1,6 +1,8 @@
+# stephanie/utils/model_locator.py
 import os
-from typing import Dict, List
-
+import torch
+from typing import Dict
+from stephanie.models.incontext_q_model import InContextQModel
 
 class ModelLocator:
     def __init__(
@@ -48,6 +50,15 @@ class ModelLocator:
     def scaler_file(self) -> str:
         return os.path.join(self.base_path, f"{self.dimension}_scaler.joblib")
 
+    def get_q_head_path(self) -> str:
+        return os.path.join(self.base_path, f"{self.dimension}_q.pt")
+
+    def get_v_head_path(self) -> str:
+        return os.path.join(self.base_path, f"{self.dimension}_v.pt")
+
+    def get_pi_head_path(self) -> str:
+        return os.path.join(self.base_path, f"{self.dimension}_pi.pt")
+
     def all_files(self) -> Dict[str, str]:
         return {
             "model": self.model_file(".pt" if self.model_type != "svm" else ".joblib"),
@@ -60,8 +71,18 @@ class ModelLocator:
     def ensure_dirs(self):
         os.makedirs(self.base_path, exist_ok=True)
 
+    def load_sicql_model(self, device="cpu"):
+        """
+        Loads an InContextQModel using the locator's path and dimension settings.
+        """
+        return InContextQModel.load_from_path(
+            self.base_path,
+            self.dimension,
+            device=device
+        )
+
     @staticmethod
-    def list_available_models(root_dir="models") -> List[str]:
+    def list_available_models(root_dir="models") -> list[str]:
         available = []
         for embedding in os.listdir(root_dir):
             embedding_path = os.path.join(root_dir, embedding)
@@ -81,6 +102,12 @@ class ModelLocator:
         return sorted(available)
 
     @staticmethod
+    def discover_dimensions(root_dir, embedding_type, model_type, target_type):
+        base = os.path.join(root_dir, embedding_type, model_type, target_type)
+        if not os.path.exists(base):
+            return []
+        return [d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d))]
+
     def find_best_model_per_dimension(root_dir="models") -> Dict[str, str]:
         best = {}
         for model_path in ModelLocator.list_available_models(root_dir):
