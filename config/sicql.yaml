@@ -70,7 +70,7 @@ pipeline:
     - name: sicql_mrq_trainer
       description: "Build document pairs for training and evaluation"
       cls: stephanie.agents.maintenance.mrq_trainer.MRQTrainerAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_svm_trainer
@@ -112,7 +112,7 @@ pipeline:
     - name: document_mrq_inference
       description: "Infer MRQ scores for documents"
       cls: stephanie.agents.inference.mrq_inference.MRQInferenceAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: sicql_mrq_inference
@@ -124,19 +124,19 @@ pipeline:
     - name: document_svm_inference
       description: "Infer SVM scores for documents"
       cls: stephanie.agents.inference.svm_inference.SVMInferenceAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: document_ebt_inference
       description: "Infer EBT scores for documents"
       cls: stephanie.agents.inference.ebt_inference.EBTInferenceAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: document_reward_scorer
       description: "Score the documents based on their relevance and quality"
       cls: stephanie.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: ethics
@@ -148,13 +148,13 @@ pipeline:
     - name: scoring_policy
       description: "Apply scoring policy to evaluate documents"
       cls: stephanie.agents.inference.scoring_policy.ScoringPolicyAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: scoring_memcube
       description: "Apply scoring memcube to evaluate documents"
       cls: stephanie.agents.inference.scoring_memcube.ScoringMemcubeAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: hnet

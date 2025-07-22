@@ -5,6 +5,7 @@ from collections import defaultdict
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.value_predictor import ValuePredictor
@@ -103,21 +104,35 @@ class MRQTrainerEngine:
                 if epochs_no_improve >= patience:
                     break
 
-    def train_sicql(self, model, contrast_pairs: list, cfg: dict):
+    def train_sicql(self, model: InContextQModel, contrast_pairs: list, cfg: dict):
         """
-        Trains an InContextQModel using contrastive preference pairs and LLM scores as targets.
-        Trains the Q-head via supervised regression.
+        Trains an InContextQModel using SICQL-style loss:
+        - Q-head: MSE with LLM scores
+        - V-head: expectile regression on (Q - V)
+        - π-head: advantage-weighted regression
         """
         model.train()
-        optimizer = torch.optim.Adam(model.q_head.parameters(), lr=cfg.get("lr", 1e-4))
-        criterion = torch.nn.MSELoss()
+        lr = cfg.get("lr", 1e-4)
+        tau = cfg.get("tau", 0.7)
+        optimizer = torch.optim.Adam(
+            list(model.q_head.parameters())
+            + list(model.v_head.parameters())
+            + list(model.pi_head.parameters()),
+            lr=lr,
+        )
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=2)
 
+        mse = torch.nn.MSELoss()
         epochs = cfg.get("epochs", 10)
         patience = cfg.get("patience", 2)
         min_delta = cfg.get("min_delta", 0.001)
 
         best_loss = float("inf")
         epochs_no_improve = 0
+
+        def expectile_loss(diff, tau):
+            weight = torch.where(diff > 0, tau, 1 - tau)
+            return (weight * diff.pow(2)).mean()
 
         for epoch in range(epochs):
             total_loss = 0.0
@@ -142,21 +157,36 @@ class MRQTrainerEngine:
                         device=self.device,
                     ).unsqueeze(0)
 
-                    # Forward through model
+                    # Forward pass
                     result = model(prompt_emb, output_emb)
-                    q_value = result["q_value"].squeeze(0)  # shape: [1] → scalar
+                    q = result["q_value"].squeeze(0)
+                    v = result["state_value"].squeeze(0)
+                    pi = result["action_probabilities"].squeeze(0)
 
-                    loss = criterion(q_value, target_score)
+                    # Compute losses
+                    loss_q = mse(q, target_score)
+                    loss_v = expectile_loss(q.detach() - v, tau)
+                    advantage = (q - v).detach()
+                    loss_pi = -pi * advantage  # AWR loss
 
+                    loss = loss_q + loss_v + loss_pi
+
+                    # Backprop
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
 
                     total_loss += loss.item()
-
-            avg_loss = total_loss / (2 * len(contrast_pairs))  # two samples per pair
-
-            self.logger.log("SICQLTrainerEpoch", {"epoch": epoch + 1, "avg_loss": avg_loss})
+            scheduler.step(total_loss / len(contrast_pairs))
+            self.logger.log("SICQL_LR", {"epoch": epoch + 1, "lr": optimizer.param_groups[0]["lr"]})
+            avg_loss = total_loss / (2 * len(contrast_pairs))  # two examples per pair
+            self.logger.log("SICQLTrainerEpoch", {
+                "epoch": epoch + 1,
+                "avg_loss": avg_loss,
+                "loss_q": loss_q.item(),
+                "loss_v": loss_v.item(),
+                "loss_pi": loss_pi.item(),
+            })
 
             if best_loss - avg_loss > min_delta:
                 best_loss = avg_loss
@@ -219,7 +249,7 @@ class MRQTrainerEngine:
 
         return encoders, predictors, tuners
 
-    def build_sicql_model(self):
+    def build_sicql_model(self) -> InContextQModel:
         return InContextQModel(dim=self.dim, hdim=self.hdim, device=self.device).to(self.device)
 
 
