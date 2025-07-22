@@ -80,7 +80,14 @@ class MRQInferenceAgent(BaseAgent):
                     v_value = result["state_value"].item()
                     policy_logits = result["action_logits"].cpu().detach().numpy().tolist()
 
-                     # Calculate uncertainty (|Q - V|)
+                    if isinstance(policy_logits, list) and len(policy_logits) == 1:
+                        if isinstance(policy_logits[0], list):
+                            # [[0.1166]] → [0.1166]
+                            policy_logits = policy_logits[0]
+
+                    print(f"Policy logits for {dim}: {policy_logits}")
+
+                        # Calculate uncertainty (|Q - V|)
                     uncertainty = abs(q_value - v_value)
                     
                     # Calculate entropy from policy logits

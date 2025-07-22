@@ -52,15 +52,46 @@ class InContextQModel(nn.Module):
         prompt_emb = prompt_emb.to(self.device)
         output_emb = output_emb.to(self.device)
 
-        zsa = self.encoder(prompt_emb, output_emb)
-        q_value = self.q_head(zsa).squeeze()
-        state_value = self.v_head(zsa).squeeze()
-        action_logits = self.pi_head(zsa).squeeze()
+        # Ensure proper shape
+        if prompt_emb.dim() == 1:
+            prompt_emb = prompt_emb.unsqueeze(0)  # Add batch dim if missing
+        if output_emb.dim() == 1:
+            output_emb = output_emb.unsqueeze(0)
+
+        zsa = self.encoder(prompt_emb, output_emb)  # [batch, hdim]
         
-        # Add softmax for policy interpretation
-        action_probs = F.softmax(action_logits, dim=-1) if action_logits.dim() > 0 else F.softmax(action_logits.unsqueeze(0), dim=-1)
+        # Get outputs without over-squeezing
+        q_value = self.q_head(zsa)  # [batch, 1]
+        state_value = self.v_head(zsa)  # [batch, 1]
+        action_logits = self.pi_head(zsa)  # [batch, action_dim]
         
+        # Ensure 2D structure for policy
+        if action_logits.dim() == 1:
+            action_logits = action_logits.unsqueeze(0)  # [1, action_dim]
+        
+        # For single-action spaces, flatten to [batch]
+        if action_logits.size(1) == 1:
+            action_logits = action_logits.squeeze(1)  # [batch]
+
+        # Handle NaNs (critical for regression tuner)
+        if torch.isnan(action_logits).any():
+            self.logger.log("NaNPredicted", {
+                "action_logits": action_logits.tolist()
+            })
+            action_logits = torch.zeros_like(action_logits)  # Fallback
+        
+        # Compute action probs (safe softmax)
+        try:
+            action_probs = F.softmax(action_logits, dim=-1)
+        except Exception as e:
+            self.logger.log("SoftmaxFailed", {
+                "logits": action_logits.tolist(),
+                "error": str(e)
+            })
+            action_probs = torch.ones_like(action_logits) / action_logits.size(-1)
+
         return {
+            "zsa": zsa,
             "q_value": q_value,
             "state_value": state_value,
             "action_logits": action_logits,

@@ -1,7 +1,8 @@
 # stephanie/models/evaluation_attribute.py
-from sqlalchemy import Column, Float, Integer, String, ForeignKey, JSON
+from sqlalchemy import Column, Float, Integer, String, ForeignKey, JSON, DateTime
 from sqlalchemy.orm import relationship
 from stephanie.models.base import Base
+from datetime import datetime
 
 class EvaluationAttributeORM(Base):
     __tablename__ = "evaluation_attributes"
@@ -37,6 +38,7 @@ class EvaluationAttributeORM(Base):
     evaluation = relationship("EvaluationORM", back_populates="attributes")
 
     extra = Column(JSON, nullable=True)  # For future extensibility
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     def to_dict(self):
         return {

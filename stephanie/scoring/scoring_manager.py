@@ -2,7 +2,7 @@
 import re
 from pathlib import Path
 from typing import Optional
-
+import json
 import yaml
 from sqlalchemy.orm import Session
 
@@ -385,12 +385,12 @@ class ScoringManager(BaseAgent):
                 raw_score=score_result.score,
                 energy=score_result.energy,
                 uncertainty=score_result.uncertainty,
-                pi_value=score_result.policy_logits,
+                pi_value=score_result.policy_logits[0] if score_result.policy_logits else None,
                 entropy=score_result.entropy,
                 advantage=score_result.advantage,
                 q_value=score_result.q_value,
                 v_value=score_result.state_value,
-                policy_logits=score_result.policy_logits,
+                policy_logits=json.dumps(score_result.policy_logits),
                 extra=score_result.to_dict(),
             )
             memory.session.add(attribute)

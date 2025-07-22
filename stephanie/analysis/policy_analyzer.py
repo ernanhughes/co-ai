@@ -6,6 +6,7 @@ from stephanie.models.evaluation_attribute import EvaluationAttributeORM
 from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.score import ScoreORM
 from typing import Dict, List, Any
+import json
 
 class PolicyAnalyzer:
     def __init__(self, session: Session, logger=None):
@@ -87,16 +88,14 @@ class PolicyAnalyzer:
         return [self._format_score(score) for score in query.all()]
 
     def _format_attribute(self, attr: EvaluationAttributeORM) -> Dict:
-        """Convert ORM to analysis-friendly format"""
         return {
             "evaluation_id": attr.evaluation_id,
-            "policy_logits": np.array(attr.policy_logits) if attr.policy_logits else None,
+            "policy_logits": json.loads(attr.policy_logits),  # Should be 2D
             "q_value": attr.q_value,
             "v_value": attr.v_value,
             "uncertainty": attr.uncertainty,
-            "advantage": attr.advantage,
             "dimension": attr.dimension,
-            "source": attr.source
+            "timestamp": attr.created_at
         }
 
     def _format_score(self, score: ScoreORM) -> Dict:
