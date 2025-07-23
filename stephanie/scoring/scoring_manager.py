@@ -287,7 +287,7 @@ class ScoringManager(BaseAgent):
                 score = dim.get("postprocess", lambda s: s)(score)
             except Exception as e:
                 self.logger.log(
-    Right so this is" Right so this is",
+                    "ScoreParseError",
                     {"dimension": dim["name"], "response": response, "error": str(e)},
                 )
                 self.handle_score_error(dim, response, e)

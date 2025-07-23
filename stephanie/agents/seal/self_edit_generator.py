@@ -67,7 +67,7 @@ class SelfEditGeneratorAgent(ScoringMixin, BaseAgent):
             context["prompt"] = prompt_text  # we use thie to score in the evaluator
 
             scorable = Scorable(
-                text=hypothesis.text,
+                text=scorable.text,
                 id=hypothesis.id,
                 target_type=TargetType.HYPOTHESIS,
             )

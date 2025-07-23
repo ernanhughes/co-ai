@@ -11,11 +11,11 @@ class ScoreResult:
     score: float
     rationale: str
     weight: float
-    energy: float
     source: str
     target_type: str
     prompt_hash: str
     # SICQL-specific fields
+    energy: Optional[float] = None
     q_value: Optional[float] = None
     state_value: Optional[float] = None
     policy_logits: Optional[list[float]] = None
