@@ -1018,24 +1018,46 @@ CREATE TABLE IF NOT EXISTS component_interfaces (
 );
 
 
+-- Create table with core fields and relationships
 CREATE TABLE belief_cartridges (
     id TEXT PRIMARY KEY,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW() ON UPDATE NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    
+    -- Source information
     source_id TEXT,
-    source_type TEXT,
+    source_type TEXT NOT NULL CHECK (source_type IN ('paper', 'blog', 'experiment', 'pipeline', 'manual')),
+    source_url TEXT,
+    
+    -- Core content
     markdown_content TEXT NOT NULL,
-    goal_tags JSONB DEFAULT '[]',
-    domain_tags JSONB DEFAULT '[]',
-    idea_payload JSONB,
-    rationale TEXT,
     is_active BOOLEAN DEFAULT TRUE,
-    derived_from JSONB DEFAULT '[]',
-    applied_in JSONB DEFAULT '[]',
+    
+    -- Structured idea payload
+    idea_payload JSONB,  -- e.g., {title: "Q-MAX", description: "...", code_snippet: "..."}
+    
+    -- Tagging
+    goal_tags TEXT[] DEFAULT ARRAY[]::TEXT[],  -- Tags from goal context
+    domain_tags TEXT[] DEFAULT ARRAY[]::TEXT[],  -- Tags from domain analysis
+    
+    -- Provenance
+    derived_from JSONB DEFAULT '[]',  -- List of belief_cartridge IDs this was derived from
+    applied_in JSONB DEFAULT '[]',    -- List of pipeline_run IDs where this was used
+    
+    -- Versioning
     version INTEGER DEFAULT 1,
     memcube_id TEXT,
-    debug_log JSONB
-    );
+    
+    -- Relationships
+    goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL,
+    document_id INTEGER REFERENCES documents(id) ON DELETE SET NULL
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_belief_cartridges_source ON belief_cartridges(source_type, source_id);
+CREATE INDEX idx_belief_cartridges_tags ON belief_cartridges USING GIN (goal_tags);
+CREATE INDEX idx_belief_cartridges_active ON belief_cartridges(is_active);
+CREATE INDEX idx_belief_cartridges_version ON belief_cartridges(version);
 
 
 CREATE TABLE IF NOT EXISTS pipeline_stages (

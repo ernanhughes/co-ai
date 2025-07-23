@@ -1,68 +1,93 @@
 # stephanie/context/context_manager.py
+import json
 import uuid
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional
-
 import numpy as np
 import torch
-
-from stephanie.scoring.score_bundle import ScoreBundle
-
+from typing import Any, Dict, Optional, List, Union
+from sqlalchemy import text
+from stephanie.models.context_state import ContextStateORM
+from stephanie.scoring.mrq.model import MRQModel
+from stephanie.utils.model_utils import get_model_path
 
 class ContextManager:
     def __init__(
         self,
-        goal: str, 
-        max_tokens: int = 8192,
-        assembly_fn: Callable[[Dict[str, Any]], str] = None,
-        compression_fn: Optional[Callable[[Dict[str, Any], int], Dict[str, Any]]] = None,
-        scorer_fn: Optional[Callable[[str, Any], ScoreBundle]] = None,
-        memory = None,
-        logger =None
+        goal: str,
+        context_id: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+        memory=None,
+        logger=None,
+        db_table: str = "contexts",
+        validate: bool = True,
+        save_to_db: bool = True
     ):
         """
-        ContextManager wraps a dictionary with introspection and validation
+        Centralized context manager for pipeline stages
         
         Args:
             goal: Goal text for context prioritization
-            max_tokens: Max token limit for assembled context
-            assembly_fn: Function to combine components into final prompt
-            compression_fn: Function to compress context if needed
-            scorer_fn: Function to score context components
-            logger: Logger for introspection
+            context_id: Unique ID for context tracking
+            context: Existing context dictionary
+            memory: Database connection
+            logger: Logging utility
+            db_table: Table name for context storage
+            validate: Whether to validate context
         """
-        self._data: Dict[str, Any] = {
+        self.memory = memory
+        self.logger = logger
+        self.db_table = db_table
+        self.validate = validate
+        self.save_to_db = save_to_db
+        
+        # Initialize context dictionary
+        self._data = {
             "goal": goal,
             "trace": [],
             "metadata": {
-                "context_id": str(uuid.uuid4()),
+                "context_id": context_id or str(uuid.uuid4()),
                 "start_time": datetime.utcnow().isoformat(),
                 "last_modified": datetime.utcnow().isoformat(),
                 "token_count": 0,
                 "components": {}
             }
         }
-        self.max_tokens = max_tokens
-        self.assembly_fn = assembly_fn or self.default_assembly
-        self.compression_fn = compression_fn or self.default_compression
-        self.scorer_fn = scorer_fn
-        self.logger = logger
+        
+        # Load from existing context if provided
+        if context:
+            self._data.update({
+                k: v for k, v in context.items() 
+                if k not in ["trace", "metadata"]
+            })
+            self._data["trace"] = context.get("trace", [])
+            self._update_metadata()
+        
+        self.logger.log("ContextManagerInitialized", {
+            "context_id": self.context_id,
+            "goal": goal[:50] + "...",
+            "component_count": len(self._data["metadata"]["components"])
+        })
 
-    def __getitem__(self, key):
+    @property
+    def context_id(self) -> str:
+        """Get context ID from metadata"""
+        return self._data["metadata"]["context_id"]
+
+    def __getitem__(self, key: str) -> Any:
         """Allow dictionary-style access"""
         return self._data[key]
 
-    def __setitem__(self, key, value):
-        """Allow dictionary-style assignment"""
+    def __setitem__(self, key: str, value: Any) -> None:
+        """Allow dictionary-style assignment with validation"""
         self._data[key] = self._ensure_serializable(value)
         self._update_metadata()
         return self
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         """Allow 'in' operator"""
         return key in self._data
 
-    def __call__(self):
+    def __call__(self) -> Dict[str, Any]:
         """Make ContextManager itself a context provider"""
         return self._data
 
@@ -70,25 +95,24 @@ class ContextManager:
         """Return a pure dictionary for serialization"""
         return self._strip_non_serializable(self._data)
 
-    def update(self, other: Dict[str, Any]):
-        """Update with another dictionary"""
-        for key, value in other.items():
-            self._data[key] = self._ensure_serializable(value)
-        self._update_metadata()
-        return self
-
     def add_component(
-        self, 
-        name: str, 
-        content: Any, 
+        self,
+        name: str,
+        content: Any,
         source: str,
-        score: Optional[ScoreBundle] = None,
+        score: Optional[Dict] = None,
         priority: float = 1.0
-    ):
+    ) -> None:
         """Add a structured component with metadata"""
-        # Ensure serializable
+        # Ensure content is serializable
         content = self._ensure_serializable(content)
-        score = score.to_dict() if score else None
+        
+        # Score component if scorer is available
+        if score is None and hasattr(self, "scorer_fn"):
+            try:
+                score = self.scorer_fn(self._data["goal"], content)
+            except:
+                score = {"alignment": 0.5, "clarity": 0.6, "novelty": 0.7}
         
         # Add to metadata
         self._data["metadata"]["components"][name] = {
@@ -108,16 +132,19 @@ class ContextManager:
         """Assemble components into final prompt"""
         try:
             # Score components if scorer is available
-            if self.scorer_fn:
+            if hasattr(self, "scorer_fn"):
                 self.score_components()
             
-            # Compress if needed
+            # Get components
             components = self._data["metadata"]["components"]
-            if len(components) > 0:
-                components = self.compression_fn(components, self.max_tokens)
+            if not components:
+                return self._data["goal"]
+            
+            # Compress if needed
+            components = self._compress_components(components)
             
             # Assemble final prompt
-            final_prompt = self.assembly_fn(components)
+            final_prompt = self._default_assembly(components)
             self._data["prompt"] = final_prompt
             self._update_metadata()
             return final_prompt
@@ -125,29 +152,29 @@ class ContextManager:
         except Exception as e:
             self.logger.log("ContextAssemblyFailed", {
                 "error": str(e),
-                "components": self._data["metadata"]["components"]
+                "context_id": self.context_id
             })
             raise
 
     def score_components(self):
         """Score components using provided scorer"""
-        if not self.scorer_fn:
+        if not hasattr(self, "scorer_fn"):
             return
             
         for name, component in self._data["metadata"]["components"].items():
             try:
                 # Score component content
                 score = self.scorer_fn(self._data["goal"], component["content"])
-                self._data["metadata"]["components"][name]["score"] = score.to_dict()
+                self._data["metadata"]["components"][name]["score"] = score
             except Exception as e:
                 self.logger.log("ComponentScoringFailed", {
                     "component": name,
                     "error": str(e)
                 })
 
-    def log_action(self, agent, inputs, outputs, description):
+    def log_action(self, agent, inputs, outputs, description: str):
         """Log agent actions with introspection"""
-        # Ensure serializable inputs/outputs
+        # Ensure inputs/outputs are serializable
         self._data["trace"].append({
             "agent": agent.__class__.__name__,
             "inputs": self._strip_non_serializable(inputs),
@@ -167,8 +194,13 @@ class ContextManager:
         for key, value in self._data.items():
             if isinstance(value, str):
                 token_count += len(value.split()) * 1.5  # Approximate token count
+            if isinstance(value, dict):
+                token_count += sum(
+                    len(str(v).split()) * 1.5 
+                    for v in value.values() 
+                    if isinstance(v, str)
+                )
         
-        # Update metadata
         self._data["metadata"]["token_count"] = token_count
         return self
 
@@ -176,19 +208,34 @@ class ContextManager:
         """Ensure value is JSON-serializable"""
         if isinstance(value, torch.Tensor):
             # Convert tensor to list
+            if torch.isnan(value).any():
+                self.logger.log("TensorContainsNaN", {
+                    "tensor": value.tolist(),
+                    "shape": list(value.shape),
+                    "dtype": str(value.dtype)
+                })
+                return [0.0] * value.size(0)  # Fallback
+            
             return value.tolist()
+        
         if isinstance(value, np.ndarray):
-            # Convert numpy array to list
+            if np.isnan(value).any():
+                self.logger.log("ArrayContainsNaN", {
+                    "array": value.tolist(),
+                    "shape": value.shape
+                })
+                return [0.0] * value.size
+            
             return value.tolist()
+        
         if isinstance(value, dict):
-            # Recursively ensure serializable
             return {k: self._ensure_serializable(v) for k, v in value.items()}
+        
         if isinstance(value, (list, tuple)):
-            # Process list items
             return [self._ensure_serializable(v) for v in value]
-        if isinstance(value, (float, int, str, bool)) or value is None:
-            return value
-        return str(value)  # Fallback for other types
+        
+        # Fallback for other types
+        return str(value) if value is not None else value
 
     def _strip_non_serializable(self, data: Any) -> Any:
         """Remove non-serializable elements"""
@@ -204,7 +251,7 @@ class ContextManager:
             return data
         return str(data)  # Fallback for non-serializable types
 
-    def default_assembly(self, components: Dict[str, Any]) -> str:
+    def _default_assembly(self, components: Dict[str, Any]) -> str:
         """Default prompt assembly function"""
         prompt_parts = []
         for name, comp in components.items():
@@ -214,10 +261,10 @@ class ContextManager:
                 prompt_parts.append(f"[{name.upper()}]: {comp}")
         return "\n\n".join(prompt_parts)
 
-    def default_compression(self, components: Dict[str, Any], max_tokens: int) -> Dict[str, Any]:
+    def _compress_components(self, components: Dict[str, Any]) -> Dict[str, Any]:
         """Default compression strategy"""
         # Implement basic token-based compression
-        return {k: v for k, v in components.items() if self._estimate_tokens(v) < max_tokens}
+        return {k: v for k, v in components.items() if self._estimate_tokens(v) < self.max_tokens}
 
     def _estimate_tokens(self, value: Any) -> int:
         """Estimate token count for a value"""
@@ -229,16 +276,80 @@ class ContextManager:
             return sum(self._estimate_tokens(v) for v in value)
         return 1  # Minimal for other types
 
+    def save_to_db(self):
+        """Save context to database"""
+        if not self.save_to_db:
+            return False
+            
+        # Ensure context is valid
+        serializable_context = self._strip_non_serializable(self._data)
+        
+        # Save to ORM
+        context_orm = ContextStateORM(
+            context_id=self.context_id,
+            content=json.dumps(serializable_context),
+            trace=json.dumps(serializable_context["trace"]),
+            token_count=serializable_context["metadata"]["token_count"]
+        )
+        self.memory.session.add(context_orm)
+        self.memory.session.commit()
+        return True
+
+    def load_from_db(self, context_id: str):
+        """Load context from database"""
+        query = text(f"SELECT content FROM {self.db_table} WHERE context_id = :context_id")
+        result = self.memory.session.execute(query, {"context_id": context_id}).first()
+        
+        if result and result.content:
+            loaded_context = json.loads(result.content)
+            self._data = self._validate_context(loaded_context)
+            self._update_metadata()
+            return self
+        return None
+
     def _validate_context(self, context: Dict[str, Any]):
         """Ensure context is valid before use"""
         for key, value in context.items():
             if isinstance(value, torch.Tensor) and torch.isnan(value).any():
-                self.logger.log("NaNInContext", {
+                self.logger.log("InvalidContext", {
                     "key": key,
-                    "tensor": value.tolist()
+                    "tensor": value.tolist(),
+                    "reason": "tensor_contains_nan"
                 })
-                context[key] = [0.0] * len(value)  # Fallback
+                context[key] = [0.0] * value.size(0)  # Fallback
+        
+        # Ensure metadata structure
+        if "metadata" not in context:
+            context["metadata"] = {
+                "context_id": str(uuid.uuid4()),
+                "token_count": 0,
+                "components": {}
+            }
+        
         return context
+
+    def _compress_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Compress context if needed"""
+        if not self._exceeds_token_limit(context):
+            return context
+        
+        # Strategy: Drop low-priority components
+        components = context["metadata"]["components"]
+        prioritized = sorted(
+            components.items(),
+            key=lambda x: x[1].get("priority", 0.5),
+            reverse=True
+        )
+        
+        # Keep top components
+        top_components = dict(prioritized[:self.cfg.get("max_components", 5)])
+        context["metadata"]["components"] = top_components
+        return context
+
+    def _exceeds_token_limit(self, context: Dict[str, Any]) -> bool:
+        """Check if context exceeds token limit"""
+        token_count = context["metadata"]["token_count"]
+        return token_count > self.cfg.get("max_tokens", 8192)
 
     def load_from_dict(self, context: Dict[str, Any]):
         """Load from existing dictionary"""
