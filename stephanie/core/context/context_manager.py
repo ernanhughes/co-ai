@@ -4,15 +4,14 @@ import uuid
 from datetime import datetime
 import numpy as np
 import torch
-from typing import Any, Dict, Optional, List, Union
+from typing import Any, Dict, Optional
 from sqlalchemy import text
 from stephanie.models.context_state import ContextStateORM
-from stephanie.scoring.mrq.model import MRQModel
-from stephanie.utils.model_utils import get_model_path
 
 class ContextManager:
     def __init__(
         self,
+        cfg: Dict[str, Any],
         goal: str,
         context_id: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
@@ -34,11 +33,12 @@ class ContextManager:
             db_table: Table name for context storage
             validate: Whether to validate context
         """
+        self.cfg = cfg
         self.memory = memory
         self.logger = logger
         self.db_table = db_table
         self.validate = validate
-        self.save_to_db = save_to_db
+        self.save_db = save_to_db
         
         # Initialize context dictionary
         self._data = {
@@ -79,6 +79,8 @@ class ContextManager:
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Allow dictionary-style assignment with validation"""
+        if self._data["metadata"].get("frozen"):
+            raise RuntimeError("Context is frozen and cannot be modified.")
         self._data[key] = self._ensure_serializable(value)
         self._update_metadata()
         return self
@@ -94,6 +96,13 @@ class ContextManager:
     def to_dict(self) -> Dict[str, Any]:
         """Return a pure dictionary for serialization"""
         return self._strip_non_serializable(self._data)
+
+
+    def freeze(self):
+        self._data["metadata"]["frozen"] = True
+
+    def unfreeze(self):
+        self._data["metadata"]["frozen"] = False
 
     def add_component(
         self,
@@ -180,7 +189,8 @@ class ContextManager:
             "inputs": self._strip_non_serializable(inputs),
             "outputs": self._strip_non_serializable(outputs),
             "description": description,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
+            "added_keys": list(set(outputs.keys()) - set(inputs.keys()))
         })
         self._update_metadata()
         return self
@@ -278,7 +288,7 @@ class ContextManager:
 
     def save_to_db(self):
         """Save context to database"""
-        if not self.save_to_db:
+        if not self.save_db:
             return False
             
         # Ensure context is valid
@@ -356,3 +366,12 @@ class ContextManager:
         self._data = self._validate_context(context)
         self._update_metadata()
         return self
+    
+    def extract_memcube(self):
+        return {
+            "goal": self._data["goal"],
+            "components": self._data["metadata"]["components"],
+            "summary": self._data.get("summary"),
+            "trace": self._data["trace"],
+            "created": self._data["metadata"]["start_time"]
+        }

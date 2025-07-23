@@ -240,7 +240,7 @@ class ScoringManager(BaseAgent):
     def evaluate(self, context: dict, scorable: Scorable, llm_fn=None):
         try:
             score = self.scorer.score(
-                context, scorable, self.dimensions
+                context, scorable, self.dimensions, llm_fn=llm_fn
             )
         except Exception as e:
             self.logger.log(
@@ -287,7 +287,7 @@ class ScoringManager(BaseAgent):
                 score = dim.get("postprocess", lambda s: s)(score)
             except Exception as e:
                 self.logger.log(
-                    "MgrScoreParseError",
+    Right so this is" Right so this is",
                     {"dimension": dim["name"], "response": response, "error": str(e)},
                 )
                 self.handle_score_error(dim, response, e)

@@ -7,14 +7,12 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import hydra
-from dependency_injector.wiring import Provide, inject
 from omegaconf import DictConfig, OmegaConf
 from tabulate import tabulate
 
 from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID,
                                  PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
                                  SKIP_IF_COMPLETED, STAGE)
-from stephanie.containers import AppContainer
 from stephanie.engine.cycle_watcher import CycleWatcher
 from stephanie.engine.meta_confidence import MetaConfidenceTracker
 from stephanie.engine.self_validation import SelfValidationEngine
@@ -22,8 +20,6 @@ from stephanie.engine.state_tracker import StateTracker
 from stephanie.engine.training_controller import TrainingController
 from stephanie.logs.json_logger import JSONLogger
 from stephanie.memory import MemoryTool
-from stephanie.protocols.base import Protocol
-from stephanie.registry.agent_registry import AgentRegistry
 from stephanie.registry.registry import register
 from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
@@ -40,26 +36,9 @@ class PipelineStage:
         self.stage_dict = stage_dict
 
 
-class SingleAgentPipeline:
-    def __init__(self, agent_name, config, container: AppContainer):
-        self.agent = AgentRegistry(config).get(agent_name)
-        self.goal_input = config.input_path
-        self.container = container
-
-    def run(self):
-        pass
-        # goals = load_goal_list(self.goal_input)
-        # for goal in goals:
-        #     result = self.agent.run(goal)
-        # wrap it in pipeline logs, score evals, etc.
-
-container = AppContainer()
-
 class Supervisor:
-    def __init__(self, cfg, memory=None, logger=None, container: AppContainer = None):
+    def __init__(self, cfg, memory=None, logger=None):
         self.cfg = cfg
-        self.container = container or AppContainer()
-        self.container.init_resources()  # Important!
         self.memory = memory or MemoryTool(cfg=cfg.db, logger=logger)
         self.logger = logger or JSONLogger(log_path=cfg.logger.log_path)
         self.logger.log("SupervisorInit", {"cfg": cfg})
@@ -241,20 +220,6 @@ class Supervisor:
         return context
 
 
-    @inject
-    async def _run_with_protocol(
-        self,
-        context: dict,
-        protocol_name: str,
-        protocol: Protocol = Provide["container.protocol_selector"]
-    ):
-        """
-        Runs the given protocol.
-        Dependency Injector resolves `protocol` based on `protocol_name`.
-        """
-        result = protocol.run(context)
-        return result
-    
     async def _run_single_stage(self, stage: PipelineStage, context: dict) -> dict:
         stage_details = {
             STAGE: stage.name,
@@ -439,7 +404,6 @@ class Supervisor:
             elif hasattr(obj, "__dict__"):
                 for attr, val in vars(obj).items():
                     self.inspect_non_serializable(val, f"{path}.{attr}")
-
 
 
 

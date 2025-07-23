@@ -73,7 +73,7 @@ pipeline:
     - name: sicql_mrq_trainer
       description: "Build document pairs for training and evaluation"
       cls: stephanie.agents.maintenance.mrq_trainer.MRQTrainerAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: document_svm_trainer

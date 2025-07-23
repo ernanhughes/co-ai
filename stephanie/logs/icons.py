@@ -27,7 +27,7 @@ SYSTEM_INIT = {
 }
 
 AGENT_EVENTS = {
-    
+    "GILDTrainerAgentInitialized": "📊🤖",  # GILD trainer agent initialized
     "MRQInferenceAgentInitialized": "📊🤖",  # MRQ inference agent initialized
     "AgentInitialized": "ᯓ★",  # Agent initialization
     "AgentInit": "🤖",  # Agent startup
@@ -169,6 +169,9 @@ SCORING = {
     "SVMScoringFinished": "📊🏁",  # SVM scoring finished
     "SVMScoringStarted": "📊▶️",  # SVM scoring started
     "SVMScoreComputed": "📊✅",  # SVM score computed
+    "PolicyAnalysis": "📊🔍",  # Policy analysis
+    "NoSICQLDataFound": "🚫📊",  # No SI-CQL data found
+
 }
 
 # =====================
@@ -194,7 +197,7 @@ REASONING = {
 # TRAINING & MODEL OPS
 # =====================
 TRAINING = {
-    "MRQTrainerEpoch": "🏋️📊",  # MRQ training epoch
+    "MRQTrainerEpoch": "🏋️",  # MRQ training epoch
     "MRQTrainerStart": "🚀🧠",  # MRQ training started
     "MRQTrainerTrainingComplete": "🎓🧠",  # MRQ training completed
     "MRQModelInitializing": "🧠⚙️",  # MRQ model initializing
@@ -258,6 +261,7 @@ RESEARCH = {
     "NoResultsFromWebSearch": "🌐🚫",  # No search results
     "DocumentProfiled": "📄📋",  # Document profiled
     "DocumentProfileFailed": "📄❌",  # Document profile failed
+    "DocumentsSearched": "📄🔍",  # Documents searched
 }
 
 # ===================
@@ -310,8 +314,11 @@ SPECIAL = {
 MODELS = {
     "SVMModelSaved": "💾📊",  # SVM model saved
     "SVMModelLoaded": "📥📊",  # SVM model load
-    "SVMModelTrainingStarted": "🏋️📊",
-    "SVMTrainingStarted": "🏋️📊"
+    "SVMModelTrainingStarted": "🏋️⚖️",
+    "SVMTrainingStarted": "🏋️📊",
+    "EBTModelLoaded": "📥🧪",  # EBT model loaded
+    "SICQLTrainingEpoch": "🏋️📊",  # SICQL training epoch
+    "SICQLTrainingComplete": "🎓📊",  # SICQL training completed
 
 }
 
