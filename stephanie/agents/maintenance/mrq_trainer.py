@@ -4,11 +4,12 @@
 import torch
 
 from stephanie.agents.base_agent import BaseAgent
+from stephanie.models.incontext_q_model import InContextQModel
 from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 from stephanie.utils.file_utils import save_json
 from stephanie.utils.model_locator import ModelLocator
-from stephanie.models.incontext_q_model import InContextQModel
+
 
 class MRQTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

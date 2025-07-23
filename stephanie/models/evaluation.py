@@ -9,13 +9,13 @@ from sqlalchemy.orm import Mapped, relationship
 from stephanie.models.base import Base
 from stephanie.models.belief_cartridge import BeliefCartridgeORM
 from stephanie.models.document import DocumentORM
+from stephanie.models.evaluation_attribute import EvaluationAttributeORM
 from stephanie.models.goal import GoalORM
 from stephanie.models.hypothesis import HypothesisORM
 from stephanie.models.pipeline_run import PipelineRunORM
 from stephanie.models.score import ScoreORM
 from stephanie.models.symbolic_rule import SymbolicRuleORM
 from stephanie.scoring.scorable_factory import TargetType
-from stephanie.models.evaluation_attribute import EvaluationAttributeORM
 
 
 class EvaluationORM(Base):

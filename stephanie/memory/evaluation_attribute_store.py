@@ -1,9 +1,12 @@
 # stephanie/memory/evaluation_attribute_store.py
 
 from typing import Optional
-from sqlalchemy.orm import Session
-from stephanie.models.evaluation_attribute import EvaluationAttributeORM
+
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from stephanie.models.evaluation_attribute import EvaluationAttributeORM
+
 
 class EvaluationAttributeStore:
     def __init__(self, session: Session, logger=None):

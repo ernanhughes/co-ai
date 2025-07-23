@@ -1,13 +1,15 @@
 # stephanie/scoring/scoring_manager.py
+import json
 import re
 from pathlib import Path
 from typing import Optional
-import json
+
 import yaml
 from sqlalchemy.orm import Session
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.models.evaluation import EvaluationORM
+from stephanie.models.evaluation_attribute import EvaluationAttributeORM
 from stephanie.models.score import ScoreORM
 from stephanie.models.score_dimension import ScoreDimensionORM
 from stephanie.prompts.prompt_renderer import PromptRenderer
@@ -20,7 +22,6 @@ from stephanie.scoring.scorable_factory import TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_display import ScoreDisplay
 from stephanie.scoring.score_result import ScoreResult
-from stephanie.models.evaluation_attribute import EvaluationAttributeORM
 
 
 class ScoringManager(BaseAgent):

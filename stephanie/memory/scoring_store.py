@@ -2,9 +2,11 @@
 
 from dataclasses import dataclass
 from typing import List, Optional
+
+import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
-import pandas as pd
+
 
 @dataclass
 class ScoringExample:

@@ -1,6 +1,7 @@
 # stephanie/agents/maintenance/ebt_trainer.py
 import os
 import sys
+import json
 
 import torch
 from sqlalchemy import text
@@ -13,9 +14,12 @@ from stephanie.agents.maintenance.model_evolution_manager import \
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.value_predictor import ValuePredictor
-from stephanie.utils.file_utils import save_json
-from stephanie.utils.model_utils import get_model_path, save_model_with_version
-
+from stephanie.utils.model_utils import save_model_with_version
+from stephanie.utils.model_locator import ModelLocator
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torch.nn.functional as F
+import numpy as np
+from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 
 class EBTDataset(Dataset):
     def __init__(self, contrast_pairs, min_score=None, max_score=None):
@@ -57,9 +61,20 @@ class EBTTrainerAgent(BaseAgent):
         self.model_type = cfg.get("model_type", "ebt")
         self.target_type = cfg.get("target_type", "document")
         self.model_version = cfg.get("model_version", "v1")
+
+        self.early_stopping_patience = cfg.get("early_stopping_patience", 3)
+        self.early_stopping_min_delta = cfg.get("early_stopping_min_delta", 1e-4)
+        self.early_stop_counter = 0
+        self.best_loss = float('inf')
+        self.early_stop_active = False
+        self.early_stop_threshold = None
+
         self.embedding_type = self.memory.embedding.type
+        self.dim = self.memory.embedding.dim
+        self.hdim = self.memory.embedding.hdim
+        self.num_actions = cfg.get("num_actions", 3)
         self.dimensions = cfg.get("dimensions", [])
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(cfg.get("device", "cpu") if torch.cuda.is_available() else "cpu")
 
 
         self.encoder = TextEncoder().to(self.device)
@@ -67,6 +82,30 @@ class EBTTrainerAgent(BaseAgent):
         self.evolution_manager = ModelEvolutionManager(
             self.cfg, self.memory, self.logger
         )
+        self.tuners = {}
+        self._load_tuners()
+    
+    def _load_tuners(self):
+        """Load tuners for each dimension"""
+        for dim in self.dimensions:
+            locator = ModelLocator(
+                root_dir=self.model_path,
+                dimension=dim,
+                model_type=self.model_type,
+                target_type=self.target_type,
+                version=self.model_version,
+                embedding_type=self.embedding_type
+            )
+            tuner_path = locator.tuner_file()
+            if os.path.exists(tuner_path):
+                self.tuners[dim] = RegressionTuner(dim=dim)
+                self.tuners[dim].load(tuner_path)
+            else:
+                self.tuners[dim] = None
+                self.logger.log("TunerMissing", {
+                    "dimension": dim,
+                    "path": tuner_path
+                })
 
     async def run(self, context: dict) -> dict:
         goal_text = context.get("goal", {}).get("goal_text")
@@ -76,8 +115,6 @@ class EBTTrainerAgent(BaseAgent):
 
         # Build contrastive training pairs grouped by scoring dimension
         builder = PreferencePairBuilder(db=self.memory.session, logger=self.logger)
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Train one model per scoring dimension (e.g. clarity, novelty, etc.)
         for dim in self.dimensions:
@@ -103,64 +140,180 @@ class EBTTrainerAgent(BaseAgent):
                     batch_size=8,
                     shuffle=True,
                     collate_fn=lambda b: collate_ebt_batch(
-                        b, self.memory.embedding, device
+                        b, self.memory.embedding, self.device
                     ),
                 )
 
                 # Create model for this dimension
-                model = EBTModel().to(device)
-                optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
-                loss_fn = nn.MSELoss()
-
-                # Training loop for fixed number of epochs
-                for epoch in range(10):
-                    model.train()
-                    total_loss = 0.0
-                    for ctx_enc, cand_enc, labels in dl:
-                        preds = model(ctx_enc, cand_enc)  # Predict score given (goal, doc)
-                        loss = loss_fn(preds, labels)  # Compare against normalized label
-
-                        optimizer.zero_grad()
-                        loss.backward()
-                        optimizer.step()
-
-                        total_loss += loss.item()
-
-                    avg_loss = total_loss / len(dl)
-                    self.logger.log(
-                        "DocumentEBTEpoch",
-                        {
-                            "dimension": dim,
-                            "epoch": epoch + 1,
-                            "avg_loss": round(avg_loss, 5),
-                        },
-                    )
-
-                model_path = get_model_path(
-                    self.model_path,
-                    self.model_type,
-                    self.target_type,
-                    dim,
-                    self.model_version,
-                    embedding_type=self.embedding_type
-                )
-                os.makedirs(os.path.dirname(model_path), exist_ok=True)
-                predictor_path = f"{model_path}{dim}.pt"
-                print(model.state_dict().keys())
-                torch.save(model.state_dict(), predictor_path)
-                self.logger.log(
-                    "DocumentEBTModelSaved", {"dimension": dim, "path": model_path}
-                )
-
-                # Save score normalization metadata for this dimension
-                meta_path = f"{model_path}{dim}.meta.json"
-                normalization = ds.get_normalization()
-                save_json(normalization, meta_path)
-
-            # self._save_and_promote_model(model, self.model_type, self.target_type, dim)
+                model = EBTModel(self.dim, self.hdim, self.num_actions, self.device).to(self.device)
+                self.train_ebt_model(model, dl, dim)    
+                self._save_model(model, dim)
 
         context[self.output_key] = training_pairs
         return context
+
+
+    # Updated training loop
+    def train_ebt_model(self, model: EBTModel, dl: DataLoader, dim: str):
+        """Train EBTModel with Q/V/Policy heads"""
+        model.train()
+        optimizer = torch.optim.Adam(model.parameters(), lr=self.cfg.get("lr", 2e-5))
+        scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=2)
+        
+        # Loss functions
+        mse = nn.MSELoss()
+        def expectile_loss(diff, tau=0.7):
+            return (torch.where(diff > 0, tau * diff.pow(2), (1 - tau) * diff.pow(2))).mean()
+        
+        # Training stats
+        stats = {
+            "q_losses": [],
+            "v_losses": [],
+            "pi_losses": [],
+            "total_losses": [],
+            "policy_entropies": []
+        }
+
+        for epoch in range(self.cfg.get("epochs", 10)):
+            epoch_q_loss = 0.0
+            epoch_v_loss = 0.0
+            epoch_pi_loss = 0.0
+            
+            for ctx_enc, cand_enc, labels in dl:
+                # Ensure device alignment
+                ctx_enc = ctx_enc.to(self.device)
+                cand_enc = cand_enc.to(self.device)
+                labels = labels.to(self.device)
+                
+                # Forward pass
+                outputs = model(ctx_enc, cand_enc)
+                
+                # Q-head loss (supervised learning)
+                q_loss = mse(outputs["q_value"], labels)
+                
+                # V-head loss (expectile regression)
+                v_loss = expectile_loss(outputs["q_value"].detach() - outputs["state_value"])
+                
+                # Policy head loss (AWR)
+                advantage = (outputs["q_value"] - outputs["state_value"]).detach()
+                policy_probs = F.softmax(outputs["action_logits"], dim=-1)
+                entropy = -torch.sum(policy_probs * torch.log(policy_probs + 1e-8), dim=-1).mean()
+                stats["policy_entropies"].append(entropy.item())
+                pi_loss = -(torch.log(policy_probs) * advantage).mean() - 0.01 * entropy  # With entropy regularization
+                
+                # Composite loss
+                total_loss = (
+                    q_loss * self.cfg.get("q_weight", 1.0) +
+                    v_loss * self.cfg.get("v_weight", 0.5) +
+                    pi_loss * self.cfg.get("pi_weight", 0.3)
+                )
+                
+                # Backward pass
+                optimizer.zero_grad()
+                total_loss.backward()
+                optimizer.step()
+                
+                # Track losses
+                epoch_q_loss += q_loss.item()
+                epoch_v_loss += v_loss.item()
+                epoch_pi_loss += pi_loss.item()
+            
+            # End of epoch
+            avg_q_loss = epoch_q_loss / len(dl)
+            avg_v_loss = epoch_v_loss / len(dl)
+            avg_pi_loss = epoch_pi_loss / len(dl)
+            
+            stats["q_losses"].append(avg_q_loss)
+            stats["v_losses"].append(avg_v_loss)
+            stats["pi_losses"].append(avg_pi_loss)
+            stats["total_losses"].append(avg_q_loss + avg_v_loss + avg_pi_loss)
+            
+            # Learning rate scheduling
+            scheduler.step(avg_q_loss)
+            
+            entropy_value = (
+                torch.mean(torch.tensor(stats["policy_entropies"])).item()
+                if stats["policy_entropies"]
+                else float("nan")  # or 0.0 if you prefer
+            )
+
+            self.logger.log("EBTModelTrainerEpoch", {
+                "dimension": dim,
+                "epoch": epoch + 1,
+                "q_loss": avg_q_loss,
+                "v_loss": avg_v_loss,
+                "pi_loss": avg_pi_loss,
+                "lr": optimizer.param_groups[0]["lr"],
+                "policy_entropy": entropy_value,
+            })
+
+            # Early stopping
+            if self._should_stop_early(stats["q_losses"]):
+                self.logger.log("EBTModelTrainerEarlyStopping", {
+                    "dimension": dim,
+                    "epoch": epoch + 1
+                })
+                break
+
+        return {
+            "q_loss": stats["q_losses"][-1],
+            "v_loss": stats["v_losses"][-1],
+            "pi_loss": stats["pi_losses"][-1],
+            "avg_q_loss": np.mean(stats["q_losses"]),
+            "avg_v_loss": np.mean(stats["v_losses"]),
+            "avg_pi_loss": np.mean(stats["pi_losses"]),
+            "policy_entropy": np.mean(stats["policy_entropies"]),
+            "model": model
+        }
+
+    def _calculate_policy_entropy(self, model, data):
+        """Calculate policy entropy with validation"""
+        if not data:
+            return 0.0  # Fallback if no data
+        
+        with torch.no_grad():
+            context_embs = torch.stack([d["context_emb"] for d in data])
+            doc_embs = torch.stack([d["doc_emb"] for d in data])
+            
+            outputs = model(context_embs.to(self.device), doc_embs.to(self.device))
+            action_probs = F.softmax(outputs["action_logits"], dim=-1)
+            entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-8), dim=-1)
+        
+        return entropy.mean().item() if len(entropy) > 0 else 0.0
+
+    def _save_model(self, model, dim):
+        locator = ModelLocator(
+            root_dir=self.model_path,
+            embedding_type=self.embedding_type,
+            model_type="ebt",
+            target_type="document",
+            dimension=dim,
+            version=self.model_version
+        )
+        
+        # Save components
+        locator.ensure_dirs()
+        
+        print(f"Saving EBT model to {locator.encoder_file()}")
+        torch.save(model.encoder.state_dict(), locator.encoder_file())
+        torch.save(model.q_head.state_dict(), locator.get_q_head_path())
+        torch.save(model.v_head.state_dict(), locator.get_v_head_path())
+        torch.save(model.pi_head.state_dict(), locator.get_pi_head_path())
+        
+        # Save meta
+        meta = {
+            "dim": model.embedding_dim,
+            "hdim": model.hidden_dim,
+            "num_actions": model.num_actions,
+            "version": self.model_version,
+            "scorer_map": ["ebt", "svm", "mrq"]
+        }
+        with open(locator.meta_file(), "w") as f:
+            json.dump(meta, f)
+        
+        # Save tuner
+        if self.tuners[dim]:
+            self.tuners[dim].save(locator.tuner_file())
 
     def _save_and_promote_model(self, model, model_type, target_type, dimension):
         # Generate new version ID
@@ -257,6 +410,22 @@ class EBTTrainerAgent(BaseAgent):
             "accuracy": round(accuracy, 4),
         }
 
+    def _should_stop_early(self, losses):
+        if not losses or len(losses) < self.early_stopping_patience:
+            return False
+        
+        # Use sliding window of last N losses
+        window = losses[-self.early_stopping_patience:]
+        avg_window = sum(window) / len(window)
+        
+        # If no improvement in window
+        if avg_window >= self.best_loss - self.early_stopping_min_delta:
+            self.early_stop_counter += 1
+            return self.early_stop_counter >= self.early_stopping_patience
+        else:
+            self.best_loss = avg_window
+            self.early_stop_counter = 0
+            return False
 
 def collate_ebt_batch(batch, embedding_store, device):
     # Custom batch collation for EBT dataset: fetch embeddings for goal and doc
@@ -272,3 +441,4 @@ def collate_ebt_batch(batch, embedding_store, device):
     doc_tensor = torch.stack(doc_embs)
 
     return ctx_tensor, doc_tensor, labels
+

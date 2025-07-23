@@ -3,6 +3,8 @@ import os
 from typing import Optional
 
 import torch
+import torch.nn.functional as F
+from torch import nn
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.memcubes.memcube_factory import MemCubeFactory
@@ -13,7 +15,10 @@ from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
-from stephanie.utils.file_utils import load_json
+from stephanie.utils.file_utils import load_json, save_json
+from stephanie.utils.math_utils import (advantage_weighted_regression,
+                                        expectile_loss)
+from stephanie.utils.model_locator import ModelLocator
 from stephanie.utils.model_utils import (discover_saved_dimensions,
                                          get_model_path)
 
@@ -61,31 +66,31 @@ class EBTInferenceAgent(BaseAgent):
 
         for dim in dimensions:
             if dim not in self.models:
-                model_path = get_model_path(
-                    self.model_path,
-                    self.model_type,
-                    self.target_type,
-                    dim,
-                    self.model_version,
-                    self.embedding_type
+                locater = ModelLocator(
+                    root_dir=self.model_path,
+                    embedding_type=self.embedding_type,
+                    model_type=self.model_type,
+                    target_type=self.target_type,
+                    dimension=dim,
+                    version=self.model_version,
                 )
-                infer_path = f"{model_path}/{dim}.pt"
-                meta_path = f"{model_path}/{dim}.meta.json"
-
-                self.logger.log("LoadingEBTModel", {"dimension": dim, "path": infer_path})
-                model = self._load_model(infer_path)
-                self.models[dim] = model
-
-                if os.path.exists(meta_path):
-                    self.model_meta[dim] = load_json(meta_path)
-                else:
-                    self.model_meta[dim] = {"min": 40, "max": 100}
-
-    def _load_model(self, path):
-        model = EBTModel().to(self.device)
-        model.load_state_dict(torch.load(path, map_location=self.device))
-        model.eval()
-        return model
+                model, meta = locater.load_ebt_model()
+                if model is None:
+                    self.logger.log(
+                        "EBTModelNotFound",
+                        {"dimension": dim, "model_path": locater.base_path},
+                    )
+                    continue
+                self.models[dim] = model.to(self.device)
+                self.model_meta[dim] = meta
+                self.logger.log(
+                    "EBTModelLoaded",  
+                    {
+                        "dimension": dim,
+                        "model_path": locater.base_path,
+                        "meta": meta,
+                    }
+                )
 
 
     def get_model_name(self) -> str:
@@ -422,3 +427,101 @@ class EBTInferenceAgent(BaseAgent):
 
         probs = torch.softmax(logits, dim=-1).squeeze().cpu().tolist()
         return {f"action_{i}": p for i, p in enumerate(probs)}
+
+    # In ebt_inference.py or trainer.py
+    def _train_ebt_model(self, dim, train_loader):
+        model = self.models[dim].to(self.device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=self.cfg.get("lr", 2e-5))
+        model.train()
+        
+        total_q_loss = 0.0
+        total_v_loss = 0.0
+        total_pi_loss = 0.0
+        
+        for ctx_enc, cand_enc, labels in train_loader:
+            ctx_enc = ctx_enc.to(self.device)
+            cand_enc = cand_enc.to(self.device)
+            llm_scores = labels.to(self.device)
+            
+            outputs = model(ctx_enc, cand_enc)
+            
+            # Q-head loss (MRQ-style scoring)
+            q_loss = F.mse_loss(outputs["q_value"], llm_scores)
+            
+            # V-head loss (expectile regression)
+            v_loss = expectile_loss(outputs["q_value"], outputs["state_value"])
+            
+            # Policy loss (GILD-style imitation)
+            if self.use_gild and "action_logits" in outputs:
+                expert_policy = self._get_expert_policy(ctx_enc, cand_enc)
+                pi_loss = advantage_weighted_regression(
+                    outputs["action_logits"], 
+                    outputs["advantage"]
+                )
+            else:
+                pi_loss = torch.tensor(0.0, device=self.device)
+            
+            # Composite loss
+            total_loss = (
+                q_loss * self.cfg.get("q_weight", 1.0) +
+                v_loss * self.cfg.get("v_weight", 0.5) +
+                pi_loss * self.cfg.get("pi_weight", 0.3)
+            )
+            
+            # Backward pass
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
+            
+            # Track losses
+            total_q_loss += q_loss.item()
+            total_v_loss += v_loss.item()
+            total_pi_loss += pi_loss.item()
+        
+        return {
+            "q_loss": total_q_loss / len(train_loader),
+            "v_loss": total_v_loss / len(train_loader),
+            "pi_loss": total_pi_loss / len(train_loader),
+            "model": model
+        }
+
+    def expectile_loss(pred, target, expectile=0.5):
+        diff = pred - target.detach()
+        loss = torch.where(
+            diff > 0,
+            expectile * diff ** 2,
+            (1 - expectile) * diff ** 2
+        ).mean()
+        return loss
+
+    # In your model saving function
+    def _save_model(self, model, dim):
+        model_path = self.model_locator.get_locator(
+            embedding_type=self.embedding_type,
+            model_type=self.model_type,
+            target_type=self.target_type,
+            dimension=dim,
+            version=self.model_version
+        ).root_dir
+        
+        # Save model components
+        torch.save(model.encoder.state_dict(), f"{model_path}/encoder.pt")
+        torch.save(model.q_head.state_dict(), f"{model_path}/q_head.pt")
+        torch.save(model.v_head.state_dict(), f"{model_path}/v_head.pt")
+        torch.save(model.pi_head.state_dict(), f"{model_path}/pi_head.pt")
+        
+        # Save metadata
+        meta = {
+            "dim": model.embedding_dim,
+            "hdim": model.hidden_dim,
+            "num_actions": model.num_actions,
+            "scale_factor": model.scale_factor.item(),
+            "version": self.model_version
+        }
+        save_json(meta, f"{model_path}/meta.json")
+        
+        self.logger.log("ModelSaved", {
+            "dimension": dim,
+            "path": model_path,
+            "components": ["encoder", "q_head", "v_head", "pi_head", "meta"]
+        })

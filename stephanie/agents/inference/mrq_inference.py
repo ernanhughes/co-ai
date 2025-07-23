@@ -1,21 +1,22 @@
 # stephanie/agents/inference/document_mrq_inference.py
 import os
+
 import torch
+import torch.nn.functional as F
 
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.evaluator.hypothesis_value_predictor import HypothesisValuePredictor
+from stephanie.evaluator.hypothesis_value_predictor import \
+    HypothesisValuePredictor
 from stephanie.models.score import ScoreORM
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.model import MRQModel
-from stephanie.scoring.scorable_factory import TargetType, ScorableFactory
+from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_locator import ModelLocator
-import torch.nn.functional as F
-
 
 
 class MRQInferenceAgent(BaseAgent):

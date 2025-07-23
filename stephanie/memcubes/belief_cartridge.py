@@ -1,10 +1,12 @@
 
-from stephanie.models.belief_cartridge import BeliefCartridgeORM
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text, DateTime, JSON
-from sqlalchemy.orm import relationship
-from stephanie.models.base import Base
-
 from datetime import datetime
+
+from sqlalchemy import (JSON, Column, DateTime, Float, ForeignKey, Integer,
+                        String, Text)
+from sqlalchemy.orm import relationship
+
+from stephanie.models.base import Base
+from stephanie.models.belief_cartridge import BeliefCartridgeORM
 
 
 # stephanie/models/belief_cartridge.py

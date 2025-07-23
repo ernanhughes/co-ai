@@ -1,17 +1,15 @@
 # stephanie/agents/learning/gild_trainer.py
 import torch
 import torch.nn.functional as F
+
 from stephanie.agents.base_agent import BaseAgent
-
-from stephanie.agents.inference.mrq_inference import MRQInferenceAgent
-from stephanie.constants import GOAL
-
-from stephanie.models.evaluation import EvaluationORM
-from stephanie.scoring.scorable_factory import TargetType, ScorableFactory
-from stephanie.scoring.scorable import Scorable
 from stephanie.agents.inference.ebt_inference import EBTInferenceAgent
 from stephanie.agents.inference.llm_inference import LLMInferenceAgent
-
+from stephanie.agents.inference.mrq_inference import MRQInferenceAgent
+from stephanie.constants import GOAL
+from stephanie.models.evaluation import EvaluationORM
+from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 
 
 class GILDTrainerAgent(BaseAgent):

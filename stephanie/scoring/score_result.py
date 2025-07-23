@@ -1,7 +1,9 @@
 # stephanie/scoring/score_result.py
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 import numpy as np
+
 
 @dataclass
 class ScoreResult:

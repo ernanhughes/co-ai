@@ -1,9 +1,12 @@
 # stephanie/metrics.py
-import numpy as np
 import logging
 from typing import Dict, Optional, Union
-from stephanie.logs.json_logger import JSONLogger
+
+import numpy as np
 import torch
+
+from stephanie.logs.json_logger import JSONLogger
+
 
 class EpistemicMetrics:
     """

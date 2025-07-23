@@ -18,6 +18,8 @@ from stephanie.memory.document_domain_store import DocumentDomainStore
 from stephanie.memory.document_section_store import DocumentSectionStore
 from stephanie.memory.document_store import DocumentStore
 from stephanie.memory.embedding_store import EmbeddingStore
+from stephanie.memory.evaluation_attribute_store import \
+    EvaluationAttributeStore
 from stephanie.memory.evaluation_store import EvaluationStore
 from stephanie.memory.goal_dimensions_store import GoalDimensionsStore
 from stephanie.memory.goal_store import GoalStore
@@ -43,7 +45,7 @@ from stephanie.memory.search_result_store import SearchResultStore
 from stephanie.memory.sharpening_store import SharpeningStore
 from stephanie.memory.symbolic_rule_store import SymbolicRuleStore
 from stephanie.models.base import engine  # From your SQLAlchemy setup
-from stephanie.memory.evaluation_attribute_store import EvaluationAttributeStore
+
 
 class MemoryTool:
     def __init__(self, cfg: dict, logger: Optional[JSONLogger] = None):

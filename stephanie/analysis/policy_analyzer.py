@@ -1,12 +1,15 @@
 # stephanie/analysis/policy_analyzer.py
+import json
+from typing import Any, Dict, List
+
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
-from stephanie.models.evaluation_attribute import EvaluationAttributeORM
+
 from stephanie.models.evaluation import EvaluationORM
+from stephanie.models.evaluation_attribute import EvaluationAttributeORM
 from stephanie.models.score import ScoreORM
-from typing import Dict, List, Any
-import json
+
 
 class PolicyAnalyzer:
     def __init__(self, session: Session, logger=None):

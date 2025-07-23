@@ -2,7 +2,6 @@
 
 from typing import List
 
-
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.trainer_engine import MRQTrainerEngine
 from stephanie.scoring.mrq.value_predictor import ValuePredictor

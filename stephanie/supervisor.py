@@ -2,12 +2,14 @@
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from uuid import uuid4
 
 import hydra
 from dependency_injector.wiring import Provide, inject
 from omegaconf import DictConfig, OmegaConf
+from tabulate import tabulate
 
 from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID,
                                  PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
@@ -26,9 +28,6 @@ from stephanie.registry.registry import register
 from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
 from stephanie.utils.timing import time_function
-
-from tabulate import tabulate
-import time
 
 
 class PipelineStage:

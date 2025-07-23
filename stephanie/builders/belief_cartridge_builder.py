@@ -1,21 +1,24 @@
 # stephanie/agents/belief_cartridge_builder.py
 import time
-import torch
-import numpy as np
-from typing import Dict
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
+from typing import Dict
+
+import numpy as np
+import torch
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.constants import GOAL
+from stephanie.memory.evaluation_attribute_store import \
+    EvaluationAttributeStore
 from stephanie.models.belief_cartridge import BeliefCartridgeORM
 from stephanie.models.evaluation import EvaluationORM
 from stephanie.models.evaluation_attribute import EvaluationAttributeORM
+from stephanie.models.score import ScoreORM
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import TargetType
-from stephanie.memory.evaluation_attribute_store import EvaluationAttributeStore
 from stephanie.utils.metrics import compute_uncertainty
-from stephanie.models.score import ScoreORM
+
 
 class BeliefCartridgeBuilder(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):

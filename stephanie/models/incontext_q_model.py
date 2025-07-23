@@ -1,10 +1,13 @@
-from streamlit import json
+import json
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import json
-import os
+from streamlit import json
+
 from stephanie.scoring.mrq.encoder import TextEncoder
+
 
 class MLP(nn.Module):
     def __init__(self, input_dim, output_dim):

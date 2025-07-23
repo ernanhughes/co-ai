@@ -1,18 +1,20 @@
 # stephanie/scoring/mrq/trainer_engine.py
+import os
+from collections import defaultdict
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.nn import functional as F
-from stephanie.scoring.mrq.value_predictor import ValuePredictor
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
-from collections import defaultdict
-import os
-import numpy as np
-from stephanie.scoring.mrq.encoder import TextEncoder
-from stephanie.scoring.transforms.regression_tuner import RegressionTuner
+
 from stephanie.models.incontext_q_model import InContextQModel
+from stephanie.scoring.mrq.encoder import TextEncoder
+from stephanie.scoring.mrq.value_predictor import ValuePredictor
+from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import save_json
 from stephanie.utils.metrics import EpistemicMetrics
 
