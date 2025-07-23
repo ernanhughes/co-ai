@@ -1184,7 +1184,7 @@ ON hnet_embeddings
 USING ivfflat (embedding vector_cosine_ops);
 ALTER TABLE hnet_embeddings ADD CONSTRAINT unique_text_hash_hnet UNIQUE (text_hash);
 
-CREATE TABLE evaluation_attributes (
+CREATE TABLE IF NOT EXISTS evaluation_attributes (
     id SERIAL PRIMARY KEY,
     evaluation_id INTEGER NOT NULL,
     dimension TEXT NOT NULL,
@@ -1205,7 +1205,51 @@ CREATE TABLE evaluation_attributes (
 );
 
 
+CREATE TABLE IF NOT EXISTS training_stats (
+    id SERIAL PRIMARY KEY,
+    
+    -- Model identification
+    model_type VARCHAR NOT NULL,
+    target_type VARCHAR NOT NULL,
+    dimension VARCHAR NOT NULL,
+    version VARCHAR NOT NULL,
+    embedding_type VARCHAR NOT NULL,
+    
+    -- Training metrics
+    q_loss DOUBLE PRECISION,
+    v_loss DOUBLE PRECISION,
+    pi_loss DOUBLE PRECISION,
+    avg_q_loss DOUBLE PRECISION,
+    avg_v_loss DOUBLE PRECISION,
+    avg_pi_loss DOUBLE PRECISION,
+    
+    -- Policy metrics
+    policy_entropy DOUBLE PRECISION,
+    policy_stability DOUBLE PRECISION,
+    policy_logits JSONB,
+    
+    -- Configuration
+    config JSONB,
+    
+    -- Dataset stats
+    sample_count INTEGER DEFAULT 0,
+    valid_samples INTEGER DEFAULT 0,
+    invalid_samples INTEGER DEFAULT 0,
+    
+    -- Timing
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMP,
+    
+    -- Relationships
+    goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL,
+    model_version_id INTEGER REFERENCES model_versions(id) ON DELETE SET NULL
+);
 
+-- Indexes for common queries
+CREATE INDEX idx_training_stats_dimension ON training_stats(dimension);
+CREATE INDEX idx_training_stats_model ON training_stats(model_type);
+CREATE INDEX idx_training_stats_version ON training_stats(version);
+CREATE INDEX idx_training_stats_embedding ON training_stats(embedding_type);
 
 
 

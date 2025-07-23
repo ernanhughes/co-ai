@@ -117,7 +117,7 @@ class MRQTrainerEngine:
         )
 
         # Policy loss: Advantage-weighted regression (AWR)
-        action_probs = F.softmax(outputs["action_probabilities"], dim=-1)
+        action_probs = F.softmax(outputs["action_probs"], dim=-1)
         advantage = (outputs["q_value"] - outputs["state_value"]).detach()
         losses["pi"] = -torch.mean(
             torch.log(action_probs) * advantage.unsqueeze(-1)
@@ -125,7 +125,7 @@ class MRQTrainerEngine:
 
         # Entropy regularization
         dist = torch.distributions.Categorical(
-            logits=outputs["action_probabilities"]
+            logits=outputs["action_probs"]
         )
         losses["entropy"] = -self.entropy_weight * dist.entropy().mean()
 

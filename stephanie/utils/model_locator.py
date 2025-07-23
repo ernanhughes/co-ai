@@ -9,6 +9,9 @@ from joblib import load
 
 from stephanie.models.incontext_q_model import InContextQModel
 from stephanie.scoring.model.ebt_model import EBTModel
+from stephanie.scoring.mrq.encoder import TextEncoder
+from stephanie.scoring.mrq.model import MRQModel
+from stephanie.scoring.mrq.value_predictor import ValuePredictor
 
 
 class ModelLocator:
@@ -237,3 +240,89 @@ class ModelLocator:
                 best[key] = info
                 
         return {f"{info['dimension']}/{info['model_type']}": info["path"] for info in best.values()}
+    
+
+
+    def load_mrq_model(self, device="cpu"):
+        """Load MRQ model components and build MRQModel"""
+        try:
+            # Check for required files
+            if not self._check_required_files(["encoder", "predictor"]):
+                raise FileNotFoundError(f"Missing required model files in {self.base_path}")
+            
+            # Load metadata
+            meta_path = self.meta_file()
+            if os.path.exists(meta_path):
+                with open(meta_path, "r") as f:
+                    meta = json.load(f)
+            else:
+                meta = {
+                    "dim": self.memory.embedding.dim,
+                    "hdim": self.memory.embedding.hdim,
+                    "version": self.version
+                }
+            
+            # Build model components
+            encoder = TextEncoder(dim=meta["dim"], hdim=meta["hdim"])
+            predictor = ValuePredictor(zsa_dim=meta["dim"], hdim=meta["hdim"])
+            
+            # Load weights
+            encoder.load_state_dict(
+                torch.load(self.encoder_file(), map_location=device)
+            )
+
+
+            # Load state_dict
+            state_dict = torch.load(self.model_file(), map_location=device)
+            
+            # Remap keys from v_head to value_net
+            remapped_dict = {
+                k.replace("v_head.net", "value_net"): v
+                for k, v in state_dict.items()
+                if k.startswith("v_head.net")
+            }
+            
+            if not remapped_dict:
+                raise ValueError("No relevant keys found for ValuePredictor")
+            
+            # Build ValuePredictor
+            predictor = ValuePredictor(zsa_dim=meta["dim"], hdim=meta["hdim"]).to(device)
+            predictor.load_state_dict(remapped_dict)
+            predictor.eval()
+        
+            
+            # Build MRQModel
+            mrq_model = MRQModel(encoder, predictor, self.memory.embedding, device=device)
+            mrq_model.eval()
+            
+            # Log successful load
+            self.logger.log("MRQModelLoaded", {
+                "dimension": self.dimension,
+                "embedding_type": self.embedding_type,
+                "model_path": self.base_path
+            })
+            
+            return mrq_model, meta
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to load MRQ model: {e}")
+
+    def _check_required_files(self, components):
+        """Validate required model files exist"""
+        required = {
+            "encoder": self.encoder_file(),
+            "predictor": self.model_file()
+        }
+        
+        missing = [
+            name for name, path in required.items() 
+            if not os.path.exists(path)
+        ]
+        
+        if missing:
+            self.logger.log("MissingModelFiles", {
+                "dimension": self.dimension,
+                "missing_files": missing
+            })
+            return False
+        return True

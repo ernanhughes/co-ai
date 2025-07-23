@@ -1,11 +1,14 @@
 # stephanie/agents/maintenance/ebt_trainer.py
+import json
 import os
 import sys
-import json
 
+import numpy as np
 import torch
+import torch.nn.functional as F
 from sqlalchemy import text
 from torch import nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset
 
 from stephanie.agents.base_agent import BaseAgent
@@ -14,12 +17,10 @@ from stephanie.agents.maintenance.model_evolution_manager import \
 from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.value_predictor import ValuePredictor
-from stephanie.utils.model_utils import save_model_with_version
-from stephanie.utils.model_locator import ModelLocator
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-import torch.nn.functional as F
-import numpy as np
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
+from stephanie.utils.model_locator import ModelLocator
+from stephanie.utils.model_utils import save_model_with_version
+
 
 class EBTDataset(Dataset):
     def __init__(self, contrast_pairs, min_score=None, max_score=None):
