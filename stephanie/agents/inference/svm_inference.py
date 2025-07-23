@@ -13,8 +13,7 @@ from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
-from stephanie.utils.model_utils import (discover_saved_dimensions,
-                                         get_svm_file_paths)
+from stephanie.utils.model_locator import ModelLocator
 
 
 class SVMInferenceAgent(BaseAgent):
@@ -30,38 +29,35 @@ class SVMInferenceAgent(BaseAgent):
         self.model_meta = {}
         self.tuners = {}
 
-        if not self.dimensions:
-            self.dimensions = discover_saved_dimensions(
-                model_type=self.model_type, target_type=self.target_type
-            )
-
-        self.logger.log(
-            "SVMInferenceInitialized", {"dimensions": self.dimensions}
-        )
-
+ 
         for dim in self.dimensions:
-            paths = get_svm_file_paths(
-                self.model_path,
-                self.model_type,
-                self.target_type,
-                dim,
-                self.model_version,
-                self.embedding_type
+            locator = ModelLocator(
+                root_dir=self.model_path,
+                embedding_type=self.embedding_type,
+                model_type=self.model_type,
+                target_type=self.target_type,
+                dimension=dim,
+                version=self.model_version,
             )
-            scaler_path = paths["scaler"]
-            model_file = paths["model"]
-            meta_path = paths["meta"]
 
-            self.logger.log("LoadingSVMModel", {"dimension": dim, "model": model_file})
+            self.logger.log("LoadingSVMModel", {
+                "dimension": dim,
+                "model": locator.model_file(suffix=".joblib"),
+            })
 
-            self.models[dim] = (load(scaler_path), load(model_file))
+            scaler = load(locator.scaler_file())
+            model = load(locator.model_file(suffix=".joblib"))
+            tuner_path = locator.tuner_file()
+            meta_path = locator.meta_file()
+
+            self.models[dim] = (scaler, model)
             self.model_meta[dim] = (
-                load_json(meta_path)
-                if os.path.exists(meta_path)
+                load_json(meta_path) if os.path.exists(meta_path)
                 else {"min_score": 0, "max_score": 100}
             )
-            self.tuners[dim] = RegressionTuner(dimension=dim, logger=logger)
-            self.tuners[dim].load(paths["tuner"])
+            tuner = RegressionTuner(dimension=dim, logger=self.logger)
+            tuner.load(tuner_path)
+            self.tuners[dim] = tuner
 
     def get_model_name(self) -> str:
         return f"{self.target_type}_{self.model_type}_{self.model_version}"

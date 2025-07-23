@@ -11,6 +11,8 @@ from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import save_json
 from stephanie.utils.model_utils import get_model_path
+from joblib import dump
+from stephanie.utils.model_locator import ModelLocator
 
 
 class SVMTrainerAgent(BaseAgent):
@@ -60,29 +62,24 @@ class SVMTrainerAgent(BaseAgent):
             pairs = builder.get_training_pairs_by_dimension(goal=goal_text, dim=[dim])
             training_pairs[dim] = pairs.get(dim, [])
        
+
         for dim, pairs in training_pairs.items():
             self._initialize_dimension(dim)
             if not pairs:
                 self.logger.log("SVMNoTrainingPairs", {"dimension": dim})
                 continue
 
-            self.logger.log(
-                "SVMTrainingStart", {"dimension": dim, "num_pairs": len(pairs)}
-            )
+            self.logger.log("SVMTrainingStart", {"dimension": dim, "num_pairs": len(pairs)})
 
             X, y = [], []
 
-            # Build dataset
             for pair in pairs:
                 title = pair["title"]
                 for side in ["a", "b"]:
                     output = pair[f"output_{side}"]
                     score = pair[f"value_{side}"]
-
                     ctx_emb = self.memory.embedding.get_or_create(title)
                     doc_emb = self.memory.embedding.get_or_create(output)
-
-                    # Combine embeddings as feature vector
                     feature = np.array(ctx_emb + doc_emb)
                     X.append(feature)
                     y.append(score)
@@ -93,61 +90,37 @@ class SVMTrainerAgent(BaseAgent):
 
             X = np.array(X)
             y = np.array(y)
-
-            # Normalize features
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(X)
-
-            # Train model
             model = SVR(kernel="linear")
             model.fit(X_scaled, y)
 
-            # Save model
-            self.models[dim] = (scaler, model)
-
-            # Save model files
-            model_path = get_model_path(
-                self.model_path,
-                self.model_type,
-                self.target_type,
-                dim,
-                self.model_version,
-                embedding_type=self.embedding_type
+            # Save using ModelLocator
+            locator = ModelLocator(
+                root_dir=self.model_path,
+                embedding_type=self.embedding_type,
+                model_type=self.model_type,
+                target_type=self.target_type,
+                dimension=dim,
+                version=self.model_version,
             )
-            os.makedirs(model_path, exist_ok=True)
+            save_dir = locator.ensure_dirs()
 
-            # Save model state (we'll serialize separately)
-            predicttor_path = f"{model_path}/{dim}.pt"
-            meta_path = f"{model_path}/{dim}.meta.json"
-            tuner_path = f"{model_path}/{dim}.tuner.json"
+            dump(scaler, locator.scaler_file())
+            dump(model, locator.model_file(suffix=".joblib"))
 
-            # Since we're using scikit-learn, we'll use joblib or custom serialization
-            from joblib import dump
-
-            scaler_path = f"{model_path}/{dim}_scaler.joblib"
-            model_path_joblib = f"{model_path}/{dim}.joblib"
-            dump(scaler, scaler_path)
-            dump(model, model_path_joblib)
-
-            # Save normalization meta
             meta = {
                 "min_score": float(np.min(y)),
                 "max_score": float(np.max(y)),
             }
-            save_json(meta, meta_path)
+            save_json(locator.meta_file(), meta)
 
-            # Train regression tuner using same data
             tuner = self.regression_tuners[dim]
             for i in range(len(X)):
-                tuner.train_single(
-                    model.predict(X_scaled[i].reshape(1, -1))[0], y[i]
-                )
+                tuner.train_single(model.predict(X_scaled[i].reshape(1, -1))[0], y[i])
+            tuner.save(locator.tuner_file())
 
-            tuner.save(tuner_path)
-
-            self.logger.log(
-                "SVMModelSaved", {"dimension": dim, "path": model_path}
-            )
+            self.logger.log("SVMModelSaved", {"dimension": dim, "path": save_dir})
 
         context[self.output_key] = training_pairs
         return context
