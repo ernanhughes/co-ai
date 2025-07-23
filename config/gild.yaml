@@ -7,7 +7,9 @@ defaults:
   - agents/paper_score
   - agents/knowledge_loader
   - agents/document_mrq_inference
+  - agents/sicql_mrq_inference
   - agents/document_mrq_trainer
+  - agents/sicql_mrq_trainer
   - agents/document_ebt_trainer
   - agents/document_ebt_inference
   - agents/document_reward_scorer
@@ -16,12 +18,14 @@ defaults:
   - agents/document_embedding_backfill
   - agents/document_llm_inference
   - agents/knowledge_db_loader
+  - agents/gild_trainer
   - agents/ethics
   - agents/scoring_memcube
   - agents/scoring_policy
+  - agents/policy_analyzer
+  - agents/pipeline_comparison
   - agents/pipeline_judge
   - agents/hnet
-  - agents/gild_selector
   - logging/json_logger
 
 embeddings:
@@ -66,6 +70,12 @@ pipeline:
       enabled: false
       iterations: 1
 
+    - name: sicql_mrq_trainer
+      description: "Build document pairs for training and evaluation"
+      cls: stephanie.agents.maintenance.mrq_trainer.MRQTrainerAgent
+      enabled: false
+      iterations: 1
+
     - name: document_svm_trainer
       description: "Train a model to predict document values using SVM"
       cls: stephanie.agents.maintenance.svm_trainer.SVMTrainerAgent
@@ -105,6 +115,12 @@ pipeline:
     - name: document_mrq_inference
       description: "Infer MRQ scores for documents"
       cls: stephanie.agents.inference.mrq_inference.MRQInferenceAgent
+      enabled: true
+      iterations: 1
+
+    - name: sicql_mrq_inference
+      description: "Infer MRQ SICQL scores for documents"
+      cls: stephanie.agents.inference.mrq_inference.MRQInferenceAgent
       enabled: false
       iterations: 1
 
@@ -126,16 +142,22 @@ pipeline:
       enabled: false
       iterations: 1
 
-    - name: ethics
-      description: "Evaluate the ethical soundness of AI-generated advice"
-      cls: stephanie.agents.world.ethics.Ethics
-      enabled: false
-      iterations: 1
-
     - name: scoring_policy
       description: "Apply scoring policy to evaluate documents"
       cls: stephanie.agents.inference.scoring_policy.ScoringPolicyAgent
       enabled: false
+      iterations: 1
+
+    - name: policy_analyzer
+      description: "Analyze the policy and its effectiveness"
+      cls: stephanie.agents.policy_analyzer.PolicyAnalysisAgent
+      enabled: true
+      iterations: 1
+
+    - name: gild_trainer
+      description: "Train the GILD model for policy improvement"
+      cls: stephanie.agents.gild_trainer.GILDTrainerAgent
+      enabled: true
       iterations: 1
 
     - name: scoring_memcube
@@ -144,14 +166,3 @@ pipeline:
       enabled: false
       iterations: 1
 
-    - name: hnet
-      description: "HNet agent for handling knowledge and scoring"
-      cls: stephanie.agents.hnet.HNetAgent
-      enabled: false
-      iterations: 1
-
-    - name: gild_selector
-      description: "GILD selector for selecting the best documents based on GILD criteria"  
-      cls: stephanie.agents.gild_selector.GILDSelectorAgent
-      enabled: true
-      iterations: 1

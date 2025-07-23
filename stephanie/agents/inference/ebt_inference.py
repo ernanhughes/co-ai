@@ -397,3 +397,28 @@ class EBTInferenceAgent(BaseAgent):
             "uncertainty_score": round(uncertainty_score, 4),
             "threshold": dim_threshold,
         })
+
+    def get_refinements(self, goal_text:str, text: str, dimension: str) -> dict:
+        """
+        Returns softmax-normalized action logits from the EBT model
+        for use as expert policy targets (used by GILD).
+        """
+        model = self.models.get(dimension)
+
+        if not model:
+            self.logger.log("EBTRefinementModelMissing", {"dimension": dimension})
+            return {}
+
+        ctx_emb = torch.tensor(self.memory.embedding.get_or_create(goal_text)).unsqueeze(0).to(self.device)
+        doc_emb = torch.tensor(self.memory.embedding.get_or_create(text)).unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            result = model(ctx_emb, doc_emb)
+            logits = result.get("action_logits")  # expects EBTModel to return a dict with logits
+
+        if logits is None:
+            self.logger.log("EBTNoActionLogits", {"dimension": dimension})
+            return {}
+
+        probs = torch.softmax(logits, dim=-1).squeeze().cpu().tolist()
+        return {f"action_{i}": p for i, p in enumerate(probs)}
