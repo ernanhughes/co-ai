@@ -6,6 +6,7 @@ from datetime import datetime
 
 import torch
 
+
 @DeprecationWarning
 def get_model_version(session, model_type: str, target_type: str, dimension: str):
     return "v1"

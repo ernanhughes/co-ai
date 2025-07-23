@@ -337,38 +337,49 @@ class MRQTrainerEngine:
             dataloader = self._create_dataloader(self.build_encoder(), samples)
 
             # Initialize model
-            model = self.build_sicql_model(action_dim=1)
+
+            use_sicql = self.cfg.get("use_sicql_style", False)
+
+            if use_sicql:
+                model = self.build_sicql_model(action_dim=1)
+            else:
+                encoder = self.build_encoder()
+                predictor = self.build_predictor()
+                from stephanie.scoring.mrq.model import MRQModel
+                model = MRQModel(encoder, predictor, self.memory.embedding, device=self.device)
 
             # Create output directory
             output_dir = f"{self.cfg.get('model_path', 'models')}/{dim}"
             os.makedirs(output_dir, exist_ok=True)
 
             # Train
-            trained_model = self.train_sicql(
-                model, dataloader, output_dir=output_dir
-            )
-
-            # Save components
-            trained_models[dim] = trained_model.state_dict()
-            trained_encoders[dim] = trained_model.encoder.state_dict()
-
-            # Save heads separately
-            torch.save(
-                trained_model.q_head.state_dict(), f"{output_dir}/q_head.pt"
-            )
-            torch.save(
-                trained_model.v_head.state_dict(), f"{output_dir}/v_head.pt"
-            )
-            torch.save(
-                trained_model.pi_head.state_dict(), f"{output_dir}/pi_head.pt"
-            )
+            if use_sicql:
+                trained_model = self.train_sicql(
+                    model, dataloader, output_dir=output_dir
+                )
+                trained_models[dim] = trained_model.state_dict()
+                trained_encoders[dim] = trained_model.encoder.state_dict()
+                torch.save(
+                    trained_model.q_head.state_dict(), f"{output_dir}/q_head.pt"
+                )
+                torch.save(
+                    trained_model.v_head.state_dict(), f"{output_dir}/v_head.pt"
+                )
+                torch.save(
+                    trained_model.pi_head.state_dict(), f"{output_dir}/pi_head.pt"
+                )
+            else:
+                model = self._train_mrq(model, dataloader, output_dir=output_dir)  
+                trained_model = model.predictor
+                trained_models[dim] = model.predictor.state_dict()
+                trained_encoders[dim] = model.encoder.state_dict()
 
             # Save metadata
             meta = {
                 "dim": self.dim,
                 "hdim": self.hdim,
                 "dimension": dim,
-                "model_type": "sicql",
+                "model_type": "sicql" if use_sicql else "mrq",
                 "target_type": self.cfg.get("target_type", "document"),
                 "embedding_type": self.cfg.get("embedding_type", "hnet"),
                 "version": self.cfg.get("model_version", "v1"),
@@ -412,3 +423,64 @@ class MRQTrainerEngine:
             "expectile_weight", self.expectile_weight
         )
         self.entropy_weight = cfg.get("entropy_weight", self.entropy_weight)
+
+    def _train_mrq(self, model, dataloader, output_dir=None):
+        """Train a standard MRQModel (Q only) using MSE"""
+        model.train_mode()  # ✅ FIXED
+
+        optimizer = optim.Adam(
+            list(model.encoder.parameters()) + list(model.predictor.parameters()),
+            lr=self.lr
+        )
+        best_loss = float("inf")
+        patience_counter = 0
+
+        for epoch in range(self.epochs):
+            total_loss = 0
+            count = 0
+
+            for context_emb, doc_emb, scores in tqdm(dataloader, desc=f"Epoch {epoch+1}"):
+                optimizer.zero_grad()
+
+                # Forward pass
+                zsa = model.encoder(context_emb, doc_emb)
+                q_pred = model.predictor(zsa).squeeze()
+
+                # MSE loss
+                loss = F.mse_loss(q_pred, scores)
+                loss.backward()
+
+                torch.nn.utils.clip_grad_norm_(model.encoder.parameters(), 0.5)
+                torch.nn.utils.clip_grad_norm_(model.predictor.parameters(), 0.5)
+
+                optimizer.step()
+
+                total_loss += loss.item() * context_emb.size(0)
+                count += context_emb.size(0)
+
+            avg_loss = total_loss / count
+
+            self.logger.log("MRQTrainingEpoch", {
+                "epoch": epoch + 1,
+                "loss": avg_loss,
+                "lr": optimizer.param_groups[0]["lr"],
+            })
+
+            if avg_loss < best_loss - self.min_delta:
+                best_loss = avg_loss
+                patience_counter = 0
+                if output_dir:
+                    torch.save(model.encoder.state_dict(), f"{output_dir}/encoder.pt")
+                    torch.save(model.predictor.state_dict(), f"{output_dir}/predictor.pt")
+            else:
+                patience_counter += 1
+
+            if patience_counter >= self.patience:
+                self.logger.log("MRQEarlyStopping", {
+                    "epoch": epoch + 1,
+                    "best_loss": best_loss,
+                })
+                break
+
+        self.logger.log("MRQTrainingComplete", {"best_loss": best_loss})
+        return model

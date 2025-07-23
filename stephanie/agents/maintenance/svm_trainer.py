@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import torch
+from joblib import dump
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
 
@@ -10,9 +11,8 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import save_json
-from stephanie.utils.model_utils import get_model_path
-from joblib import dump
 from stephanie.utils.model_locator import ModelLocator
+from stephanie.utils.model_utils import get_model_path
 
 
 class SVMTrainerAgent(BaseAgent):
