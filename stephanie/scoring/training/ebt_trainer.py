@@ -96,6 +96,8 @@ class EBTTrainer(BaseTrainer):
             "dim": model.embedding_dim,
             "hdim": model.hidden_dim,
             "num_actions": model.num_actions,
-            "version": self.version
+            "version": self.version,
+            "min_score": self.cfg.get("min_score", 0),
+            "max_score": self.cfg.get("max_score", 100),
         }
         self._save_meta_file(meta, dimension)

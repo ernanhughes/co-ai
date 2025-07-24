@@ -230,7 +230,8 @@ class Supervisor:
             STAGE: stage.name,
             "agent": stage.cls.split(".")[-1],
             "status": "⏳ running", 
-            "start_time": datetime.utcnow().isoformat()
+            "start_time": datetime.utcnow().strftime("%H:%M:%S")
+
         }
         self.context().setdefault("STAGE_DETAILS", []).append(stage_details)
 
@@ -275,14 +276,14 @@ class Supervisor:
             self.logger.log("PipelineStageEnd", {STAGE: stage.name})
 
             stage_details["status"] = "✅ completed"
-            stage_details["end_time"] = datetime.utcnow().isoformat()
+            stage_details["end_time"] = datetime.utcnow().strftime("%H:%M:%S")
             return context
 
         except Exception as e:
             self.logger.log("PipelineStageFailed", {"stage": stage.name, "error": str(e)})
             stage_details["status"] = "💀 failed"
             stage_details["error"] = str(e)
-            stage_details["end_time"] = datetime.utcnow().isoformat()
+            stage_details["end_time"] = datetime.utcnow().strftime("%H:%M:%S")
             return context
         
     def _save_pipeline_stage(self, stage: PipelineStage, context: dict, stage_dict: dict):

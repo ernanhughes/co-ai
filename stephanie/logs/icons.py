@@ -217,6 +217,11 @@ TRAINING = {
     "LoadingSVMModel": "📥📊",  # Loading SVM model
     "SVMInferenceCompleted": "📊✅",  # SVM inference completed
     "EBTBufferCreated": "🧪📦",  # EBT buffer created
+    "EBTTrainerEpoch": "🏋️🧪",  # EBT training epoch
+    "TrainingCompleted": "🏁🎓",  # Training completed
+    "MRQTrainingEpoch": "🏋️🧠",  # MRQ training epoch
+    "MRQEarlyStopping": "🛑🏋️",  # MRQ early stopping
+    "MRQTrainingComplete": "🎓🧠",  # MRQ training completed
 }
 
 PROMPTS = {

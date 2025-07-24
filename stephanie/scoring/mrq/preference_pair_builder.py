@@ -81,8 +81,8 @@ class PreferencePairBuilder:
             params["goal"] = goal  # Currently unused unless you add it to the query.
 
         # Optional: print full SQL for debugging
-        compiled = query.compile(self.db.bind, compile_kwargs={"literal_binds": True})
-        self.logger.log("SQLQuery", {"query": str(compiled)})
+        # compiled = query.compile(self.db.bind, compile_kwargs={"literal_binds": True})
+        # self.logger.log("SQLQuery", {"query": str(compiled)})
         try:
             rows = self.db.execute(query, params).fetchall()
         except Exception as e:

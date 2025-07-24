@@ -92,7 +92,8 @@ class SVMInferenceAgent(BaseAgent):
                     self.logger.log("EmbeddingDimMismatch", {
                         "dimension": dim,
                         "expected": expected_features,
- Yeah                   "a Yeah
+                        "actual": actual_features
+                    })
 
                 X_scaled = scaler.transform(feature)
                 raw_score = model.predict(X_scaled)[0]

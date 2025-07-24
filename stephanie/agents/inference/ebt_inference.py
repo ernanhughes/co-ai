@@ -108,11 +108,11 @@ class EBTInferenceAgent(BaseAgent):
 
             for dim, model in self.models.items():
                 with torch.no_grad():
-                    raw_energy = model(ctx_emb, doc_emb).squeeze().cpu().item()
+                    raw_energy = model(ctx_emb, doc_emb)["q_value"].squeeze().cpu().item()
                     normalized_score = torch.sigmoid(torch.tensor(raw_energy)).item()
-                    meta = self.model_meta.get(dim, {"min": 40, "max": 100})
+                    meta = self.model_meta.get(dim, {"min_score": 40, "max_score": 100})
                     real_score = (
-                        normalized_score * (meta["max"] - meta["min"]) + meta["min"]
+                        normalized_score * (meta["max_score"] - meta["min_score"]) + meta["min_score"]
                     )
                     final_score = round(real_score, 4)
                     dimension_scores[dim] = final_score
