@@ -73,7 +73,7 @@ pipeline:
     - name: sicql_mrq_trainer
       description: "Build document pairs for training and evaluation"
       cls: stephanie.agents.maintenance.sicql_trainer.SICQLTrainerAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: document_svm_trainer
@@ -103,7 +103,7 @@ pipeline:
     - name: knowledge_db_loader
       description: "Load knowledge from the database into the system"
       cls: stephanie.agents.knowledge.knowledge_db_loader.KnowledgeDBLoaderAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: document_llm_inference
@@ -121,7 +121,7 @@ pipeline:
     - name: sicql_mrq_inference
       description: "Infer MRQ SICQL scores for documents"
       cls: stephanie.agents.inference.mrq_inference.MRQInferenceAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: document_svm_inference

@@ -66,6 +66,10 @@ class SVMTrainer(BaseTrainer):
             "kernel": self.kernel,
             "C": self.C,
             "epsilon": self.epsilon,
+            "dim": self.dim,
+            "hdim": self.hdim,
+            "min_score": self.cfg.get("min_score", 0),
+            "max_score": self.cfg.get("max_score", 100),
         }
         self._save_meta_file(meta, dimension)
 

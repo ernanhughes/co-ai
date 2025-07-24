@@ -25,6 +25,8 @@ class SVMInferenceAgent(BaseAgent):
         self.model_version = cfg.get("model_version", "v1")
         self.dimensions = cfg.get("dimensions", [])
         self.embedding_type = self.memory.embedding.type
+        self.dim = self.memory.embedding.dim
+        self.hdim = self.memory.embedding.hdim
         self.models = {}
         self.model_meta = {}
         self.tuners = {}
@@ -76,12 +78,22 @@ class SVMInferenceAgent(BaseAgent):
 
             ctx_emb = self.memory.embedding.get_or_create(goal_text)
             doc_emb = self.memory.embedding.get_or_create(scorable.text)
-            feature = np.array(ctx_emb + doc_emb).reshape(1, -1)
+            feature = np.concatenate([np.array(ctx_emb), np.array(doc_emb)], axis=0).reshape(1, -1)
 
             dimension_scores = {}
             score_results = []
 
             for dim, (scaler, model) in self.models.items():
+
+                meta = self.model_meta[dim]
+                expected_features = 2 * meta.get("dim", 512)
+                actual_features = self.memory.embedding.dim * 2
+                if expected_features != actual_features:
+                    self.logger.log("EmbeddingDimMismatch", {
+                        "dimension": dim,
+                        "expected": expected_features,
+ Yeah                   "a Yeah
+
                 X_scaled = scaler.transform(feature)
                 raw_score = model.predict(X_scaled)[0]
                 tuned_score = self.tuners[dim].transform(raw_score)
