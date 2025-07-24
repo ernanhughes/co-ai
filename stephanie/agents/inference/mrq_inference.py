@@ -101,13 +101,14 @@ class MRQInferenceAgent(BaseAgent):
                 else:
                     q_value = model.predict(goal_text, scorable.text)
 
+                meta = self.model_meta.get(dim, {"min": 0, "max": 100})
                 if dim in self.tuners:
                     scaled_score = self.tuners[dim].transform(q_value)
                 else:
-                    meta = self.model_meta.get(dim, {"min": 0, "max": 100})
                     normalized = torch.sigmoid(torch.tensor(q_value)).item()
-                    scaled_score = normalized * (meta["max"] - meta["min"]) + meta["min"]
+                    scaled_score = normalized * (meta["max_score"] - meta["min_score"]) + meta["min_score"]
 
+                scaled_score = max(min(scaled_score, meta["max_score"]), meta["min_score"])
                 final_score = round(scaled_score, 4)
                 dimension_scores[dim] = final_score
                 prompt_hash = ScoreORM.compute_prompt_hash(goal_text, scorable)
@@ -177,24 +178,19 @@ class MRQInferenceAgent(BaseAgent):
                 version=self.model_version,
             )
 
-            if self.use_sicql:
-                model = locator.load_sicql_model(self.device)
-                self.models[dim] = model
-                self.model_meta[dim] = {"min": 0, "max": 100}
-            else:
-                encoder = TextEncoder(self.dim, self.hdim)
-                predictor = HypothesisValuePredictor(self.dim, self.hdim)
-                model = MRQModel(encoder, predictor, self.memory.embedding, device=self.device)
-                model.load_weights(locator.encoder_file(), locator.model_file())
-                self.models[dim] = model
+            encoder = TextEncoder(self.dim, self.hdim)
+            predictor = HypothesisValuePredictor(self.dim, self.hdim)
+            model = MRQModel(encoder, predictor, self.memory.embedding, device=self.device)
+            model.load_weights(locator.encoder_file(), locator.model_file())
+            self.models[dim] = model
 
-                meta = load_json(locator.meta_file()) if os.path.exists(locator.meta_file()) else {"min": 0, "max": 100}
-                tuner_path = locator.tuner_file()
-                self.model_meta[dim] = meta
+            meta = load_json(locator.meta_file()) if os.path.exists(locator.meta_file()) else {"min": 0, "max": 100}
+            tuner_path = locator.tuner_file()
+            self.model_meta[dim] = meta
 
-                if os.path.exists(tuner_path):
-                    tuner = RegressionTuner(dimension=dim)
-                    tuner.load(tuner_path)
-                    self.tuners[dim] = tuner
+            if os.path.exists(tuner_path):
+                tuner = RegressionTuner(dimension=dim)
+                tuner.load(tuner_path)
+                self.tuners[dim] = tuner
 
         self.logger.log("AllMRQModelsLoaded", {"dimensions": dimensions})

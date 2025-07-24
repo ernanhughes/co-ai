@@ -1,13 +1,16 @@
 # stephanie/agents/maintenance/mrq_trainer_agent.py
 
 from stephanie.agents.base_agent import BaseAgent
+from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
 from stephanie.scoring.training.mrq_trainer import MRQTrainer
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 
 class MRQTrainerAgent(BaseAgent):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
+        self.pair_builder = PreferencePairBuilder(memory.session, logger)
         self.trainer = MRQTrainer(cfg, memory=memory, logger=logger)
+
 
     def _extract_samples(self, context):
         goal = context.get("goal", {})
@@ -28,15 +31,21 @@ class MRQTrainerAgent(BaseAgent):
         """
         Agent entry point to train MRQ models for all configured dimensions.
         """
+        goal = context.get("goal", {})
         results = {}
-        for dim in self.trainer.dimensions:
-            samples = self._extract_samples(context)
+        for dimension in self.trainer.dimensions:
+            pairs_by_dim = self.pair_builder.get_training_pairs_by_dimension(
+                dim=[dimension],
+                goal=goal.get("goal_text"),
+                limit=100
+            )
+            samples = pairs_by_dim.get(dimension, [])
             if not samples:
-                self.logger.log("NoSamplesFound", {"dimension": dim})
+                self.logger.log("NoSamplesFound", {"dimension": dimension})
                 continue
-            stats = self.trainer.train(samples, dim)
+            stats = self.trainer.train(samples, dimension)
             if "error" not in stats:
-                results[dim] = stats
+                results[dimension] = stats
 
         context["training_stats"] = results
         return context
