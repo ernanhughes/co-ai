@@ -222,6 +222,8 @@ TRAINING = {
     "MRQTrainingEpoch": "🏋️🧠",  # MRQ training epoch
     "MRQEarlyStopping": "🛑🏋️",  # MRQ early stopping
     "MRQTrainingComplete": "🎓🧠",  # MRQ training completed
+    "MRQTrainerInitialized": "🧠🤖",  # MRQ trainer initialized
+    "NoSamplesFound": "🚫🚫🚫",  # No samples found for training
 }
 
 PROMPTS = {
