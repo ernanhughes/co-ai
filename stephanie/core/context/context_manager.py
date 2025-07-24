@@ -12,9 +12,8 @@ class ContextManager:
     def __init__(
         self,
         cfg: Dict[str, Any],
-        goal: str,
-        context_id: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
+        context_id: Optional[str] = None,
         memory=None,
         logger=None,
         db_table: str = "contexts",
@@ -42,7 +41,6 @@ class ContextManager:
         
         # Initialize context dictionary
         self._data = {
-            "goal": goal,
             "trace": [],
             "metadata": {
                 "context_id": context_id or str(uuid.uuid4()),
@@ -64,7 +62,6 @@ class ContextManager:
         
         self.logger.log("ContextManagerInitialized", {
             "context_id": self.context_id,
-            "goal": goal[:50] + "...",
             "component_count": len(self._data["metadata"]["components"])
         })
 

@@ -1,4 +1,4 @@
-# insight_service/dashboard.py
+# sis/dashboard.py
 
 import gradio as gr
 import sqlite3

@@ -1,4 +1,4 @@
-# insight_service/main.py
+# sis/main.py
 
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
@@ -11,7 +11,7 @@ import asyncio
 app = FastAPI()
 
 DB_PATH = "insight_data.db"
-LOG_DIRECTORY = "../log"
+LOG_DIRECTORY = "../logs Just do one thing"
 FILE_POSITIONS = {}  # Tracks last read position in each file
 
 # Define data schema

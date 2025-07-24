@@ -115,7 +115,7 @@ pipeline:
     - name: document_mrq_inference
       description: "Infer MRQ scores for documents"
       cls: stephanie.agents.inference.mrq_inference.MRQInferenceAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: sicql_mrq_inference
@@ -133,36 +133,36 @@ pipeline:
     - name: document_ebt_inference
       description: "Infer EBT scores for documents"
       cls: stephanie.agents.inference.ebt_inference.EBTInferenceAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: document_reward_scorer
       description: "Score the documents based on their relevance and quality"
       cls: stephanie.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: scoring_policy
       description: "Apply scoring policy to evaluate documents"
       cls: stephanie.agents.inference.scoring_policy.ScoringPolicyAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: policy_analyzer
       description: "Analyze the policy and its effectiveness"
       cls: stephanie.agents.policy_analyzer.PolicyAnalysisAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: gild_trainer
       description: "Train the GILD model for policy improvement"
       cls: stephanie.agents.gild_trainer.GILDTrainerAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: scoring_memcube
       description: "Apply scoring memcube to evaluate documents"
       cls: stephanie.agents.inference.scoring_memcube.ScoringMemcubeAgent
-      enabled: true
+      enabled: false
       iterations: 1
 

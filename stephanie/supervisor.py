@@ -24,6 +24,7 @@ from stephanie.registry.registry import register
 from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
 from stephanie.utils.timing import time_function
+from stephanie.core.context.context_manager import ContextManager
 
 
 class PipelineStage:
@@ -45,6 +46,11 @@ class Supervisor:
         self.rule_applier = SymbolicRuleApplier(cfg, self.memory, self.logger)
         print(f"Parsing pipeline stages from config: {cfg.pipeline}")
         self.pipeline_stages = self._parse_pipeline_stages(cfg.pipeline.stages)
+
+        self.context = self._init_context()
+        self.logger.log("ContextManagerInitialized", {
+            "context": self.context
+        })
 
         # Initialize and register core components
         state_tracker = StateTracker(cfg, self.memory, self.logger)
@@ -93,6 +99,35 @@ class Supervisor:
                 "training_controller": training_controller,
             },
         )
+
+    def _init_context(self):
+        # Get context config from Hydra
+        context_cfg = self.cfg.get("context", {})
+        
+        # Build context manager
+        context = ContextManager(
+            cfg=context_cfg,
+            memory=self.memory,
+            logger=self.logger
+        )
+            
+        # Load from DB if context_id exists
+        if self.cfg.get("context_id"):
+            loaded = self.context.load_from_db(self.cfg.context_id)
+            if loaded:
+                self.context = loaded
+                self.logger.log("ContextLoadedFromDB", {
+                    "context_id": self.cfg.context_id,
+                    "component_count": len(self.context._data["metadata"]["components"])
+                })
+        return context            
+
+    def _stage_already_processed(self, stage):
+        """Check if stage was already processed"""
+        for action in self.context._data["trace"]:
+            if action["agent"] == stage.name:
+                return True
+        return False
 
     def _parse_pipeline_stages(
         self, stage_configs: list[dict[str, any]]
@@ -589,4 +624,3 @@ class Supervisor:
         print(table)
         self.logger.log("PipelineSummaryPrinted", {"summary": summary})    
 
-__all__ = ["Supervisor", "container"]
