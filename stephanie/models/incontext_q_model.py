@@ -9,46 +9,66 @@ from stephanie.scoring.mrq.encoder import TextEncoder
 
 
 class MLP(nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, hidden_dim, output_dim):
         super().__init__()
         self.model = nn.Sequential(
-            nn.Linear(input_dim, input_dim),
+            nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(input_dim, output_dim)
+            nn.Linear(hidden_dim, output_dim)
         )
 
     def forward(self, x):
         return self.model(x)
 
 class ExpectileHead(nn.Module):
-    def __init__(self, input_dim):
+    def __init__(self, input_dim, hidden_dim):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, input_dim),
+            nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.Linear(input_dim, 1)
+            nn.Linear(hidden_dim, 1)
         )
 
     def forward(self, x):
         return self.net(x)
 
 class PolicyHead(nn.Module):
-    def __init__(self, input_dim, action_dim=1):
+    def __init__(self, input_dim, hdim, action_dim=3):
+        """
+        Multi-layer policy head using a hidden layer
+
+        Args:
+            input_dim: Dimension of the zsa vector
+            hdim: Hidden layer size
+            action_dim: Number of discrete actions (e.g. MRQ, SVM, EBT)
+        """
         super().__init__()
-        self.linear = nn.Linear(input_dim, action_dim)
+        self.linear = nn.Sequential(
+            nn.Linear(input_dim, hdim),
+            nn.ReLU(),
+            nn.Linear(hdim, action_dim)
+        )
+        self._init_weights()
+
+    def _init_weights(self):
+        """Xavier initialization"""
+        for layer in self.linear:
+            if isinstance(layer, nn.Linear):
+                nn.init.xavier_uniform_(layer.weight)
+                nn.init.zeros_(layer.bias)
 
     def forward(self, x):
-        return self.linear(x)  # Optionally softmax if needed
+        return self.linear(x)  # raw logits; use softmax externally if needed
 
 class InContextQModel(nn.Module):
-    def __init__(self, dim, hdim, action_dim=1, device="cpu"):
+    def __init__(self, dim, hdim, action_dim=3, device="cpu"):
         super().__init__()
         print(f"Initializing InContextQModel with dim={dim}, hdim={hdim}, action_dim={action_dim}, device={device}")
         self.device = device
         self.encoder = TextEncoder(dim, hdim).to(device)
-        self.q_head = MLP(dim, 1).to(device)
-        self.v_head = ExpectileHead(dim).to(device)
-        self.pi_head = PolicyHead(dim, action_dim).to(device)
+        self.q_head = MLP(dim, hdim, 1).to(device)
+        self.v_head = ExpectileHead(dim, hdim).to(device)
+        self.pi_head = PolicyHead(dim, hdim, action_dim).to(device)
 
     def forward(self, prompt_emb, output_emb):
         prompt_emb = prompt_emb.to(self.device)
