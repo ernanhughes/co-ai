@@ -56,5 +56,7 @@ class SICQLTrainerAgent(ScoringMixin, BaseAgent):
 
             results[dimension] = stats
 
-        context[self.output_key] = results
+        context[self.output_key] = {
+            "training_stats": results
+        }
         return context

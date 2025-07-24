@@ -85,7 +85,6 @@ class PreferencePairBuilder:
         self.logger.log("SQLQuery", {"query": str(compiled)})
         try:
             rows = self.db.execute(query, params).fetchall()
-            self.logger.log("SQLQueryResult", {"rows": [dict(row) for row in rows]})
         except Exception as e:
             if self.logger:
                 self.logger.log("DocumentPairBuilderError", {"error": str(e)})

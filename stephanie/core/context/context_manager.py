@@ -7,6 +7,7 @@ import torch
 from typing import Any, Dict, Optional
 from sqlalchemy import text
 from stephanie.models.context_state import ContextStateORM
+import sys
 
 class ContextManager:
     def __init__(
@@ -290,7 +291,9 @@ class ContextManager:
             
         # Ensure context is valid
         serializable_context = self._strip_non_serializable(self._data)
-        
+        context_size_breakdown = self.context_size_breakdown(serializable_context)
+        print(f"Context size breakdown: {context_size_breakdown}")    
+
         # Save to ORM
         context_orm = ContextStateORM(
             run_id=self.run_id,
@@ -374,3 +377,13 @@ class ContextManager:
             "trace": self._data["trace"],
             "created": self._data["metadata"]["start_time"]
         }
+
+
+    def context_size_breakdown(self, context):
+        sizes = {}
+        for key, value in context.items():
+            try:
+                sizes[key] = sys.getsizeof(value)
+            except TypeError:
+                sizes[key] = "unmeasurable"
+        return sorted(sizes.items(), key=lambda x: x[1] if isinstance(x[1], int) else 0, reverse=True)

@@ -8,7 +8,6 @@ import torch
 import torch.optim as optim
 from torch.nn import functional as F
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 from stephanie.models.belief_cartridge import BeliefCartridgeORM
@@ -16,85 +15,18 @@ from stephanie.models.model_version import ModelVersionORM
 from stephanie.scoring.model.policy_head import PolicyHead
 from stephanie.scoring.model.q_head import QHead
 from stephanie.scoring.model.v_head import VHead
-from stephanie.scoring.mrq import model
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.model.in_context_q import InContextQModel
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
+from stephanie.scoring.training.base_trainer import BaseTrainer
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.models.training_stats import TrainingStatsORM
 
 
-class SICQLTrainer:
-    class Locator:
-        """Integrated model path resolver for SICQL"""
+class SICQLTrainer(BaseTrainer):
 
-        def __init__(
-            self,
-            root_dir="models",
-            dimension="alignment",
-            embedding_type="hnet",
-            model_type="sicql",
-            target_type="document",
-            version="v1",
-        ):
-            self.root_dir = root_dir
-            self.embedding_type = embedding_type
-            self.dimension = dimension
-            self.model_type = model_type
-            self.target_type = target_type
-            self.version = version
-            self._validate_inputs()
-
-        def _validate_inputs(self):
-            """Ensure valid input types"""
-            if not isinstance(self.version, str):
-                raise ValueError("Version must be a string")
-
-        @property
-        def base_path(self) -> str:
-            """Build hierarchical path: models/embedding_type/model_type/target_type/dimension/version"""
-            path = os.path.join(
-                self.root_dir,
-                self.embedding_type,
-                self.model_type,
-                self.target_type,
-                self.dimension,
-                self.version,
-            )
-            os.makedirs(path, exist_ok=True)
-            return path
-
-        def encoder_file(self) -> str:
-            return os.path.join(self.base_path, f"{self.dimension}_encoder.pt")
-
-        def q_head_file(self) -> str:
-            return os.path.join(self.base_path, f"{self.dimension}_q.pt")
-
-        def v_head_file(self) -> str:
-            return os.path.join(self.base_path, f"{self.dimension}_v.pt")
-
-        def pi_head_file(self) -> str:
-            return os.path.join(self.base_path, f"{self.dimension}_pi.pt")
-
-        def meta_file(self) -> str:
-            return os.path.join(self.base_path, f"{self.dimension}.meta.json")
-
-        def tuner_file(self) -> str:
-            return os.path.join(self.base_path, f"{self.dimension}.tuner.json")
-
-        def model_exists(self) -> bool:
-            """Check if all required components exist"""
-            return all(
-                os.path.exists(path)
-                for path in [
-                    self.encoder_file(),
-                    self.q_head_file(),
-                    self.v_head_file(),
-                    self.pi_head_file(),
-                ]
-            )
-
-    def __init__(self, cfg: dict, memory=None, logger=None):
+    def __init__(self, cfg, memory=None, logger=None):
+        super().__init__(cfg, memory, logger)
         self.cfg = cfg
         self.memory = memory
         self.logger = logger
@@ -134,6 +66,7 @@ class SICQLTrainer:
                 "device": str(self.device),
             },
         )
+ 
 
     def _init_config(self, cfg):
         """Initialize training parameters from config"""
@@ -157,7 +90,7 @@ class SICQLTrainer:
     def _load_tuners(self):
         """Load regression tuners for each dimension"""
         for dim in self.dimensions:
-            tuner_path = self.get_locater(dim).tuner_file()
+            tuner_path = super().get_locator(dim).tuner_file()
             if os.path.exists(tuner_path):
                 self.tuners[dim] = RegressionTuner(dimension=dim)
                 self.tuners[dim].load(tuner_path)
@@ -167,20 +100,9 @@ class SICQLTrainer:
                     "TunerMissing", {"dimension": dim, "path": tuner_path}
                 )
 
-    def get_locater(self, dimension):
-        """Get locator for a specific dimension"""
-        return self.Locator(
-            root_dir=self.root_dir,
-            dimension=dimension,
-            embedding_type=self.embedding_type,
-            model_type=self.model_type,
-            target_type=self.target_type,
-            version=self.version,
-        )
-
     def _build_model(self, dimension):
         """Build or load SICQL model"""
-        locator = self.get_locater(dimension)
+        locator = super().get_locator(dimension)
         if locator.model_exists():
             # Load existing model
             encoder = TextEncoder(dim=self.dim, hdim=self.hdim).to(self.device)
@@ -234,61 +156,6 @@ class SICQLTrainer:
             embedding_store=self.memory.embedding,
             device=self.device,
         )
-
-    def _create_dataloader(self, samples):
-        """Convert samples to DataLoader with validation"""
-        valid_samples = []
-        for s in samples:
-            context_text = s.get("title", "")
-            doc_text = s.get("output", "")
-
-            # Validate text
-            if not context_text or not doc_text:
-                continue
-
-            # Get embeddings
-            context_emb = torch.tensor(
-                self.memory.embedding.get_or_create(context_text)
-            ).to(self.device)
-
-            doc_emb = torch.tensor(
-                self.memory.embedding.get_or_create(doc_text)
-            ).to(self.device)
-
-            # Get score
-            score = s.get("score", 0.5)
-            if not isinstance(score, (float, int)):
-                continue
-
-            valid_samples.append(
-                {"context": context_emb, "document": doc_emb, "score": score}
-            )
-
-        if len(valid_samples) < self.min_samples:
-            self.logger.log(
-                "InsufficientSamples",
-                {
-                    "dimension": self.cfg.get("dimension", "alignment"),
-                    "sample_count": len(valid_samples),
-                    "threshold": self.min_samples,
-                },
-            )
-            return None
-
-        # Convert to tensors
-        context_tensors = torch.stack(
-            [s["context"] for s in valid_samples]
-        ).to(self.device)
-        doc_tensors = torch.stack([s["document"] for s in valid_samples]).to(
-            self.device
-        )
-        scores = torch.tensor([s["score"] for s in valid_samples]).to(
-            self.device
-        )
-
-        # Create dataset
-        dataset = TensorDataset(context_tensors, doc_tensors, scores)
-        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
     def _train_epoch(self, model, dataloader):
         """Train for one epoch with all heads"""
@@ -380,7 +247,7 @@ class SICQLTrainer:
         return self.early_stop_counter >= self.early_stopping_patience
 
     def _save_model(self, model, dimension, stats):
-        locator = self.get_locater(dimension)
+        locator = super().get_locator(dimension)
         """Save model components with metadata"""
         # Save each component
         torch.save(model.encoder.state_dict(), locator.encoder_file())
@@ -499,7 +366,7 @@ class SICQLTrainer:
         self.logger.log("DimensionTrainingStarted", {"dimension": dim})
 
         # Prepare data
-        dataloader = self._create_dataloader(samples)
+        dataloader = super()._create_dataloader(samples)
         if not dataloader:
             return {"error": "insufficient_data", "dimension": dim}
 
@@ -755,7 +622,7 @@ class SICQLTrainer:
 
     def _save_model(self, model, dimension, stats):
         """Save SICQL model components"""
-        locator = self.get_locater(dimension)
+        locator = super().get_locator(dimension)
         # Save components separately
         torch.save(model.encoder.state_dict(), locator.encoder_file())
         torch.save(model.q_head.state_dict(), locator.q_head_file())
@@ -787,10 +654,7 @@ class SICQLTrainer:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        # Save metadata
-        with open(locator.meta_file(), "w") as f:
-            json.dump(meta, f)
-
+        super()._save_meta_file(meta, dimension)
         return meta
 
     def run(self, context: dict) -> dict:

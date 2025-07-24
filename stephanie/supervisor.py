@@ -255,7 +255,6 @@ class Supervisor:
             self.logger.log("PipelineStageStart", {STAGE: stage.name})
 
             for i in range(stage.iterations or 1):
-                iteration_start = datetime.utcnow().isoformat()
                 self.logger.log("PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1})
                 
                 agent_input_context = context.copy()
