@@ -12,14 +12,11 @@ from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.model_locator import ModelLocator
+from stephanie.agents.base_agent import BaseAgent
 
-
-class GILDQMAXTrainer:
+class GILDQMAXTrainer(BaseAgent):
     def __init__(self, cfg, memory, logger=None):
-        self.cfg = cfg
-        self.memory = memory
-        self.logger = logger
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        super().__init__(cfg, memory, logger)
         self.dimensions = cfg.get("dimensions", ["alignment", "clarity", "novelty"])
         self.use_gild = cfg.get("use_gild", True)
         self.use_qmax = cfg.get("use_qmax", True)
@@ -35,6 +32,9 @@ class GILDQMAXTrainer:
             dim: {"drift": [], "entropy": [], "stability": []} 
             for dim in self.dimensions
         }
+
+    async def run(self, context: dict) -> dict:
+        self.train(context, context.get("documents", []))
 
     def train(self, context: dict, documents: list[dict]):
         """

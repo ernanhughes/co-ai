@@ -4,23 +4,19 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
-from torch import nn
 
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.memcubes.memcube_factory import MemCubeFactory
 from stephanie.models.score import ScoreORM
-from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
-from stephanie.utils.file_utils import load_json, save_json
+from stephanie.utils.file_utils import save_json
 from stephanie.utils.math_utils import (advantage_weighted_regression,
                                         expectile_loss)
 from stephanie.utils.model_locator import ModelLocator
-from stephanie.utils.model_utils import (discover_saved_dimensions,
-                                         get_model_path)
 
 
 class EBTInferenceAgent(BaseAgent):
@@ -36,12 +32,6 @@ class EBTInferenceAgent(BaseAgent):
         self.dimensions = cfg.get("dimensions", [])
         self.models = {}
         self.model_meta = {}
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        if not self.dimensions:
-            self.dimensions = discover_saved_dimensions(
-                model_type=self.model_type, target_type=self.target_type
-            )
 
         self.logger.log(
             "DocumentEBTInferenceAgentInitialized",
@@ -49,7 +39,6 @@ class EBTInferenceAgent(BaseAgent):
                 "model_type": self.model_type,
                 "target_type": self.target_type,
                 "dimensions": self.dimensions,
-                "device": str(self.device),
             },
         )
 

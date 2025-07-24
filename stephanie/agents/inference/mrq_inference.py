@@ -36,7 +36,6 @@ class MRQInferenceAgent(BaseAgent):
         self.models = {}
         self.model_meta = {}
         self.tuners = {}
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         if not self.dimensions:
             self.dimensions = ModelLocator.discover_dimensions(

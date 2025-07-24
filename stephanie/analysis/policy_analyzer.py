@@ -366,7 +366,7 @@ class PolicyAnalyzer:
         
         return insights
         
-    def visualize_policy(self, dimension: str, output_path: str = "policy_visualization"):
+    def visualize_policy(self, dimension: str, output_path: str = "logs/policy_visualization"):
         """Generate policy visualization for a dimension"""
         try:
             import matplotlib.pyplot as plt

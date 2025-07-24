@@ -19,9 +19,6 @@ class GILDTrainerAgent(BaseAgent):
         self.il_weight = cfg.get("il_weight", 0.5)
         self.il_decay_rate = cfg.get("il_decay_rate", 0.95)
         self.uncertainty_threshold = cfg.get("uncertainty_threshold", 0.3)
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
         self.logger.log(
             "GILDTrainerAgentInitialized",
             {

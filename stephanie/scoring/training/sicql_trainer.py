@@ -1,6 +1,7 @@
 # stephanie/agents/maintenance/sicql_trainer.py
 import json
 import os
+from datetime import datetime
 
 import numpy as np
 import torch
@@ -10,24 +11,16 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-from stephanie.agents.base_agent import BaseAgent
-from stephanie.models.base import BaseORM
 from stephanie.models.belief_cartridge import BeliefCartridgeORM
 from stephanie.models.model_version import ModelVersionORM
-from stephanie.models.score import ScoreORM
 from stephanie.scoring.model.policy_head import PolicyHead
 from stephanie.scoring.model.q_head import QHead
 from stephanie.scoring.model.v_head import VHead
 from stephanie.scoring.mrq.encoder import TextEncoder
-from stephanie.scoring.mrq.model import InContextQModel
-from stephanie.scoring.mrq.policy_head import PolicyHead
-from stephanie.scoring.mrq.preference_pair_builder import PreferencePairBuilder
-from stephanie.scoring.mrq.value_predictor import ValuePredictor
+from stephanie.scoring.model.in_context_q import InContextQModel
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-from stephanie.utils.file_utils import save_json
-from stephanie.utils.metrics import EpistemicMetrics
-
+from stephanie.models.training_stats import TrainingStatsORM
 
 class SICQLTrainer:
     class Locator:
@@ -99,7 +92,7 @@ class SICQLTrainer:
                 self.pi_head_file()
             ])
 
-    def __init__(self, cfg, memory=None, logger=None):
+    def __init__(self, cfg: dict, memory=None, logger=None):
         self.cfg = cfg
         self.memory = memory
         self.logger = logger
@@ -404,7 +397,6 @@ class SICQLTrainer:
             "policy_probs": policy_probs,
             "policy_entropy": policy_entropy,
             "policy_stability": max(policy_probs),
-            "sample_count": len(dataloader),
             "device": str(self.device),
             "embedding_type": self.cfg.get("embedding_type", "hnet"),
             "timestamp": datetime.utcnow().isoformat()
@@ -696,20 +688,17 @@ class SICQLTrainer:
                 "v_loss": avg_v,
                 "pi_loss": avg_pi,
                 "lr": optimizers["q_head"].param_groups[0]["lr"],
-                "policy_entropy": policy_entropy
             })
             
             # Check for early stopping
             if patience_counter >= self.early_stopping_patience:
                 self.logger.log("SICQLEarlyStopping", {
-                    "dimension": dim,
                     "epoch": epoch + 1,
                     "best_loss": best_loss
                 })
                 break
         
         self.logger.log("SICQLTrainingComplete", {
-            "dimension": dim,
             "best_loss": best_loss
         })
         return model
@@ -744,7 +733,6 @@ class SICQLTrainer:
             "policy_probs": policy_probs,
             "policy_entropy": policy_entropy,
             "policy_stability": policy_stability,
-            "sample_count": len(dataloader),
             "timestamp": datetime.utcnow().isoformat()
         }
         
@@ -757,17 +745,6 @@ class SICQLTrainer:
     def run(self, context: dict) -> dict:
         """Main entry point for training"""
         documents = context.get("documents", [])
-        goal = context.get("goal", {})
-        
-        # Discover dimensions if not specified
-        if not self.dimensions:
-            self.dimensions = ModelLocator.discover_dimensions(
-                self.cfg.get("model_path", "models"),
-                self.cfg.get("embedding_type", "hnet"),
-                "sicql",
-                self.cfg.get("target_type", "document")
-            )
-        
         # Train each dimension
         results = {}
         for dim in self.dimensions:
@@ -782,16 +759,17 @@ class SICQLTrainer:
                 continue
             
             # Update belief cartridges
-            self._update_belief_cartridge(dim, stats)
+            self._update_belief_cartridge(context, dim, stats)
             results[dim] = stats
         
         # Update context with results
         context["training_stats"] = results
         return context
 
-    def _get_samples(self, documents, dim):
+    def _get_samples(self, context, documents, dim):
         """Get training samples for dimension"""
         samples = []
+        goal = context.get("goal", {})
         for doc in documents:
             scorable = ScorableFactory.from_dict(doc, TargetType.DOCUMENT)
             score = self.memory.scores.get_score(goal.id, scorable.id)
@@ -803,7 +781,7 @@ class SICQLTrainer:
                 })
         return samples
 
-    def _update_belief_cartridge(self, dim, stats):
+    def _update_belief_cartridge(self, context, dim, stats):
         """Update belief cartridges with policy stats"""
         policy_logits = stats.get("policy_logits", [0.3, 0.7, 0.0])
         policy_probs = F.softmax(torch.tensor(policy_logits), dim=-1).tolist()

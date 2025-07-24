@@ -1,4 +1,5 @@
 # stephanie/agents/base_agent.py
+import torch
 import random
 import re
 from abc import ABC, abstractmethod
@@ -29,6 +30,7 @@ class BaseAgent(ABC):
         self.name = cfg.get(NAME, agent_key)
         self.memory = memory
         self.logger = logger or JSONLogger()
+        self.device = torch.device(cfg.get("device", "cpu") if torch.cuda.is_available() else "cpu")
         self.rule_applier = SymbolicRuleApplier(cfg, memory, logger)
         self.model_config = cfg.get(MODEL, {})
         self.prompt_loader = PromptLoader(memory=self.memory, logger=self.logger)
