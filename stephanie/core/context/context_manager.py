@@ -13,7 +13,7 @@ class ContextManager:
         self,
         cfg: Dict[str, Any],
         context: Optional[Dict[str, Any]] = None,
-        context_id: Optional[str] = None,
+        run_id: Optional[str] = None,
         memory=None,
         logger=None,
         db_table: str = "contexts",
@@ -25,7 +25,7 @@ class ContextManager:
         
         Args:
             goal: Goal text for context prioritization
-            context_id: Unique ID for context tracking
+            run_id: Unique ID for context tracking
             context: Existing context dictionary
             memory: Database connection
             logger: Logging utility
@@ -43,7 +43,7 @@ class ContextManager:
         self._data = {
             "trace": [],
             "metadata": {
-                "context_id": context_id or str(uuid.uuid4()),
+                "run_id": run_id or str(uuid.uuid4()),
                 "start_time": datetime.utcnow().isoformat(),
                 "last_modified": datetime.utcnow().isoformat(),
                 "token_count": 0,
@@ -61,14 +61,14 @@ class ContextManager:
             self._update_metadata()
         
         self.logger.log("ContextManagerInitialized", {
-            "context_id": self.context_id,
+            "run_id": self.run_id,
             "component_count": len(self._data["metadata"]["components"])
         })
 
     @property
-    def context_id(self) -> str:
+    def run_id(self) -> str:
         """Get context ID from metadata"""
-        return self._data["metadata"]["context_id"]
+        return self._data["metadata"]["run_id"]
 
     def __getitem__(self, key: str) -> Any:
         """Allow dictionary-style access"""
@@ -158,7 +158,7 @@ class ContextManager:
         except Exception as e:
             self.logger.log("ContextAssemblyFailed", {
                 "error": str(e),
-                "context_id": self.context_id
+                "run_id": self.run_id
             })
             raise
 
@@ -283,7 +283,7 @@ class ContextManager:
             return sum(self._estimate_tokens(v) for v in value)
         return 1  # Minimal for other types
 
-    def save_to_db(self):
+    def save_to_db(self, stage_dict:dict):
         """Save context to database"""
         if not self.save_db:
             return False
@@ -293,19 +293,21 @@ class ContextManager:
         
         # Save to ORM
         context_orm = ContextStateORM(
-            context_id=self.context_id,
-            content=json.dumps(serializable_context),
+            run_id=self.run_id,
+            stage_name=stage_dict.get("name", "unknown"),
+            context=json.dumps(serializable_context),
             trace=json.dumps(serializable_context["trace"]),
-            token_count=serializable_context["metadata"]["token_count"]
+            token_count=serializable_context["metadata"]["token_count"],
+            extra_data=json.dumps(stage_dict)
         )
         self.memory.session.add(context_orm)
         self.memory.session.commit()
         return True
 
-    def load_from_db(self, context_id: str):
+    def load_from_db(self, run_id: str):
         """Load context from database"""
-        query = text(f"SELECT content FROM {self.db_table} WHERE context_id = :context_id")
-        result = self.memory.session.execute(query, {"context_id": context_id}).first()
+        query = text(f"SELECT content FROM {self.db_table} WHERE run_id = :run_id")
+        result = self.memory.session.execute(query, {"run_id": run_id}).first()
         
         if result and result.content:
             loaded_context = json.loads(result.content)
@@ -328,7 +330,7 @@ class ContextManager:
         # Ensure metadata structure
         if "metadata" not in context:
             context["metadata"] = {
-                "context_id": str(uuid.uuid4()),
+                "run_id": str(uuid.uuid4()),
                 "token_count": 0,
                 "components": {}
             }

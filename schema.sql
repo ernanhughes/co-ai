@@ -227,6 +227,7 @@ CREATE TABLE IF NOT EXISTS context_states (
     stage_name TEXT NOT NULL,         -- Agent name (generation, reflection)
     version INT DEFAULT 1,           -- Iteration number for this stage
     context JSONB NOT NULL,          -- Full context dict after stage
+    trace JSONB DEFAULT '{}'::JSONB, -- Execution trace (e.g., {"generation": [...], "reflection": [...]})
     preferences JSONB,              -- Preferences used (novelty, feasibility)
     feedback JSONB,                 -- Feedback from previous stages
     extra_data JSONB DEFAULT '{}'::JSONB, -- Strategy, prompt_version, etc.

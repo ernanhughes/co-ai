@@ -16,6 +16,7 @@ from stephanie.models.model_version import ModelVersionORM
 from stephanie.scoring.model.policy_head import PolicyHead
 from stephanie.scoring.model.q_head import QHead
 from stephanie.scoring.model.v_head import VHead
+from stephanie.scoring.mrq import model
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.model.in_context_q import InContextQModel
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
@@ -35,8 +36,8 @@ class SICQLTrainer:
             version="v1"
         ):
             self.root_dir = root_dir
-            self.dimension = dimension
             self.embedding_type = embedding_type
+            self.dimension = dimension
             self.model_type = model_type
             self.target_type = target_type
             self.version = version
@@ -44,12 +45,8 @@ class SICQLTrainer:
 
         def _validate_inputs(self):
             """Ensure valid input types"""
-            if not isinstance(self.dimension, str):
-                raise ValueError("Dimension must be a string")
             if not isinstance(self.version, str):
                 raise ValueError("Version must be a string")
-            if self.model_type not in ["mrq", "sicql"]:
-                raise ValueError("Invalid model type")
 
         @property
         def base_path(self) -> str:
@@ -96,20 +93,25 @@ class SICQLTrainer:
         self.cfg = cfg
         self.memory = memory
         self.logger = logger
+        self.embedding_type = self.memory.embedding.type
+        self.dim = self.memory.embedding.dim
+        self.hdim = self.memory.embedding.hdim
+        self.root_dir=cfg.get("model_path", "models")
+        self.dimension=cfg.get("dimension", "alignment")
+        self.embedding_type=cfg.get("embedding_type", "hnet")
+        self.model_type="sicql"
+        self.target_type=cfg.get("target_type", "document")
+        self.version=cfg.get("model_version", "v1")
+
         
+
+
         # Device management
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         # Training configuration
         self._init_config(cfg)
-        
-        # Initialize locator
-        self.locator = self.Locator(
-            root_dir=cfg.get("model_path", "models"),
-            dimension=cfg.get("dimension", "alignment"),
-            embedding_type=cfg.get("embedding_type", "hnet")
-        )
-        
+       
         # Track training state
         self.best_loss = float('inf')
         self.early_stop_counter = 0
@@ -139,7 +141,7 @@ class SICQLTrainer:
         self.beta = cfg.get("beta", 1.0)  # Policy temperature
         self.entropy_weight = cfg.get("entropy_weight", 0.01)
         self.dimensions = cfg.get("dimensions", [])
-        self.min_samples = cfg.get("min_samples", 100)
+        self.min_samples = cfg.get("min_samples", 10)
         self.expectile_tau = cfg.get("expectile_tau", 0.7)  # For V-head
         self.use_gild = cfg.get("use_gild", True)
         self.use_qmax = cfg.get("use_qmax", True)
@@ -148,11 +150,7 @@ class SICQLTrainer:
     def _load_tuners(self):
         """Load regression tuners for each dimension"""
         for dim in self.dimensions:
-            tuner_path = self.Locator(
-                dimension=dim,
-                embedding_type=self.cfg.get("embedding_type", "hnet")
-            ).tuner_file()
-            
+            tuner_path = self.get_locater(dim).tuner_file()
             if os.path.exists(tuner_path):
                 self.tuners[dim] = RegressionTuner(dimension=dim)
                 self.tuners[dim].load(tuner_path)
@@ -163,27 +161,39 @@ class SICQLTrainer:
                     "path": tuner_path
                 })
 
-    def _build_model(self, dim):
+    def get_locater(self, dimension):
+        """Get locator for a specific dimension"""
+        return self.Locator(
+            root_dir=self.root_dir,
+            dimension=dimension,
+            embedding_type=self.embedding_type,
+            model_type=self.model_type,
+            target_type=self.target_type,
+            version=self.version
+        )            
+
+    def _build_model(self, dimension):
         """Build or load SICQL model"""
-        if self.locator.model_exists():
+        locator = self.get_locater(dimension)
+        if locator.model_exists():
             # Load existing model
             encoder = TextEncoder(dim=self.dim, hdim=self.hdim).to(self.device)
             q_head = QHead(zsa_dim=self.dim, hdim=self.hdim).to(self.device)
             v_head = VHead(zsa_dim=self.dim, hdim=self.hdim).to(self.device)
-            pi_head = PolicyHead(zsa_dim=self.dim, num_actions=3).to(self.device)
+            pi_head = PolicyHead(zsa_dim=self.dim, hdim=self.hdim, num_actions=3).to(self.device)
             
             # Load weights
             encoder.load_state_dict(
-                torch.load(self.locator.encoder_file(), map_location=self.device)
+                torch.load(locator.encoder_file(), map_location=self.device)
             )
             q_head.load_state_dict(
-                torch.load(self.locator.q_head_file(), map_location=self.device)
+                torch.load(locator.q_head_file(), map_location=self.device)
             )
             v_head.load_state_dict(
-                torch.load(self.locator.v_head_file(), map_location=self.device)
+                torch.load(locator.v_head_file(), map_location=self.device)
             )
             pi_head.load_state_dict(
-                torch.load(self.locator.pi_head_file(), map_location=self.device)
+                torch.load(locator.pi_head_file(), map_location=self.device)
             )
             
             # Build model
@@ -204,7 +214,7 @@ class SICQLTrainer:
         encoder = TextEncoder(dim=self.dim, hdim=self.hdim).to(self.device)
         q_head = QHead(zsa_dim=self.dim, hdim=self.hdim).to(self.device)
         v_head = VHead(zsa_dim=self.dim, hdim=self.hdim).to(self.device)
-        pi_head = PolicyHead(zsa_dim=self.dim, num_actions=3).to(self.device)
+        pi_head = PolicyHead(zsa_dim=self.dim, hdim=self.hdim, num_actions=3).to(self.device)
         
         return InContextQModel(
             encoder=encoder,
@@ -276,56 +286,43 @@ class SICQLTrainer:
         count = 0
         
         for ctx_emb, doc_emb, scores in tqdm(dataloader, desc="Training"):
-            # Device management
             ctx_emb = ctx_emb.to(self.device)
             doc_emb = doc_emb.to(self.device)
             scores = scores.to(self.device)
             
-            # Forward pass
             outputs = model(ctx_emb, doc_emb)
             
-            # Q-head loss (supervised learning)
             q_loss = F.mse_loss(outputs["q_value"], scores)
             
-            # V-head loss (expectile regression)
-            if self.use_qmax:
-                v_loss = self._expectile_loss(
-                    scores - outputs["state_value"],
-                    tau=self.expectile_tau
-                )
-            else:
-                v_loss = torch.tensor(0.0, device=self.device)
+            v_loss = self._expectile_loss(scores - outputs["state_value"], tau=self.expectile_tau) if self.use_qmax else torch.tensor(0.0, device=self.device)
             
-            # Policy head loss (GILD-style)
             pi_loss = torch.tensor(0.0, device=self.device)
             if self.use_gild and "action_logits" in outputs:
                 advantage = (outputs["q_value"] - outputs["state_value"]).detach()
-                policy_probs = F.softmax(outputs["action_logits"], dim=-1)
-                entropy = -torch.sum(
-                    policy_probs * torch.log(policy_probs + 1e-8), 
-                    dim=-1
-                ).mean()
-                
-                # Advantage-weighted regression
                 weights = torch.exp(self.beta * advantage)
                 weights = weights / weights.sum()
-                pi_loss = -(F.log_softmax(outputs["action_logits"], dim=-1) * weights).mean()
+
+                # Corrected reshape
+                weights = weights.unsqueeze(-1)  # Ensure (batch_size, 1)
+
+                log_probs = F.log_softmax(outputs["action_logits"], dim=-1)
+                pi_loss = -(log_probs * weights).mean()
+                
+                # Optional entropy regularization
+                entropy = -(log_probs.exp() * log_probs).sum(dim=-1).mean()
                 pi_loss += self.entropy_weight * entropy
             
-            # Total loss
             loss = (
                 q_loss * self.cfg.get("q_weight", 1.0) +
                 v_loss * self.cfg.get("v_weight", 0.5) +
                 pi_loss * self.cfg.get("pi_weight", 0.3)
             )
             
-            # Backward pass
             self.optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
             self.optimizer.step()
             
-            # Track losses
             total_q_loss += q_loss.item() * ctx_emb.size(0)
             total_v_loss += v_loss.item() * ctx_emb.size(0)
             total_pi_loss += pi_loss.item() * ctx_emb.size(0)
@@ -335,7 +332,6 @@ class SICQLTrainer:
         avg_v = total_v_loss / count
         avg_pi = total_pi_loss / count
         
-        # Learning rate scheduling
         if self.use_qmax:
             self.scheduler["q"].step(avg_q)
         if self.use_gild:
@@ -369,13 +365,14 @@ class SICQLTrainer:
         
         return self.early_stop_counter >= self.early_stopping_patience
 
-    def _save_model(self, model, dim, stats):
+    def _save_model(self, model, dimension, stats):
+        locator = self.get_locater(dimension)
         """Save model components with metadata"""
         # Save each component
-        torch.save(model.encoder.state_dict(), self.locator.encoder_file())
-        torch.save(model.q_head.state_dict(), self.locator.q_head_file())
-        torch.save(model.v_head.state_dict(), self.locator.v_head_file())
-        torch.save(model.pi_head.state_dict(), self.locator.pi_head_file())
+        torch.save(model.encoder.state_dict(), locator.encoder_file())
+        torch.save(model.q_head.state_dict(), locator.q_head_file())
+        torch.save(model.v_head.state_dict(), locator.v_head_file())
+        torch.save(model.pi_head.state_dict(), locator.pi_head_file())
         
         # Calculate policy metrics
         policy_logits = model.pi_head.weight.data.mean(dim=0).tolist()
@@ -388,11 +385,11 @@ class SICQLTrainer:
         meta = {
             "dim": self.dim,
             "hdim": self.hdim,
-            "dimension": dim,
+            "dimension": dimension,
             "version": self.cfg.get("model_version", "v1"),
-            "avg_q_loss": stats["q"],
-            "avg_v_loss": stats["v"],
-            "avg_pi_loss": stats["pi"],
+            "avg_q_loss": stats.get("avg_q_loss", 0.0),
+            "avg_v_loss": stats.get("avg_v_loss", 0.0),
+            "avg_pi_loss": stats.get("avg_pi_loss", 0.0),
             "policy_logits": policy_logits,
             "policy_probs": policy_probs,
             "policy_entropy": policy_entropy,
@@ -403,13 +400,13 @@ class SICQLTrainer:
         }
         
         # Save metadata
-        with open(self.locator.meta_file(), "w") as f:
+        with open(locator.meta_file(), "w") as f:
             json.dump(meta, f)
         
         # Save tuner if available
-        if dim in self.tuners and self.tuners[dim]:
-            self.tuners[dim].save(self.locator.tuner_file())
-        
+        if dimension in self.tuners and self.tuners[dimension]:
+            self.tuners[dimension].save(locator.tuner_file())
+
         # Save model version
         model_version = ModelVersionORM(**meta)
         self.memory.session.add(model_version)
@@ -453,9 +450,9 @@ class SICQLTrainer:
         return True
 
     def _calculate_policy_logits(self, model):
-        """Calculate policy logits from encoder weights"""
+        """Calculate policy logits from policy head weights"""
         with torch.no_grad():
-            policy_weights = model.pi_head.weight.data.mean(dim=0)
+            policy_weights = model.pi_head.get_policy_weights()
             policy_probs = F.softmax(policy_weights, dim=-1)
             return policy_probs.tolist()
 
@@ -476,7 +473,7 @@ class SICQLTrainer:
             dim=-1
         ).mean().item()
 
-    def train(self, samples, dim=None):
+    def train(self, samples, dim):
         """
         Train SICQL model for a dimension
         Args:
@@ -485,7 +482,6 @@ class SICQLTrainer:
         Returns:
             Training statistics and model
         """
-        dim = dim or self.cfg.get("dimension", "alignment")
         self.logger.log("DimensionTrainingStarted", {"dimension": dim})
         
         # Prepare data
@@ -572,6 +568,7 @@ class SICQLTrainer:
             target_type=self.cfg.get("target_type", "document"),
             dimension=dim,
             version=meta["version"],
+            embedding_type=self.embedding_type,
             avg_q_loss=meta["avg_q_loss"],
             avg_v_loss=meta["avg_v_loss"],
             avg_pi_loss=meta["avg_pi_loss"],
@@ -703,41 +700,42 @@ class SICQLTrainer:
         })
         return model
 
-    def _save_model(self, model, dim, stats):
+    def _save_model(self, model, dimension, stats):
         """Save SICQL model components"""
+        locator = self.get_locater(dimension)
         # Save components separately
-        torch.save(model.encoder.state_dict(), self.locator.encoder_file())
-        torch.save(model.q_head.state_dict(), self.locator.q_head_file())
-        torch.save(model.v_head.state_dict(), self.locator.v_head_file())
-        torch.save(model.pi_head.state_dict(), self.locator.pi_head_file())
-        
+        torch.save(model.encoder.state_dict(), locator.encoder_file())
+        torch.save(model.q_head.state_dict(), locator.q_head_file())
+        torch.save(model.v_head.state_dict(), locator.v_head_file())
+        torch.save(model.pi_head.state_dict(), locator.pi_head_file())
+
         # Calculate policy metrics
-        policy_logits = model.pi_head.weight.data.mean(dim=0).tolist()
-        policy_probs = F.softmax(torch.tensor(policy_logits), dim=-1).tolist()
+        policy_logits = model.pi_head.get_policy_weights().tolist()
+        policy_probs_tensor = F.softmax(torch.tensor(policy_logits), dim=-1)
+        policy_probs = policy_probs_tensor.tolist()
         policy_entropy = -torch.sum(
-            policy_probs * torch.log(policy_probs + 1e-8), 
-            dim=-1
-        ).mean().item()
+            policy_probs_tensor * torch.log(policy_probs_tensor + 1e-8)
+        ).item()
         policy_stability = max(policy_probs)
         
         # Build metadata
         meta = {
             "dim": self.dim,
             "hdim": self.hdim,
-            "dimension": dim,
+            "dimension": dimension,
             "version": self.cfg.get("model_version", "v1"),
-            "avg_q_loss": stats["q"],
-            "avg_v_loss": stats["v"],
-            "avg_pi_loss": stats["pi"],
+            "avg_q_loss": float(stats["avg_q_loss"]),
+            "avg_v_loss": float(stats["avg_v_loss"]),
+            "avg_pi_loss": float(stats["avg_pi_loss"]),
+            "policy_entropy": float(policy_entropy),
+            "policy_stability": float(policy_stability),
             "policy_logits": policy_logits,
             "policy_probs": policy_probs,
-            "policy_entropy": policy_entropy,
-            "policy_stability": policy_stability,
             "timestamp": datetime.utcnow().isoformat()
         }
         
         # Save metadata
-        with open(self.locator.meta_file(), "w") as f:
+        with open(locator.meta_file(), "w") as f:
             json.dump(meta, f)
         
         return meta
@@ -749,7 +747,7 @@ class SICQLTrainer:
         results = {}
         for dim in self.dimensions:
             # Get training samples
-            samples = self._get_samples(documents, dim)
+            samples = self._get_samples(context, documents, dim)
             if not samples:
                 continue
             

@@ -41,8 +41,7 @@ class InContextQModel(nn.Module):
         doc_emb = doc_emb.to(self.device)
         
         # Combine embeddings
-        combined = torch.cat([context_emb, doc_emb], dim=-1)
-        zsa = self.encoder(combined)
+        zsa = self.encoder(context_emb, doc_emb)
         
         # Forward through heads
         q_value = self.q_head(zsa)
