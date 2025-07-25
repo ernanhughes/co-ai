@@ -1,13 +1,16 @@
 # stephanie/context/context_manager.py
 import json
+import sys
 import uuid
 from datetime import datetime
+from typing import Any, Dict, Optional
+
 import numpy as np
 import torch
-from typing import Any, Dict, Optional
 from sqlalchemy import text
+
 from stephanie.models.context_state import ContextStateORM
-import sys
+
 
 class ContextManager:
     def __init__(

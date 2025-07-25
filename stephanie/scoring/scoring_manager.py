@@ -48,8 +48,8 @@ class ScoringManager(BaseAgent):
          # Initialize fallback scorer if not provided
         if scorer is None:
             from stephanie.scoring.llm_scorer import LLMScorer
-            from stephanie.scoring.mrq.mrq_scorer import MRQScorer
-            from stephanie.scoring.svm.svm_scorer import SVMScorer
+            from stephanie.scoring.mrq_scorer import MRQScorer
+            from stephanie.scoring.svm_scorer import SVMScorer
 
             svm_scorer = SVMScorer(cfg, memory, logger, dimensions=dimensions)
             mrq_scorer = MRQScorer(cfg, memory, logger, dimensions=dimensions)
@@ -166,8 +166,8 @@ class ScoringManager(BaseAgent):
         cfg["output_format"] = output_format
 
         from stephanie.scoring.llm_scorer import LLMScorer
-        from stephanie.scoring.mrq.mrq_scorer import MRQScorer
-        from stephanie.scoring.svm.svm_scorer import SVMScorer
+        from stephanie.scoring.mrq_scorer import MRQScorer
+        from stephanie.scoring.svm_scorer import SVMScorer
 
         if data["scorer"] == "mrq":
             # Use MRQ scoring profile if specified

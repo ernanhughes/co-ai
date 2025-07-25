@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from stephanie.agents.base_agent import BaseAgent
 from stephanie.memory.gild_selector import GILDSelector
 from stephanie.memory.scoring_store import ScoringStore
 from stephanie.models.belief_cartridge import BeliefCartridgeORM
@@ -12,7 +13,7 @@ from stephanie.scoring.model.ebt_model import EBTModel
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.model_locator import ModelLocator
-from stephanie.agents.base_agent import BaseAgent
+
 
 class GILDQMAXTrainer(BaseAgent):
     def __init__(self, cfg, memory, logger=None):

@@ -1,8 +1,12 @@
 # stephanie/models/belief_cartridge.py
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, JSON
+
+from sqlalchemy import (JSON, Boolean, Column, DateTime, ForeignKey, Integer,
+                        String, Text)
 from sqlalchemy.orm import relationship
+
 from stephanie.models.base import Base
+
 
 class BeliefCartridgeORM(Base):
     __tablename__ = "belief_cartridges"

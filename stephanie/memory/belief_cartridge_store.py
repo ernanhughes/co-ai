@@ -1,18 +1,18 @@
 # stephanie/memory/belief_cartridge_store.py
 
-from datetime import datetime
-
-from sqlalchemy.orm import Session
-
-from stephanie.models.belief_cartridge import BeliefCartridgeORM
-import os
 import json
-import yaml
-from typing import Dict, Any
-from stephanie.scoring.score_bundle import ScoreBundle
+import os
+from datetime import datetime
+from typing import Any, Dict
 
 import numpy as np
 import torch
+import yaml
+from sqlalchemy.orm import Session
+
+from stephanie.models.belief_cartridge import BeliefCartridgeORM
+from stephanie.scoring.score_bundle import ScoreBundle
+
 
 class BeliefCartridgeStore:
     def __init__(self, session: Session, logger=None):

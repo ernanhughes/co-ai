@@ -1,9 +1,9 @@
 import joblib
 import numpy as np
-from sklearn.svm import SVR
-from stephanie.scoring.training.base_trainer import BaseTrainer
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVR
 
+from stephanie.scoring.training.base_trainer import BaseTrainer
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 
 

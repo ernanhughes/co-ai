@@ -5,12 +5,12 @@ import torch.nn.functional as F
 from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from stephanie.scoring.training.base_trainer import BaseTrainer
+from stephanie.models.training_stats import TrainingStatsORM
 from stephanie.scoring.mrq.encoder import TextEncoder
 from stephanie.scoring.mrq.model import MRQModel
 from stephanie.scoring.mrq.value_predictor import ValuePredictor
+from stephanie.scoring.training.base_trainer import BaseTrainer
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-from stephanie.models.training_stats import TrainingStatsORM
 
 
 class MRQTrainer(BaseTrainer):

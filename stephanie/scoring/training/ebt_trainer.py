@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from stephanie.scoring.training.base_trainer import BaseTrainer
 
+
 class EBTTrainer(BaseTrainer):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
@@ -15,9 +16,10 @@ class EBTTrainer(BaseTrainer):
         if not dl:
             return {"error": f"Insufficient samples for {dimension}"}
 
-        from stephanie.scoring.model.ebt_model import EBTModel
         from torch import nn
         from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+        from stephanie.scoring.model.ebt_model import EBTModel
 
         model = EBTModel(self.dim, self.hdim, self.num_actions, self.device).to(self.device)
         model.train()

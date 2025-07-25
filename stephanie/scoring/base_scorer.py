@@ -1,9 +1,11 @@
 import abc
 from typing import List
 
+import torch
+
 from stephanie.scoring.model_locator_mixin import ModelLocatorMixin
-from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.scorable import Scorable
+from stephanie.scoring.score_bundle import ScoreBundle
 
 
 class BaseScorer(ModelLocatorMixin, abc.ABC):
@@ -23,11 +25,12 @@ class BaseScorer(ModelLocatorMixin, abc.ABC):
 
         self.force_rescore = cfg.get("force_rescore", False)
         self.dimensions = cfg.get("dimensions", [])
+        self.device = torch.device(cfg.get("device", "cpu") if torch.cuda.is_available() else "cpu")
 
     @property
     def name(self) -> str:
         """Returns a canonical name for the scorer."""
-        return f"{self.model_type}"
+        return f"{self.model_type}_scorer"
 
     def get_model_name(self) -> str:
         return f"{self.target_type}_{self.model_type}_{self.version}"

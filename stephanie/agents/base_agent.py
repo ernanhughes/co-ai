@@ -1,5 +1,4 @@
 # stephanie/agents/base_agent.py
-import torch
 import random
 import re
 from abc import ABC, abstractmethod
@@ -7,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 import litellm
+import torch
 
 from stephanie.constants import (AGENT, API_BASE, API_KEY, BATCH_SIZE, CONTEXT,
                                  GOAL, HYPOTHESES, INPUT_KEY, MODEL, NAME,

@@ -13,6 +13,7 @@ from tabulate import tabulate
 from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID,
                                  PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
                                  SKIP_IF_COMPLETED, STAGE)
+from stephanie.core.context.context_manager import ContextManager
 from stephanie.engine.cycle_watcher import CycleWatcher
 from stephanie.engine.meta_confidence import MetaConfidenceTracker
 from stephanie.engine.self_validation import SelfValidationEngine
@@ -24,7 +25,6 @@ from stephanie.registry.registry import register
 from stephanie.reports import ReportFormatter
 from stephanie.rules.symbolic_rule_applier import SymbolicRuleApplier
 from stephanie.utils.timing import time_function
-from stephanie.core.context.context_manager import ContextManager
 
 
 class PipelineStage:

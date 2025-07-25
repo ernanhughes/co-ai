@@ -55,13 +55,13 @@ class ModelLocator:
     def encoder_file(self) -> str:
         return os.path.join(self.base_path, f"{self.dimension}_encoder.pt")
 
-    def get_q_head_path(self) -> str:
+    def q_head_file(self) -> str:
         return os.path.join(self.base_path, f"{self.dimension}_q.pt")
 
-    def get_v_head_path(self) -> str:
+    def v_head_file(self) -> str:
         return os.path.join(self.base_path, f"{self.dimension}_v.pt")
 
-    def get_pi_head_path(self) -> str:
+    def pi_head_file(self) -> str:
         return os.path.join(self.base_path, f"{self.dimension}_pi.pt")
 
     def meta_file(self) -> str:
