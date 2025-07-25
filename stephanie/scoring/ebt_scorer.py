@@ -1,4 +1,5 @@
 import os
+
 import torch
 import torch.nn.functional as F
 
@@ -10,8 +11,8 @@ from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
 from stephanie.scoring.score_result import ScoreResult
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
-from stephanie.utils.model_locator import ModelLocator
 from stephanie.utils.file_utils import load_json
+from stephanie.utils.model_locator import ModelLocator
 
 
 class EBTScorer(BaseScorer):

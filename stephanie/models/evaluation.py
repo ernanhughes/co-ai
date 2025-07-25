@@ -27,7 +27,7 @@ class EvaluationORM(Base):
     goal_id: Mapped[Optional[int]] = Column(Integer, ForeignKey("goals.id"))
     
     # Polymorphic target reference
-    target_type: Mapped[TargetType] = Column(Enum(TargetType), nullable=False)
+    target_type: Mapped[String] = Column(String, nullable=False)
     target_id: Mapped[int] = Column(Integer, nullable=False)
     
     embedding_type: Mapped[Optional[str]] = Column(String, nullable=True)
@@ -41,6 +41,7 @@ class EvaluationORM(Base):
 
     # Metadata
     agent_name: Mapped[str] = Column(String, nullable=False)
+    source: Mapped[str] = Column(String)
     model_name: Mapped[str] = Column(String, nullable=False)
     evaluator_name: Mapped[str] = Column(String, nullable=False)
     strategy: Mapped[Optional[str]] = Column(String)
@@ -94,7 +95,7 @@ class EvaluationORM(Base):
             "scores": self.scores,
             "extra_data": self.extra_data,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "target_type": self.target_type.value,
+            "target_type": self.target_type,
             "target_id": self.target_id,
             "embedding_type": self.embedding_type,
             "belief_cartridge_id": self.belief_cartridge_id,

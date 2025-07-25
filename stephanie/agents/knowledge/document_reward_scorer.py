@@ -30,7 +30,7 @@ class DocumentRewardScorerAgent(BaseAgent):
         sicql_scorer = SICQLScorer(self.cfg, memory=self.memory, logger=self.logger)  
         ebt_scorer = EBTScorer(self.cfg, memory=self.memory, logger=self.logger)
 
-        scorers = [svm_scorer, mrq_scorer, sicql_scorer, ebt_scorer]
+        scorers = [sicql_scorer, svm_scorer, mrq_scorer, ebt_scorer]
 
         for doc in documents:
 

@@ -18,77 +18,155 @@ class PolicyAnalyzer:
         self.uncertainty_threshold = 0.3  # From config
 
     def analyze_dimension(self, dimension: str, pipeline_run_id: int = None) -> Dict[str, Any]:
-        """Analyze policy behavior for a specific dimension"""
         try:
             sicql_data = self._get_sicql_data(dimension, pipeline_run_id)
             mrq_data = self._get_mrq_data(dimension, pipeline_run_id)
-            
-            # Process and compare
+            svm_data = self._get_svm_data(dimension, pipeline_run_id)
+            ebt_data = self._get_ebt_data(dimension, pipeline_run_id)
+            llm_data = self._get_llm_data(dimension, pipeline_run_id)
+
+            comparison_results = [
+                self._compare_with_source(sicql_data, mrq_data, "mrq"),
+                self._compare_with_source(sicql_data, svm_data, "svm"),
+                self._compare_with_source(sicql_data, ebt_data, "ebt"),
+                self._compare_with_source(sicql_data, llm_data, "llm"),
+            ]
+
             results = {
                 "dimension": dimension,
                 "policy_stats": self._analyze_policy_patterns(sicql_data),
-                "comparison": self._compare_with_mrq(sicql_data, mrq_data),
+                "comparisons": comparison_results,
                 "uncertainty_cases": self._find_high_uncertainty(sicql_data),
                 "policy_entropy": self._calculate_entropy(sicql_data),
                 "policy_drift": self._detect_policy_drift(sicql_data)
             }
-            
-            # Log analysis
+
             self.logger.log("PolicyAnalysis", results)
             return results
-            
+
         except Exception as e:
             self.logger.log("PolicyAnalysisFailed", {"error": str(e)})
             raise
 
     def _get_sicql_data(self, dimension: str, pipeline_run_id: int = None) -> List[Dict]:
-        """Get SICQL policy data from database with optional pipeline run filter"""
+        """Get SICQL policy data from database with optional pipeline run filter, including target matching keys"""
         query = (
-            self.session.query(EvaluationAttributeORM)
+            self.session.query(EvaluationAttributeORM, EvaluationORM)
             .join(EvaluationORM)
             .filter(
                 EvaluationAttributeORM.dimension == dimension,
-                EvaluationORM.agent_name.contains("sicql"),  # More flexible matching
-                EvaluationORM.pipeline_run_id == pipeline_run_id if pipeline_run_id else True
+                EvaluationORM.source.contains("sicql"),
+                EvaluationAttributeORM.q_value.isnot(None),
+                EvaluationAttributeORM.v_value.isnot(None),
+                EvaluationAttributeORM.policy_logits.isnot(None)
             )
         )
-        
-        # Add pipeline run filter if available
+
         if pipeline_run_id:
             query = query.filter(EvaluationORM.pipeline_run_id == pipeline_run_id)
-        
-        # Add data quality filter
-        query = query.filter(
-            EvaluationAttributeORM.q_value.isnot(None),
-            EvaluationAttributeORM.v_value.isnot(None),
-            EvaluationAttributeORM.policy_logits.isnot(None)
-        )
-        
+
         results = query.all()
-        
-        # Debugging: Add data validation
+
         if not results:
             self.logger.log("NoSICQLDataFound", {
                 "dimension": dimension,
                 "pipeline_run_id": pipeline_run_id,
-                "sample_query": str(query)
             })
-        
-        return [self._format_attribute(attr) for attr in results]
+
+        formatted = []
+        for attr, eval_obj in results:
+            formatted.append({
+                "evaluation_id": attr.evaluation_id,
+                "policy_logits": json.loads(attr.policy_logits),
+                "q_value": attr.q_value,
+                "v_value": attr.v_value,
+                "uncertainty": attr.uncertainty,
+                "dimension": attr.dimension,
+                "timestamp": attr.created_at,
+                "target_type": eval_obj.target_type,
+                "target_id": eval_obj.target_id,
+            })
+
+        return formatted
 
     def _get_mrq_data(self, dimension: str, pipeline_run_id: int = None) -> List[Dict]:
-        """Get MRQ scores for comparison"""
+        """Get MRQ scores for comparison, including target matching keys"""
         query = (
-            self.session.query(ScoreORM)
+            self.session.query(ScoreORM, EvaluationORM)
             .join(EvaluationORM)
             .filter(
                 ScoreORM.dimension == dimension,
-                EvaluationORM.evaluator_name == "mrq",
-                EvaluationORM.pipeline_run_id == pipeline_run_id if pipeline_run_id else True
+                EvaluationORM.source.contains("mrq"),
             )
         )
-        
-        return [self._format_score(score) for score in query.all()]
+
+        if pipeline_run_id:
+            query = query.filter(EvaluationORM.pipeline_run_id == pipeline_run_id)
+
+        results = query.all()
+
+        return [self._format_score(score, eval_obj) for score, eval_obj in results]
+
+    def _get_svm_data(self, dimension: str, pipeline_run_id: int = None) -> List[Dict]:
+        """Get SVM scores for comparison with target identifiers included"""
+        query = (
+            self.session.query(ScoreORM, EvaluationORM)
+            .join(EvaluationORM)
+            .filter(
+                ScoreORM.dimension == dimension,
+                EvaluationORM.source.contains("svm"),
+            )
+        )
+
+        if pipeline_run_id:
+            query = query.filter(EvaluationORM.pipeline_run_id == pipeline_run_id)
+
+        results = query.all()
+
+        return [
+            {
+                "evaluation_id": score.evaluation_id,
+                "score": score.score,
+                "dimension": score.dimension,
+                "source": "svm",
+                "target_type": eval.target_type,
+                "target_id": eval.target_id
+            }
+            for score, eval in results
+        ]
+
+
+    def _get_ebt_data(self, dimension: str, pipeline_run_id: int = None) -> List[Dict]:
+        """Get EBT scores with target IDs for comparison"""
+        query = (
+            self.session.query(ScoreORM, EvaluationORM)
+            .join(EvaluationORM)
+            .filter(
+                ScoreORM.dimension == dimension,
+                EvaluationORM.source.contains("ebt"),
+            )
+        )
+        if pipeline_run_id:
+            query = query.filter(EvaluationORM.pipeline_run_id == pipeline_run_id)
+
+        results = query.all()
+        return [self._format_score(score, eval_obj) for score, eval_obj in results]
+
+    def _get_llm_data(self, dimension: str, pipeline_run_id: int = None) -> List[Dict]:
+        """Get LLM-based evaluation scores"""
+        query = (
+            self.session.query(ScoreORM, EvaluationORM)
+            .join(EvaluationORM)
+            .filter(
+                ScoreORM.dimension == dimension,
+                EvaluationORM.source.contains("llm")
+            )
+        )
+        if pipeline_run_id:
+            query = query.filter(EvaluationORM.pipeline_run_id == pipeline_run_id)
+
+        results = query.all()
+        return [self._format_score(score, eval_obj) for score, eval_obj in results]
 
     def _format_attribute(self, attr: EvaluationAttributeORM) -> Dict:
         return {
@@ -101,13 +179,14 @@ class PolicyAnalyzer:
             "timestamp": attr.created_at
         }
 
-    def _format_score(self, score: ScoreORM) -> Dict:
-        """Convert MRQ scores to comparable format"""
+    def _format_score(self, score: ScoreORM, eval_obj: EvaluationORM) -> Dict:
         return {
             "evaluation_id": score.evaluation_id,
             "score": score.score,
             "dimension": score.dimension,
-            "source": score.source
+            "source": eval_obj.source,
+            "target_type": eval_obj.target_type,
+            "target_id": eval_obj.target_id,
         }
 
     def _analyze_policy_patterns(self, sicql_data: List[Dict]) -> Dict[str, Any]:
@@ -148,7 +227,10 @@ class PolicyAnalyzer:
         v_values = np.array([d["v_value"] for d in sicql_data if d["v_value"] is not None])
         
         if len(q_values) > 1:
-            q_v_correlation = np.corrcoef(q_values, v_values)[0,1]
+            if np.std(q_values) == 0 or np.std(v_values) == 0:
+                q_v_correlation = None
+            else:
+                q_v_correlation = np.corrcoef(q_values, v_values)[0,1]
         else:
             q_v_correlation = None
             
@@ -158,53 +240,57 @@ class PolicyAnalyzer:
             "sample_count": len(sicql_data)
         }
 
-    def _compare_with_mrq(self, sicql_data: List[Dict], mrq_data: List[Dict]) -> Dict[str, Any]:
-        """Compare SICQL policy with MRQ scores"""
-        if not sicql_data or not mrq_data:
+    def _compare_with_source(self, sicql_data: List[Dict], reference_data: List[Dict], label: str) -> Dict[str, Any]:
+        if not sicql_data or not reference_data:
             return {
+                "source": label,
                 "comparable": False,
                 "score_correlation": None,
                 "avg_score_deviation": None,
                 "sample_count": 0
             }
 
-        # Match by evaluation_id
-        sicql_by_id = {d["evaluation_id"]: d for d in sicql_data}
-        mrq_by_id = {d["evaluation_id"]: d for d in mrq_data}
-        
+        sicql_by_key = {
+            (d["target_type"], d["target_id"]): d
+            for d in sicql_data if d.get("target_type") and d.get("target_id") is not None
+        }
+        ref_by_key = {
+            (d["target_type"], d["target_id"]): d
+            for d in reference_data if d.get("target_type") and d.get("target_id") is not None
+        }
+
         matched = []
-        for eid, sicql in sicql_by_id.items():
-            if eid in mrq_by_id:
+        for key, sicql in sicql_by_key.items():
+            if key in ref_by_key:
                 matched.append({
                     "sicql": sicql,
-                    "mrq": mrq_by_id[eid]
+                    "ref": ref_by_key[key]
                 })
-                
+
         if not matched:
             return {
+                "source": label,
                 "comparable": False,
                 "score_correlation": None,
                 "avg_score_deviation": None,
                 "sample_count": 0
             }
-            
-        # Calculate score correlations
+
         sicql_scores = [m["sicql"]["q_value"] for m in matched]
-        mrq_scores = [m["mrq"]["score"] for m in matched]
-        
+        ref_scores = [m["ref"]["score"] for m in matched]
+
         try:
-            score_correlation = np.corrcoef(sicql_scores, mrq_scores)[0,1]
+            score_correlation = np.corrcoef(sicql_scores, ref_scores)[0, 1]
         except:
             score_correlation = None
-            
-        # Compare uncertainty vs score deviation
-        uncertainty_scores = [abs(m["sicql"]["q_value"] - m["mrq"]["score"]) for m in matched]
-        avg_deviation = np.mean(uncertainty_scores) if uncertainty_scores else None
-        
+
+        score_deviation = np.mean([abs(a - b) for a, b in zip(sicql_scores, ref_scores)])
+
         return {
+            "source": label,
             "comparable": True,
-            "score_correlation": float(score_correlation) if score_correlation is not None else None,
-            "avg_score_deviation": float(avg_deviation) if avg_deviation is not None else None,
+            "score_correlation": float(score_correlation) if score_correlation else None,
+            "avg_score_deviation": float(score_deviation),
             "sample_count": len(matched)
         }
 
@@ -250,9 +336,13 @@ class PolicyAnalyzer:
         action_probs = np.exp(actions) / np.exp(actions).sum()
         
         try:
-            kmeans = KMeans(n_clusters=3)
-            clusters = kmeans.fit_predict(action_probs.reshape(-1, 1))
-            cluster_changes = np.sum(clusters[1:] != clusters[:-1]) / len(clusters)
+            unique_actions = np.unique(actions)
+            if len(unique_actions) < 3:
+                cluster_changes = 0
+            else:
+                kmeans = KMeans(n_clusters=3)
+                clusters = kmeans.fit_predict(action_probs.reshape(-1, 1))
+                cluster_changes = np.sum(clusters[1:] != clusters[:-1]) / len(clusters)
         except:
             cluster_changes = 0
             
@@ -271,8 +361,15 @@ class PolicyAnalyzer:
         policy_stats = analysis.get("policy_stats", {})
         policy_consistency = policy_stats.get("policy_consistency", {})
         
-        # Extract comparison stats
-        comparison = analysis.get("comparison", {})
+        # Extract comparison stats for each source
+        comparison_dict = {
+            comp["source"]: {
+                "score_correlation": comp["score_correlation"],
+                "score_deviation": comp["avg_score_deviation"],
+                "sample_count": comp["sample_count"]
+            }
+            for comp in analysis.get("comparisons", [])
+        }
         
         # Extract other stats
         uncertainty_cases = analysis.get("uncertainty_cases", [])
@@ -285,24 +382,33 @@ class PolicyAnalyzer:
             "q_v_correlation": policy_consistency.get("q_v_correlation", None),
             "policy_entropy_avg": policy_entropy.get("avg_entropy", None),
             "policy_entropy_std": policy_entropy.get("std_entropy", None),
-            "score_correlation": comparison.get("score_correlation", None),
-            "score_deviation": comparison.get("avg_score_deviation", None),
-            "sample_count": comparison.get("sample_count", 0),
             "uncertainty_count": len(uncertainty_cases),
             "policy_drift": policy_consistency.get("drift_detected", False),
             "action_drift_rate": policy_consistency.get("action_drift_rate", 0.0),
+            **{
+                f"{src}_correlation": comparison_dict.get(src, {}).get("score_correlation")
+                for src in ["mrq", "svm", "ebt", "llm"]
+            },
+            **{
+                f"{src}_deviation": comparison_dict.get(src, {}).get("score_deviation")
+                for src in ["mrq", "svm", "ebt", "llm"]
+            },
+            **{
+                f"{src}_samples": comparison_dict.get(src, {}).get("sample_count")
+                for src in ["mrq", "svm", "ebt", "llm"]
+            },
             "insights": self._generate_insights(analysis)
         }
-        
+
         return report
 
-    def _generate_insights(self, report: Dict) -> List[str]:
+    def _generate_insights(self, stats: Dict) -> List[str]:
         """Generate actionable insights from flattened policy report"""
         insights = []
         
         # 1. Uncertainty detection
-        uncertainty_count = report.get("uncertainty_count", 0)
-        sample_count = report.get("sample_count", 1)  # Avoid division by 0
+        uncertainty_count = stats.get("uncertainty_count", 0)
+        sample_count = stats.get("sample_count", 1)  # Avoid division by 0
         uncertainty_ratio = uncertainty_count / sample_count
         
         if uncertainty_count > 0:
@@ -310,9 +416,50 @@ class PolicyAnalyzer:
                 f"Found {uncertainty_count} high-uncertainty cases ({uncertainty_ratio:.1%} of samples). "
                 "Consider retraining for this dimension."
             )
+
+        # Check for weak Q/V alignment
+        if stats.get("qv_correlation") is not None and stats["qv_correlation"] < 0.3:
+            insights.append("⚠️ Weak alignment between Q and V — the policy may lack internal consistency.")
+
+        # Check for poor alignment with MRQ
+        # Multi-source model comparisons
+        for src in ["mrq", "svm", "ebt", "llm"]:
+            corr = stats.get(f"{src}_correlation")
+            dev = stats.get(f"{src}_deviation")
+            samples = stats.get(f"{src}_samples", 0)
+
+            if corr is not None and abs(corr) < 0.3:
+                insights.append(
+                    f"⚠️ Low correlation with {src.upper()} model ({corr:.2f}) — consider alignment or retraining."
+                )
+            if dev is not None and dev > 20:
+                insights.append(
+                    f"⚠️ Score deviation from {src.upper()} exceeds 20 units ({dev:.1f}) — calibration may be needed."
+                )
+            if samples < 5:
+                insights.append(
+                    f"⚠️ Fewer than 5 samples available for {src.upper()} comparison — not enough for statistical confidence."
+                )
+
+        # High uncertainty
+        uncertainty_cases = stats.get("uncertainty_cases", 0)
+        if isinstance(uncertainty_cases, list):
+            uncertainty_count = len(uncertainty_cases)
+        else:
+            uncertainty_count = uncertainty_cases
+
+        if uncertainty_count > 50:
+            insights.append("⚠️ Model is highly uncertain — consider revisiting training or reward signal.")
+
+        # Low policy stability
+        if stats.get("policy_stability", 1.0) < 0.5:
+            insights.append("⚠️ Policy behavior is unstable — high action variance detected.")
+
+
+
         
         # 2. Policy stability check
-        policy_stability = report.get("policy_stability")
+        policy_stability = stats.get("policy_stability")
         if policy_stability is not None:
             if policy_stability < 0.7:
                 insights.append(
@@ -325,8 +472,8 @@ class PolicyAnalyzer:
                 )
         
         # 3. Score alignment analysis
-        score_correlation = report.get("score_correlation")
-        score_deviation = report.get("score_deviation")
+        score_correlation = stats.get("score_correlation")
+        score_deviation = stats.get("score_deviation")
         
         if score_correlation is not None and score_deviation is not None:
             if score_correlation < 0.5:
@@ -341,7 +488,7 @@ class PolicyAnalyzer:
                 )
         
         # 4. Entropy analysis
-        policy_entropy_avg = report.get("policy_entropy_avg")
+        policy_entropy_avg = stats.get("policy_entropy_avg")
         if policy_entropy_avg is not None:
             if policy_entropy_avg > 2.0:
                 insights.append(
@@ -355,15 +502,18 @@ class PolicyAnalyzer:
                 )
         
         # 5. Policy drift detection
-        policy_drift = report.get("policy_drift", False)
-        action_drift_rate = report.get("action_drift_rate", 0.0)
+        policy_drift = stats.get("policy_drift", False)
+        action_drift_rate = stats.get("action_drift_rate", 0.0)
         
         if policy_drift and action_drift_rate > 0.2:
             insights.append(
                 f"Policy drift detected (drift rate: {action_drift_rate:.2f}). "
                 "Consider retraining or policy regularization."
             )
-        
+ 
+        if not insights:
+            insights.append("✅ No issues detected.")
+
         return insights
         
     def visualize_policy(self, dimension: str, output_path: str = "logs/policy_visualization"):
@@ -430,3 +580,25 @@ class PolicyAnalyzer:
         return "standard_view"
     
 
+    def generate_markdown_summary(self, analysis: Dict[str, Any]) -> str:
+        lines = [f"# Policy Report for Dimension: **{analysis['dimension']}**\n"]
+        
+        lines.append("## Summary Metrics:")
+        lines.append(f"- Policy Stability: `{analysis.get('policy_stability')}`")
+        lines.append(f"- Q/V Correlation: `{analysis.get('q_v_correlation')}`")
+        lines.append(f"- Score Correlation (vs MRQ): `{analysis.get('score_correlation')}`")
+        lines.append(f"- Score Deviation: `{analysis.get('score_deviation')}`")
+        lines.append(f"- Entropy (avg): `{analysis.get('policy_entropy_avg')}`")
+        lines.append(f"- Uncertainty Cases: `{analysis.get('uncertainty_count')}`")
+        lines.append(f"- Policy Drift Detected: `{analysis.get('policy_drift')}`")
+        lines.append(f"- Action Drift Rate: `{analysis.get('action_drift_rate')}`")
+        
+        lines.append("\n## Insights:")
+        insights = analysis.get("insights", [])
+        if insights:
+            for insight in insights:
+                lines.append(f"- {insight}")
+        else:
+            lines.append("- No insights generated.")
+
+        return "\n".join(lines)

@@ -31,7 +31,7 @@ class ScoreResult:
             "weight": self.weight,
             "energy": self.energy,
             "source": self.source,
-            "target_type": self.target_type.value if hasattr(self.target_type, 'value') else self.target_type,
+            "target_type": self.target_type,
             "prompt_hash": self.prompt_hash,
             "q_value": self.q_value,
             "state_value": self.state_value,

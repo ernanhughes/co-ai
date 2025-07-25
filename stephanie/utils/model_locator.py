@@ -124,13 +124,13 @@ class ModelLocator:
                 torch.load(self.encoder_file(), map_location=device)
             )
             model.q_head.load_state_dict(
-                torch.load(self.get_q_head_path(), map_location=device)
+                torch.load(self.q_head_file(), map_location=device)
             )
             model.v_head.load_state_dict(
-                torch.load(self.get_v_head_path(), map_location=device)
+                torch.load(self.v_head_file(), map_location=device)
             )
             model.pi_head.load_state_dict(
-                torch.load(self.get_pi_head_path(), map_location=device)
+                torch.load(self.pi_head_file(), map_location=device)
             )
             
             model.eval()

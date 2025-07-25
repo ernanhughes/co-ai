@@ -300,7 +300,7 @@ class ScoringManager(BaseAgent):
                 rationale=response,
                 prompt_hash=prompt_hash,
                 source="llm",
-                target_type=scorable.target_type.value,
+                target_type=scorable.target_type,
             )
             results.append(result)
 
@@ -331,7 +331,7 @@ class ScoringManager(BaseAgent):
         cfg: dict,
         memory,
         logger,
-        source=None,
+        source,
         model_name=None,
     ):
         goal = context.get("goal")
@@ -350,12 +350,13 @@ class ScoringManager(BaseAgent):
         eval_orm = EvaluationORM(
             goal_id=goal.get("id"),
             pipeline_run_id=pipeline_run_id,
-            target_type=scorable.target_type.value,
+            target_type=scorable.target_type,
             target_id=scorable.id,
+            source=source,
             agent_name=cfg.get("name"),
             model_name=model_name,
             embedding_type=memory.embedding.type,
-            evaluator_name=cfg.get("evaluator", "ScoreEvaluator"),
+            evaluator_name=cfg.get("evaluator", cfg.get("model_type", "ScoreEvaluator")),
             strategy=cfg.get("strategy"),
             reasoning_strategy=cfg.get("reasoning_strategy"),
             scores=scores_json,
