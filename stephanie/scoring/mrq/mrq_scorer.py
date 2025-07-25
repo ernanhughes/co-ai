@@ -25,7 +25,7 @@ class MRQScorer(BaseScorer):
         self.memory = memory
         self.logger = logger
         self.device = cfg.get("device", "cpu")
-
+        self.model_type = "mrq"
         self.dimensions = dimensions or ["mrq"]
         self.models = {}  # dim -> (encoder, predictor)
         self.trainers = {}

@@ -67,7 +67,7 @@ pipeline:
     - name: document_mrq_trainer
       description: "Build document pairs for training and evaluation"
       cls: stephanie.agents.maintenance.mrq_trainer.MRQTrainerAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: sicql_mrq_trainer
@@ -115,7 +115,7 @@ pipeline:
     - name: document_mrq_inference
       description: "Infer MRQ scores for documents"
       cls: stephanie.agents.inference.mrq_inference.MRQInferenceAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: sicql_mrq_inference
@@ -139,7 +139,7 @@ pipeline:
     - name: document_reward_scorer
       description: "Score the documents based on their relevance and quality"
       cls: stephanie.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
-      enabled: false
+      enabled: true
       iterations: 1
 
     - name: scoring_policy
