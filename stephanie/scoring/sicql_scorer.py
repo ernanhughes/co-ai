@@ -119,9 +119,9 @@ class SICQLScorer(BaseScorer):
                 scaled_score = self.tuners[dim].transform(q_value)
             else:
                 normalized = torch.sigmoid(torch.tensor(q_value)).item()
-                scaled_score = normalized * (meta["max"] - meta["min"]) + meta["min"]
+                scaled_score = normalized * (meta["max_value"] - meta["min_value"]) + meta["min_value"]
 
-            scaled_score = max(min(scaled_score, meta["max"]), meta["min"])
+            scaled_score = max(min(scaled_score, meta["max_value"]), meta["min_value"])
 
 
             final_score = round(scaled_score, 4)

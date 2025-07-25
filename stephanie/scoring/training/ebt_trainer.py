@@ -9,7 +9,7 @@ class EBTTrainer(BaseTrainer):
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.model_type = "ebt"
-        self.num_actions = cfg.get("num_actions", 3)
+        self.num_actions = 3 #cfg.get("num_actions", 3)
 
     def train(self, samples, dimension):
         dl = self._create_dataloader(samples)
@@ -45,6 +45,7 @@ class EBTTrainer(BaseTrainer):
                 adv = (outputs["q_value"] - outputs["state_value"]).detach()
                 policy_probs = F.softmax(outputs["action_logits"], dim=-1)
                 entropy = -torch.sum(policy_probs * torch.log(policy_probs + 1e-8), dim=-1).mean()
+                adv = adv.unsqueeze(1)  # Shape becomes [batch_size, 1]
                 pi_loss = -(torch.log(policy_probs) * adv).mean() - 0.01 * entropy
 
                 loss = q_loss * self.cfg.get("q_weight", 1.0) + \

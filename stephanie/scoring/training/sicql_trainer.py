@@ -638,6 +638,7 @@ class SICQLTrainer(BaseTrainer):
         ).item()
         policy_stability = max(policy_probs)
 
+
         # Build metadata
         meta = {
             "dim": self.dim,
@@ -651,6 +652,10 @@ class SICQLTrainer(BaseTrainer):
             "policy_stability": float(policy_stability),
             "policy_logits": policy_logits,
             "policy_probs": policy_probs,
+            "embedding_type": self.embedding_type,
+            "max_value": 100,
+            "min_value": 0,
+            "device": str(self.device), 
             "timestamp": datetime.utcnow().isoformat(),
         }
 
