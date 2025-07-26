@@ -1,5 +1,5 @@
 # stephanie/agents/score_comparison.py
-
+import csv
 import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -144,6 +144,20 @@ class ScoreComparisonAgent(BaseAgent):
             # Generate a simple summary or export
             self._generate_basic_report(aggregated_results, context['score_comparison_metadata'])
 
+            self.logger.log("ScoreComparisonCompleted", {
+                "total_scores_processed": len(aggregated_results),
+                # Add more summary stats if needed
+            })
+
+
+            # --- 7. (Optional) Basic Reporting ---
+            # Generate a simple summary or export
+            self._generate_basic_report(aggregated_results, context['score_comparison_metadata'])
+
+            # --- 8. NEW: Save Raw CSV ---
+            self._save_comparison_csv(aggregated_results, context['score_comparison_metadata'])
+
+            # --- 9. Log completion and return ---
             self.logger.log("ScoreComparisonCompleted", {
                 "total_scores_processed": len(aggregated_results),
                 # Add more summary stats if needed
@@ -442,3 +456,60 @@ class ScoreComparisonAgent(BaseAgent):
 
         except Exception as e:
              self.logger.log("ComparisonReportGenerationFailed", {"error": str(e)})
+
+
+    def _save_comparison_csv(self, aggregated_data: List[Dict[str, Any]], metadata: Dict[str, Any]):
+        """
+        Saves the aggregated score comparison data to a CSV file.
+        """
+        try:
+            if not aggregated_data:
+                self.logger.log("SaveComparisonCSVWarning", {"message": "No data to save to CSV. Skipping."})
+                return
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            # Create a descriptive filename
+            pipeline_ids_str = "_".join(map(str, metadata.get('pipeline_run_ids', ['unknown'])))
+            filename = f"score_comparison_raw_{pipeline_ids_str}_{timestamp}.csv"
+            file_path = os.path.join(self.output_dir, filename)
+
+            # Define the fieldnames for the CSV. These should match the keys in your aggregated data dicts.
+            # Based on the current structure in run() and _fetch_local_scores/_fetch_latest_ground_truth_scores
+            fieldnames = [
+                "target_id",
+                "target_type",
+                "dimension",
+                "source", # The model that produced the score
+                "score",  # The score from the model
+                "llm_score", # The ground truth LLM score for the same target/dimension
+                "delta"  # The difference (score - llm_score)
+                # Add other fields like 'embedding_type', 'created_at' if they are included in aggregated_data
+            ]
+            # Dynamically add any other keys found in the first data point (for robustness)
+            if aggregated_data:
+                sample_keys = set(aggregated_data[0].keys())
+                for key in sample_keys:
+                    if key not in fieldnames:
+                        fieldnames.append(key)
+            # Ensure consistent order, put standard ones first
+            standard_fields = [f for f in fieldnames if f in ['target_id', 'target_type', 'dimension', 'source', 'score', 'llm_score', 'delta']]
+            other_fields = [f for f in fieldnames if f not in standard_fields]
+            ordered_fieldnames = standard_fields + sorted(other_fields)
+
+
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=ordered_fieldnames)
+                writer.writeheader()
+                # Sort data for consistent output (optional)
+                sorted_data = sorted(aggregated_data, key=lambda x: (x.get('dimension', ''), x.get('target_type', ''), x.get('target_id', 0), x.get('source', '')))
+                for row in sorted_data:
+                    # Handle potential serialization issues (e.g., datetime objects)
+                    # Although our current data should be basic types, this is good practice.
+                    safe_row = {k: v if isinstance(v, (str, int, float, type(None))) else str(v) for k, v in row.items()}
+                    writer.writerow(safe_row)
+
+
+            self.logger.log("ComparisonCSVSaved", {"path": file_path, "record_count": len(aggregated_data)})
+            
+        except Exception as e:
+            self.logger.log("SaveComparisonCSVFailed", {"error": str(e), "output_dir": self.output_dir})

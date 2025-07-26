@@ -30,7 +30,7 @@ class BaseScorer(ModelLocatorMixin, abc.ABC):
     @property
     def name(self) -> str:
         """Returns a canonical name for the scorer."""
-        return f"{self.model_type}_scorer"
+        return f"{self.model_type}"
 
     def get_model_name(self) -> str:
         return f"{self.target_type}_{self.model_type}_{self.version}"
