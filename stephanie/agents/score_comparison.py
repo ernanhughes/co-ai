@@ -2,13 +2,16 @@
 import csv
 import os
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from sqlalchemy import text
 import sqlalchemy
 from stephanie.models import EvaluationORM, ScoreORM  # Assuming these are the ORM models used
 
+import numpy as np
+from scipy.stats import pearsonr
+from collections import defaultdict
+
 from stephanie.agents.base_agent import BaseAgent
-from stephanie.memory.scoring_store import ScoringStore # Assuming ScoringStore is accessible here or imported
 # If ScoringStore methods aren't directly usable, we might need to adapt them or use session directly
 
 class ScoreComparisonAgent(BaseAgent):
@@ -160,6 +163,27 @@ class ScoreComparisonAgent(BaseAgent):
             # --- 9. Log completion and return ---
             self.logger.log("ScoreComparisonCompleted", {
                 "total_scores_processed": len(aggregated_results),
+                # Add more summary stats if needed
+            })
+
+
+            # --- 9. NEW: Perform Statistical Analysis ---
+            analysis_results = self._perform_statistical_analysis(aggregated_results)
+            context['score_analysis_results'] = analysis_results
+            context['score_analysis_metadata'] = {
+                "analysis_timestamp": datetime.now().isoformat(),
+                "sources_analyzed": self.sources_to_compare,
+                "ground_truth_source": self.ground_truth_source,
+                # You could add more metadata here if needed
+            }
+
+            # --- 10. NEW: Generate Detailed Analysis Report ---
+            self._generate_analysis_report(analysis_results, context['score_comparison_metadata']) # Use comparison metadata for context
+
+            # --- 11. Log completion and return ---
+            self.logger.log("ScoreComparisonCompleted", {
+                "total_scores_processed": len(aggregated_results),
+                "analysis_results_generated": len(analysis_results) > 0,
                 # Add more summary stats if needed
             })
 
@@ -352,7 +376,7 @@ class ScoreComparisonAgent(BaseAgent):
             from sqlalchemy import text
             # This is a simplified version focusing only on LLM
             # Note: This assumes target_type is consistent or handled, or we filter it out if not needed here
-            cte_query_text = f"""
+            cte_query_text = """
             WITH ranked_llm_scores AS (
                 SELECT
                     s.dimension,
@@ -440,7 +464,7 @@ class ScoreComparisonAgent(BaseAgent):
                 report_path = os.path.join(self.output_dir, report_filename)
 
                 with open(report_path, 'w') as f:
-                     f.write(f"# Score Comparison Summary Report\n\n")
+                     f.write("# Score Comparison Summary Report\n\n")
                      f.write(f"**Generated:** {metadata.get('comparison_timestamp', 'N/A')}\n\n")
                      f.write(f"**Pipeline Runs Analyzed:** {metadata.get('pipeline_run_ids', 'N/A')}\n\n")
                      f.write(f"**Sources Compared:** {', '.join(metadata.get('sources_compared', []))}\n\n")
@@ -513,3 +537,211 @@ class ScoreComparisonAgent(BaseAgent):
             
         except Exception as e:
             self.logger.log("SaveComparisonCSVFailed", {"error": str(e), "output_dir": self.output_dir})
+
+
+
+    def _perform_statistical_analysis(self, aggregated_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Performs statistical analysis on the aggregated score comparison data.
+        Calculates MAE, RMSE, Correlation, Bias, and Variance of model scores
+        per source and dimension.
+        """
+        try:
+
+            # --- 1. Organize Data ---
+            # Group data by (source, dimension) for metric calculation
+            grouped_data = defaultdict(list)
+            for item in aggregated_data:
+                # Only analyze non-ground-truth scores that have a corresponding LLM score/delta
+                if item.get('source') and item.get('source') != self.ground_truth_source and item.get('delta') is not None:
+                    key = (item['source'], item['dimension'])
+                    grouped_data[key].append(item)
+                
+                # Also collect model scores for calculating variance of scores produced by the model
+                # This uses the 'score' field for the model itself
+                if item.get('source') and item.get('source') != self.ground_truth_source and item.get('score') is not None:
+                    # Use a distinct key structure for model scores
+                    score_key = (item['source'], item['dimension'], 'model_scores') 
+                    grouped_data[score_key].append(item['score']) # Store just the score value
+
+            # --- 2. Calculate Metrics ---
+            results = {}
+
+            # --- Calculate Main Metrics (MAE, RMSE, Correlation, Bias) ---
+            for key, items in grouped_data.items():
+                # Process only the main metric keys: (source, dimension)
+                # Skip keys with 'model_scores' marker: (source, dimension, 'model_scores')
+                if isinstance(key, tuple) and len(key) == 3 and key[2] == 'model_scores':
+                    continue # This will be handled later for score variance
+
+                if isinstance(key, tuple) and len(key) == 2:
+                    source, dimension = key
+                else:
+                    # Handle unexpected key format gracefully
+                    self.logger.log("StatisticalAnalysisWarning", {
+                        "message": "Skipping unexpected key format in grouped data",
+                        "key": str(key), "key_type": str(type(key))
+                    })
+                    continue
+
+                if not items:
+                    continue
+
+                # Extract arrays for calculations
+                deltas = np.array([item['delta'] for item in items if item['delta'] is not None])
+                model_scores = np.array([item['score'] for item in items if item['score'] is not None])
+                llm_scores = np.array([item['llm_score'] for item in items if item['llm_score'] is not None])
+
+                # Ensure we have data to calculate metrics
+                if len(deltas) == 0 or len(model_scores) == 0 or len(llm_scores) == 0:
+                    self.logger.log("StatisticalAnalysisWarning", {
+                        "message": "Insufficient data for metric calculation",
+                        "source": source, "dimension": dimension,
+                        "delta_count": len(deltas), "model_score_count": len(model_scores), "llm_score_count": len(llm_scores)
+                    })
+                    continue
+
+                # --- Core Metrics ---
+                mae = np.mean(np.abs(deltas))
+                rmse = np.sqrt(np.mean(deltas**2))
+                
+                # Correlation: Check if variance is sufficient for meaningful correlation
+                corr_coef = None
+                corr_p_value = None
+                if np.std(model_scores) > 1e-10 and np.std(llm_scores) > 1e-10:
+                    try:
+                        # Use scipy.stats.pearsonr
+                        corr_result = pearsonr(model_scores, llm_scores)
+                        # Handle different scipy versions
+                        if hasattr(corr_result, 'statistic'):
+                            corr_coef = corr_result.statistic
+                            corr_p_value = corr_result.pvalue
+                        else: # Older scipy versions return a tuple
+                            corr_coef, corr_p_value = corr_result
+                    except Exception as e:
+                        self.logger.log("CorrelationCalculationWarning", {
+                            "error": str(e), "source": source, "dimension": dimension
+                        })
+
+                bias = np.mean(deltas) # Average difference (Model - LLM)
+
+                # --- Store Results ---
+                result_key = f"{source}_{dimension}"
+                results[result_key] = {
+                    "source": source,
+                    "dimension": dimension,
+                    "count": len(deltas),
+                    "mae": float(mae),
+                    "rmse": float(rmse),
+                    "correlation": float(corr_coef) if corr_coef is not None else None,
+                    "correlation_p_value": float(corr_p_value) if corr_p_value is not None else None,
+                    "bias": float(bias), # Positive bias = Model tends to score higher than LLM
+                }
+
+            # --- 3. Calculate Variance of Model Scores ---
+            # This is the standard deviation of scores *produced by each model* for a dimension
+            for key, scores_list in grouped_data.items():
+                # Process only the score variance keys: (source, dimension, 'model_scores')
+                if not (isinstance(key, tuple) and len(key) == 3 and key[2] == 'model_scores'):
+                    continue # Skip main metric keys
+
+                source, dimension, _ = key # Unpack the 3-tuple key
+
+                if not scores_list:
+                    continue
+                
+                scores_array = np.array(scores_list)
+                if len(scores_array) > 1: # Need more than one value for std dev
+                    score_variance = float(np.std(scores_array))
+                    # Add this to the existing result dict or create a new entry if it doesn't exist
+                    result_key = f"{source}_{dimension}"
+                    if result_key in results:
+                        results[result_key]["score_std_dev"] = score_variance
+                    else:
+                        # Less likely, but handle if main metrics weren't calculated for some reason
+                        results[result_key] = {
+                            "source": source,
+                            "dimension": dimension,
+                            "count": len(scores_array),
+                            "score_std_dev": score_variance
+                            # Other metrics will be missing
+                        }
+                # else: Not enough data for variance, leave it out or set to 0?
+
+            self.logger.log("StatisticalAnalysisCompleted", {
+                "unique_source_dimension_combinations_analyzed": len(results)
+            })
+            
+            return results
+
+        except Exception as e:
+            self.logger.log("StatisticalAnalysisFailed", {"error": str(e)})
+            # Depending on robustness needs, return empty dict or re-raise
+            return {} # Return empty dict on error to allow pipeline to potentially continue
+
+    def _generate_analysis_report(self, analysis_results: Dict[str, Any], comparison_metadata: Dict[str, Any]):
+        """
+        Generates a detailed markdown report summarizing the statistical analysis results.
+        """
+        try:
+            if not analysis_results:
+                report_content = "# Score Analysis Report (Empty)\n\nNo analysis data found.\n"
+                self.logger.log("EmptyAnalysisReportGenerated", {})
+            else:
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                pipeline_ids_str = "_".join(map(str, comparison_metadata.get('pipeline_run_ids', ['unknown'])))
+                report_filename = f"score_analysis_detailed_{pipeline_ids_str}_{timestamp}.md"
+                report_path = os.path.join(self.output_dir, report_filename)
+
+                with open(report_path, 'w', encoding='utf-8') as f:
+                    f.write(f"# Detailed Score Analysis Report\n\n")
+                    f.write(f"**Generated:** {comparison_metadata.get('comparison_timestamp', 'N/A')}\n\n") # Use timestamp from comparison
+                    f.write(f"**Analysis Performed:** {datetime.now().isoformat()}\n\n")
+                    f.write(f"**Pipeline Runs Analyzed:** {comparison_metadata.get('pipeline_run_ids', 'N/A')}\n\n")
+                    f.write(f"**Sources Compared:** {', '.join(comparison_metadata.get('sources_compared', []))}\n\n")
+                    f.write(f"**Ground Truth Source:** {comparison_metadata.get('ground_truth_source', 'N/A')}\n\n")
+                    f.write(f"**Dimensions:** {', '.join(comparison_metadata.get('dimensions', []))}\n\n")
+                    f.write("---\n\n")
+
+                    # Group results by dimension for better organization
+                    from collections import defaultdict
+                    results_by_dimension = defaultdict(list)
+                    for key, metrics in analysis_results.items():
+                        dim = metrics.get('dimension', 'unknown')
+                        results_by_dimension[dim].append(metrics)
+
+                    # Sort dimensions and sources for consistent output
+                    sorted_dimensions = sorted(results_by_dimension.keys())
+
+                    for dimension in sorted_dimensions:
+                        f.write(f"## Analysis for Dimension: `{dimension}`\n\n")
+                        f.write("| Source | Count | MAE | RMSE | Correlation (p-value) | Bias | Score Std Dev |\n")
+                        f.write("| :--- | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+
+                        sorted_sources_for_dim = sorted(results_by_dimension[dimension], key=lambda x: x.get('source', ''))
+                        for metrics in sorted_sources_for_dim:
+                            source = metrics.get('source', 'N/A')
+                            count = metrics.get('count', 0)
+                            mae = f"{metrics.get('mae', 0):.4f}" if metrics.get('mae') is not None else "N/A"
+                            rmse = f"{metrics.get('rmse', 0):.4f}" if metrics.get('rmse') is not None else "N/A"
+                            
+                            corr = metrics.get('correlation')
+                            p_val = metrics.get('correlation_p_value')
+                            if corr is not None:
+                                corr_str = f"{corr:.4f}"
+                                if p_val is not None:
+                                    corr_str += f" ({p_val:.2e})" # Add p-value in scientific notation
+                            else:
+                                corr_str = "N/A"
+
+                            bias = f"{metrics.get('bias', 0):.4f}" if metrics.get('bias') is not None else "N/A"
+                            std_dev = f"{metrics.get('score_std_dev', 0):.4f}" if metrics.get('score_std_dev') is not None else "N/A"
+
+                            f.write(f"| {source} | {count} | {mae} | {rmse} | {corr_str} | {bias} | {std_dev} |\n")
+                        f.write("\n") # Space between dimensions
+
+                self.logger.log("DetailedAnalysisReportSaved", {"path": report_path})
+
+        except Exception as e:
+            self.logger.log("DetailedAnalysisReportGenerationFailed", {"error": str(e)})
+        
