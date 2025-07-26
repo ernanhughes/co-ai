@@ -25,7 +25,9 @@ defaults:
   - agents/policy_analyzer
   - agents/pipeline_comparison
   - agents/pipeline_judge
+  - agents/scoring_report
   - agents/hnet
+  - agents/score_comparison
   - logging/json_logger
 
 embeddings:
@@ -139,7 +141,7 @@ pipeline:
     - name: document_reward_scorer
       description: "Score the documents based on their relevance and quality"
       cls: stephanie.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: scoring_policy
@@ -151,7 +153,7 @@ pipeline:
     - name: policy_analyzer
       description: "Analyze the policy and its effectiveness"
       cls: stephanie.agents.policy_analyzer.PolicyAnalysisAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: gild_trainer
@@ -166,3 +168,14 @@ pipeline:
       enabled: false
       iterations: 1
 
+    - name: scoring_report
+      description: "Generate a scoring report from the ScoringStore"
+      cls: stephanie.agents.scoring_report.ScoringReportAgent
+      enabled: false
+      iterations: 1
+    
+    - name: score_comparison
+      description: "Compare scores from different models"
+      cls: stephanie.agents.score_comparison.ScoreComparisonAgent
+      enabled: true
+      iterations: 1

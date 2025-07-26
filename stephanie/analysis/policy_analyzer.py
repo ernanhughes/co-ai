@@ -29,7 +29,7 @@ class PolicyAnalyzer:
                 self._compare_with_source(sicql_data, mrq_data, "mrq"),
                 self._compare_with_source(sicql_data, svm_data, "svm"),
                 self._compare_with_source(sicql_data, ebt_data, "ebt"),
-                self._compare_with_source(sicql_data, llm_data, "llm"),
+                # self._compare_with_source(sicql_data, llm_data, "llm"),
             ]
 
             results = {
@@ -241,6 +241,7 @@ class PolicyAnalyzer:
         }
 
     def _compare_with_source(self, sicql_data: List[Dict], reference_data: List[Dict], label: str) -> Dict[str, Any]:
+        """Compare SICQL policy with reference data using document_id and dimension for matching"""
         if not sicql_data or not reference_data:
             return {
                 "source": label,
@@ -249,25 +250,23 @@ class PolicyAnalyzer:
                 "avg_score_deviation": None,
                 "sample_count": 0
             }
-
-        sicql_by_key = {
-            (d["target_type"], d["target_id"]): d
-            for d in sicql_data if d.get("target_type") and d.get("target_id") is not None
-        }
-        ref_by_key = {
-            (d["target_type"], d["target_id"]): d
-            for d in reference_data if d.get("target_type") and d.get("target_id") is not None
-        }
-
-        matched = []
-        for key, sicql in sicql_by_key.items():
+        
+        # Create lookup by (document_id, dimension)
+        ref_by_key = {}
+        for d in reference_data:
+            # Use target_id and dimension as the key
+            key = (d.get("target_id"), d.get("dimension"))
+            if None not in key:  # Skip if either is None
+                ref_by_key[key] = d
+        
+        # Find matching records
+        matched_data = []
+        for sicql in sicql_data:
+            key = (sicql.get("target_id"), sicql.get("dimension"))
             if key in ref_by_key:
-                matched.append({
-                    "sicql": sicql,
-                    "ref": ref_by_key[key]
-                })
-
-        if not matched:
+                matched_data.append((sicql, ref_by_key[key]))
+        
+        if not matched_data:
             return {
                 "source": label,
                 "comparable": False,
@@ -275,23 +274,32 @@ class PolicyAnalyzer:
                 "avg_score_deviation": None,
                 "sample_count": 0
             }
-
-        sicql_scores = [m["sicql"]["q_value"] for m in matched]
-        ref_scores = [m["ref"]["score"] for m in matched]
-
-        try:
-            score_correlation = np.corrcoef(sicql_scores, ref_scores)[0, 1]
-        except:
+        
+        # Calculate correlation
+        sicql_scores = [d[0]["q_value"] for d in matched_data]
+        ref_scores = [d[1]["score"] for d in matched_data]
+        
+        if len(sicql_scores) < 5:
+            self.logger.warning("Low sample count for correlation", extra={
+                "source": label,
+                "sample_count": len(sicql_scores),
+                "dimension": sicql_data[0].get("dimension", "unknown")
+            })
+        
+        if len(sicql_scores) < 2:
             score_correlation = None
-
-        score_deviation = np.mean([abs(a - b) for a, b in zip(sicql_scores, ref_scores)])
-
+        else:
+            score_correlation = np.corrcoef(sicql_scores, ref_scores)[0, 1]
+        
+        # Calculate average deviation
+        score_deviation = np.mean([abs(a - b) for a, b in zip(sicql_scores, ref_scores)]) if sicql_scores else None
+        
         return {
             "source": label,
             "comparable": True,
-            "score_correlation": float(score_correlation) if score_correlation else None,
-            "avg_score_deviation": float(score_deviation),
-            "sample_count": len(matched)
+            "score_correlation": float(score_correlation) if score_correlation is not None else None,
+            "avg_score_deviation": float(score_deviation) if score_deviation is not None else None,
+            "sample_count": len(sicql_scores)
         }
 
     def _find_high_uncertainty(self, sicql_data: List[Dict]) -> List[Dict]:
