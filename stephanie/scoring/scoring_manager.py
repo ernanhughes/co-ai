@@ -414,7 +414,7 @@ class ScoringManager(BaseAgent):
         ScoreDisplay.show(scorable, bundle.to_dict(), weighted_score)
 
 
-    @staticmethod Please get done right All right so next to clear long pulse long form code I don't know like I can do without the code
+    @staticmethod 
     def save_document_score_to_memory(
         bundle, document, context, cfg, memory, logger, source="DocumentEvaluator"
     ):

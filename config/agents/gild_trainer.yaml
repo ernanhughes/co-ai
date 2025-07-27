@@ -2,7 +2,7 @@ gild_trainer:
   name: gild_trainer
   enabled: true
   save_prompt: true
-  save_context: true
+  save_context: false
   skip_if_completed: false
 
   use_gild: true

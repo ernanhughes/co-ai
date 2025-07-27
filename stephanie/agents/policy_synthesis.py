@@ -272,7 +272,7 @@ class PolicySynthesisAgent(BaseAgent):
         try:
             # Get the enriched data map from energy results
             # Assuming it's stored in a way we can access, e.g., as a list
-            enriched_data_list = energy_results.get("enriched_data_list", []) # Adjust key if needed
+            enriched_data_list = energy_results.get("enriched_data_sample", []) 
             # If it's not a list, we might need to process the map differently
             # Let's assume for now it's a list of enriched data points
             
@@ -280,7 +280,7 @@ class PolicySynthesisAgent(BaseAgent):
             # and fetching attributes on the fly (less efficient)
             data_source = enriched_data_list if enriched_data_list else comparison_data
 
-            for data_point in data_source:
+            for key, data_point  in data_source:
                 source = data_point.get('source')
                 dimension = data_point.get('dimension')
                 target_id = data_point.get('target_id')

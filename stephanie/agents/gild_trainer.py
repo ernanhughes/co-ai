@@ -61,10 +61,6 @@ class GILDTrainerAgent(BaseAgent):
         5. Save the updated model.
         6. (Optional) Trigger re-evaluation/re-analysis.
         """
-        if not self.use_gild:
-            self.logger.log("GILDTrainerSkipped", {"reason": "use_gild is False"})
-            return context
-
         try:
             self.logger.log("GILDTrainingStarted", {})
 
