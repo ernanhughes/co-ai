@@ -8,7 +8,7 @@ from stephanie.agents.base_agent import BaseAgent
 from stephanie.evaluator.hypothesis_value_predictor import \
     HypothesisValuePredictor
 from stephanie.models.score import ScoreORM
-from stephanie.scoring.mrq.encoder import TextEncoder
+from stephanie.scoring.model.text_encoder import TextEncoder
 from stephanie.scoring.mrq.model import MRQModel
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.score_bundle import ScoreBundle

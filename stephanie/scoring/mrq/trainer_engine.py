@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 from stephanie.models.incontext_q_model import InContextQModel
-from stephanie.scoring.mrq.encoder import TextEncoder
+from stephanie.scoring.model.text_encoder import TextEncoder
 from stephanie.scoring.mrq.value_predictor import ValuePredictor
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import save_json
