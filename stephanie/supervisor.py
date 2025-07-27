@@ -271,7 +271,8 @@ class Supervisor:
                 self.logger.log("PipelineIterationEnd", {STAGE: stage.name, "iteration": i + 1})
 
             # Saving context after stage
-            self.context.save_to_db(stage_dict)
+            if stage_dict.get(SAVE_CONTEXT, True):
+                self.context.save_to_db(stage_dict)
             self._save_pipeline_stage(stage, context, stage_dict)
             self.logger.log("PipelineStageEnd", {STAGE: stage.name})
 

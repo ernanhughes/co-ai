@@ -54,7 +54,8 @@ def run(cfg: DictConfig):
 
         result = await supervisor.run_pipeline_config(context)
 
-        save_json_result(log_path, result)
+        if cfg.report.get("save_context_result", False):
+            save_json_result(log_path, result)
 
         if cfg.report.generate_report:
             supervisor.generate_report(result, run_id=run_id)

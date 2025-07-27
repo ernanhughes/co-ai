@@ -28,6 +28,9 @@ defaults:
   - agents/scoring_report
   - agents/hnet
   - agents/score_comparison
+  - agents/score_energy_comparison
+  - agents/score_analysis
+  - agents/policy_synthesis
   - logging/json_logger
 
 embeddings:
@@ -54,6 +57,7 @@ paths:
   prompts: ${hydra:runtime.cwd}/prompts
 
 report:
+  save_context_result: false
   generate_report: false
   path: ${hydra:runtime.cwd}/reports
 
@@ -177,5 +181,23 @@ pipeline:
     - name: score_comparison
       description: "Compare scores from different models"
       cls: stephanie.agents.score_comparison.ScoreComparisonAgent
+      enabled: true
+      iterations: 1
+
+    - name: score_energy_comparison
+      description: "Compare energy scores from different models"
+      cls: stephanie.agents.score_energy_comparison.ScoreEnergyComparisonAgent
+      enabled: true
+      iterations: 1
+
+    - name: policy_synthesis
+      description: "Synthesize policies based on the analysis of scores"
+      cls: stephanie.agents.policy_synthesis.PolicySynthesisAgent
+      enabled: true
+      iterations: 1
+
+    - name: gild_trainer
+      description: "Train the GILD model for policy improvement"
+      cls: stephanie.agents.gild_trainer.GILDTrainerAgent
       enabled: true
       iterations: 1

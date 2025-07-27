@@ -1,5 +1,6 @@
 # stephanie/context/context_manager.py
 import json
+import os
 import sys
 import uuid
 from datetime import datetime
@@ -42,7 +43,12 @@ class ContextManager:
         self.db_table = db_table
         self.validate = validate
         self.save_db = save_to_db
-        
+        self.large_data_threshold_bytes = self.cfg.get("context_large_data_threshold_bytes", 5000)
+        # Ensure the dump directory exists
+        self.large_data_dump_dir = self.cfg.get("context_large_data_dump_dir", "logs/large_context_data")
+        os.makedirs(self.large_data_dump_dir, exist_ok=True)
+        # --
+
         # Initialize context dictionary
         self._data = {
             "trace": [],
@@ -296,19 +302,45 @@ class ContextManager:
         serializable_context = self._strip_non_serializable(self._data)
         context_size_breakdown = self.context_size_breakdown(serializable_context)
         print(f"Context size breakdown: {context_size_breakdown}")    
+        processed_context_state = self._process_context_for_large_data(serializable_context)
 
+                
         # Save to ORM
         context_orm = ContextStateORM(
             run_id=self.run_id,
             stage_name=stage_dict.get("name", "unknown"),
-            context=json.dumps(serializable_context),
-            trace=json.dumps(serializable_context["trace"]),
-            token_count=serializable_context["metadata"]["token_count"],
+            context=json.dumps(processed_context_state),
+            trace=serializable_context.get("trace", []), # Make sure trace is handled correctly
+            token_count=serializable_context["metadata"].get("token_count", 0),
             extra_data=json.dumps(stage_dict)
         )
         self.memory.session.add(context_orm)
         self.memory.session.commit()
         return True
+
+    def stringify_tuple_keys(self, d):
+        if isinstance(d, dict):
+            return {
+                str(k) if isinstance(k, tuple) else k: self.stringify_tuple_keys(v)
+                for k, v in d.items()
+            }
+        elif isinstance(d, list):
+            return [self.stringify_tuple_keys(item) for item in d]
+        else:
+            return d
+
+
+    def find_tuples(self,obj, path=""):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                self.find_tuples(v, f"{path}.{k}" if path else k)
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                self.find_tuples(item, f"{path}[{i}]")
+        elif isinstance(obj, tuple):
+            print(f"Tuple found at path: {path} -> {obj}")
+
+
 
     def load_from_db(self, run_id: str):
         """Load context from database"""
@@ -390,3 +422,151 @@ class ContextManager:
             except TypeError:
                 sizes[key] = "unmeasurable"
         return sorted(sizes.items(), key=lambda x: x[1] if isinstance(x[1], int) else 0, reverse=True)
+
+
+    def _process_context_for_large_data(self, obj: Any, path: str = "root") -> Any:
+        """
+        Recursively traverses a context object (dict, list, or primitive).
+        If a dict or list is found to be large when serialized, it is dumped to a file,
+        and its location is stored in the context instead.
+
+        Args:
+            obj: The object (part of context) to check/process.
+            path: The dot-notation path to this object within the context (for logging/debugging).
+
+        Returns:
+            The original object, or a dictionary describing the dumped file location if it was large.
+        """
+        # Only process dicts and lists, as these are the complex structures that can be large
+        if isinstance(obj, dict):
+            # --- Check size of this dictionary ---
+            try:
+                # Serialize to check size. Use default=str to handle common non-serializable types gracefully for size check.
+                # Note: This serialization is just for size, the actual dump might need more care.
+                obj_str = json.dumps(obj, default=str, ensure_ascii=False)
+                obj_size_bytes = len(obj_str.encode('utf-8'))
+                
+                # --- If large, dump it ---
+                if obj_size_bytes > self.large_data_threshold_bytes:
+                    # Generate a unique filename based on path and timestamp
+                    # Sanitize path for filename use
+                    safe_path = path.replace('.', '_').replace('[', '_').replace(']', '_')
+                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+                    run_id = self._data.get("metadata", {}).get("run_id", "unknown_run")[:8] # Shorten run_id for filename
+                    filename = f"context_large_data_{safe_path}_{run_id}_{timestamp}.json"
+                    filepath = os.path.join(self.large_data_dump_dir, filename)
+
+                    # --- Dump the data ---
+                    # Use the manager's logger or a standard logger
+                    # Make sure the object is fully serializable for the actual dump.
+                    # If issues arise, consider using a more robust encoder.
+                    try:
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            json.dump(obj, f, indent=2, default=str, ensure_ascii=False) # Use indent for readability
+                        
+                        self.logger.log("LargeDataContextComponentDumped", {
+                            "context_path": path,
+                            "size_bytes": obj_size_bytes,
+                            "filepath": filepath,
+                            "run_id": run_id
+                        })
+                        # print(f"DEBUG: Dumped large context data at '{path}' ({obj_size_bytes} bytes) to {filepath}")
+
+                        # --- Return the placeholder/descriptor ---
+                        return {
+                            "__large_data_placeholder__": True, # Marker to indicate this was dumped
+                            "original_type": type(obj).__name__,
+                            "dumped_to_file": filepath,
+                            "original_size_bytes": obj_size_bytes,
+                            "dump_timestamp": datetime.utcnow().isoformat(),
+                            # Optionally keep small metadata if needed for immediate logic
+                            # "summary_keys": list(obj.keys())[:10] if isinstance(obj, dict) else None
+                        }
+                    except Exception as dump_error:
+                        self.logger.log("LargeDataContextComponentDumpFailed", {
+                            "context_path": path,
+                            "size_bytes": obj_size_bytes,
+                            "error": str(dump_error)
+                        })
+                        # If dumping fails, return the original object, hoping DB save handles it
+                        # or decide to remove it: return {"__dump_failed__": True, "error": str(dump_error)}
+                        return obj 
+
+                # --- If not large, recursively process its children ---
+                else:
+                    # Return a new dict with processed children
+                    return {key: self._process_context_for_large_data(value, f"{path}.{key}") for key, value in obj.items()}
+
+            except (TypeError, OverflowError) as serialize_error:
+                # Handle cases where part of the dict can't be easily serialized for size check
+                self.logger.log("LargeDataSizeCheckSerializationError", {
+                    "context_path": path,
+                    "object_type": type(obj),
+                    "error": str(serialize_error)
+                })
+                # Cannot check size, assume it might be okay or handle differently.
+                # For safety, we could try to process children.
+                return {key: self._process_context_for_large_data(value, f"{path}.{key}") for key, value in obj.items()}
+
+
+        elif isinstance(obj, list) and len(obj) > 0: # Check non-empty lists
+            # Checking the size of a list can be tricky if it's very large.
+            # A rough heuristic: if it's a long list, assume it might be large.
+            # Or, serialize a sample or the whole thing.
+            # Let's try serializing the whole list for size check, but be cautious.
+            try:
+                obj_str = json.dumps(obj, default=str, ensure_ascii=False)
+                obj_size_bytes = len(obj_str.encode('utf-8'))
+
+                if obj_size_bytes > self.large_data_threshold_bytes:
+                    # --- Dump the large list ---
+                    safe_path = path.replace('.', '_').replace('[', '_').replace(']', '_')
+                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+                    run_id = self._data.get("metadata", {}).get("run_id", "unknown_run")[:8]
+                    filename = f"context_large_data_{safe_path}_{run_id}_{timestamp}.json"
+                    filepath = os.path.join(self.large_data_dump_dir, filename)
+
+                    try:
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            json.dump(obj, f, indent=2, default=str, ensure_ascii=False)
+                        
+                        self.logger.log("LargeDataContextComponentDumped", {
+                            "context_path": path,
+                            "size_bytes": obj_size_bytes,
+                            "filepath": filepath,
+                            "run_id": run_id
+                        })
+
+                        return {
+                            "__large_data_placeholder__": True,
+                            "original_type": type(obj).__name__,
+                            "dumped_to_file": filepath,
+                            "original_size_bytes": obj_size_bytes,
+                            "dump_timestamp": datetime.utcnow().isoformat(),
+                            # "item_count": len(obj) # Example metadata
+                        }
+                    except Exception as dump_error:
+                        self.logger.log("LargeDataContextComponentDumpFailed", {
+                            "context_path": path, "size_bytes": obj_size_bytes, "error": str(dump_error)
+                        })
+                        return obj # Return original on dump failure
+
+                else:
+                    # Process children of the list (in case it contains large dicts/lists)
+                    # Path for list items could be path[0], path[1], etc., but gets complex.
+                    # For simplicity in path tracking, we'll just use the parent path for children.
+                    # If deep inspection is needed, path logic can be enhanced.
+                    return [self._process_context_for_large_data(item, f"{path}[{i}]") for i, item in enumerate(obj)]
+
+            except (TypeError, OverflowError) as serialize_error:
+                self.logger.log("LargeDataSizeCheckSerializationError", {
+                    "context_path": path, "object_type": type(obj), "error": str(serialize_error)
+                })
+                # Cannot check size, process children if possible
+                return [self._process_context_for_large_data(item, f"{path}[{i}]") for i, item in enumerate(obj)]
+
+
+        # For other types (str, int, float, bool, None, or unhandled complex types)
+        # Return them as is.
+        else:
+            return obj
