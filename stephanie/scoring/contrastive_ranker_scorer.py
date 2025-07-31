@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from joblib import load
 from tqdm import tqdm
-from torch import nn Yeah I pulled everything together after a bit
+from torch import nn 
 from stephanie.scoring.base_scorer import BaseScorer
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.score_bundle import ScoreBundle
@@ -54,7 +54,7 @@ class ContrastiveRankerScorer(BaseScorer):
             self.metas[dim] = meta
             
             # Load scaler
-            scaler = load(locator.scaler_file(suffix=".joblib"))
+            scaler = load(locator.scaler_file())
             
             # Initialize model with correct dimensions
             input_dim = scaler.mean_.shape[0]

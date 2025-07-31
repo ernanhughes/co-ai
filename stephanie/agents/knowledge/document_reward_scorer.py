@@ -1,6 +1,7 @@
 # stephanie/agents/knowledge/document_reward_scorer.py
 
 from stephanie.agents.base_agent import BaseAgent
+from stephanie.scoring.contrastive_ranker_scorer import ContrastiveRankerScorer
 from stephanie.scoring.ebt_scorer import EBTScorer
 from stephanie.scoring.hrm_scorer import HRMScorer
 from stephanie.scoring.mrq_scorer import MRQScorer
@@ -31,10 +32,10 @@ class DocumentRewardScorerAgent(BaseAgent):
         sicql_scorer = SICQLScorer(self.cfg, memory=self.memory, logger=self.logger)  
         ebt_scorer = EBTScorer(self.cfg, memory=self.memory, logger=self.logger)
         hrm_scorer = HRMScorer(self.cfg, memory=self.memory, logger=self.logger)
+        pair_scorer = ContrastiveRankerScorer(self.cfg, memory=self.memory, logger=self.logger)
 
-        scorers = [hrm_scorer, sicql_scorer, svm_scorer, mrq_scorer, ebt_scorer]
-        # scorers = [hrm_scorer]
-
+        scorers = [hrm_scorer, sicql_scorer, svm_scorer, mrq_scorer, ebt_scorer, pair_scorer]
+        
         for doc in documents:
 
             doc_id = doc["id"]

@@ -13,6 +13,7 @@ defaults:
   - agents/et_hrm_inference
   - agents/gild_trainer
   - agents/rank_trainer
+  - agents/document_reward_scorer
   - logging/json_logger
 
 embeddings:
@@ -55,8 +56,15 @@ pipeline:
     - name: rank_trainer
       description: "Train the ranker model to score documents based on their relevance and quality"
       cls: stephanie.agents.maintenance.rank_trainer.ContrastiveRankerTrainerAgent
-      enabled: true for you
+      enabled: false
       iterations: 1
+
+    - name: document_reward_scorer
+      description: "Score documents using various scorers including HRM, SICQL, SVM and MRQ"
+      cls: stephanie.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
+      enabled: true
+      iterations: 1
+
 
     - name: epistemic_plan_hrm_trainer  
       description: "Train the HRM model to predict document values based on epistemic plans"
