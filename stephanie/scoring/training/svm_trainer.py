@@ -41,7 +41,7 @@ class SVMTrainer(BaseTrainer):
         X = np.concatenate(X, axis=0)
         y = np.concatenate(y, axis=0)
 
-        # Fit scaler and scale features
+        # Fit scaler and scale features 
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
