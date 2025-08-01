@@ -5,6 +5,20 @@ document_reward_scorer:
   save_context: true
   skip_if_completed: false
 
+  scorer_types:
+    - svm
+    - mrq
+    - sicql
+    - ebt
+    - hrm
+    - contrastive_ranker
+  include_mars: true
+
+  # Test mode configuration
+  test_mode: true
+  test_document_count: 100
+  progress: true
+
   model_path: "${hydra:runtime.cwd}/models"
   model_prefix: document_rm_
   embedding_type: "hnet"
@@ -17,6 +31,27 @@ document_reward_scorer:
     - "implementability"
     - "novelty"
     - "relevance"
+  dimension_config:
+      alignment:
+        scale: "0-100"
+        trust_references: ["llm"]
+        expected_variance: 0.15
+      clarity:
+        scale: "0-100"
+        trust_references: ["llm"]
+        expected_variance: 0.15
+      implementability:
+        scale: "0-100"
+        trust_references: ["llm"]
+        expected_variance: 0.15
+      novelty:
+        scale: "0-100"
+        trust_references: ["llm"]
+        expected_variance: 0.15
+      relevance:
+        scale: "0-100"
+        trust_references: ["llm"]
+        expected_variance: 0.15
 
   model:
     name: ollama/qwen3

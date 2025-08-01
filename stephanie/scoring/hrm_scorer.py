@@ -8,8 +8,8 @@ from stephanie.models.score import ScoreORM  # For prompt_hash
 from stephanie.scoring.base_scorer import BaseScorer
 from stephanie.scoring.model.hrm_model import HRMModel
 from stephanie.scoring.scorable import Scorable
-from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.scoring.score_result import ScoreResult
+from stephanie.data.score_bundle import ScoreBundle
+from stephanie.data.score_result import ScoreResult
 from stephanie.utils.file_utils import load_json  # To load meta file
 
 

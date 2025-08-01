@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
-from stephanie.scoring.score_bundle import ScoreBundle
+from stephanie.data.score_bundle import ScoreBundle
 
 
 @dataclass
@@ -41,7 +41,7 @@ class ExecutionStep:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ExecutionStep":
-        from stephanie.scoring.score_bundle import \
+        from stephanie.data.score_bundle import \
             ScoreBundle  # Local import to avoid circular dependencies
 
         return cls(
@@ -167,7 +167,7 @@ class PlanTrace:
 
     @classmethod
     def from_dict(cls, data: dict) -> "PlanTrace":
-        from stephanie.scoring.score_bundle import ScoreBundle
+        from stephanie.data.score_bundle import ScoreBundle
 
         execution_steps = [
             ExecutionStep(

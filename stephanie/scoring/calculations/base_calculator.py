@@ -1,7 +1,7 @@
 # stephanie/scoring/calculations/base_calculator.py
 from abc import ABC, abstractmethod
 
-from stephanie.scoring.score_bundle import ScoreBundle
+from stephanie.data.score_bundle import ScoreBundle
 
 
 class BaseScoreCalculator(ABC):

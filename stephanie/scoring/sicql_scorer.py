@@ -11,8 +11,8 @@ from stephanie.scoring.model.q_head import QHead
 from stephanie.scoring.model.text_encoder import TextEncoder
 from stephanie.scoring.model.v_head import VHead
 from stephanie.scoring.scorable import Scorable
-from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.scoring.score_result import ScoreResult
+from stephanie.data.score_bundle import ScoreBundle
+from stephanie.data.score_result import ScoreResult
 from stephanie.scoring.transforms.regression_tuner import RegressionTuner
 from stephanie.utils.file_utils import load_json
 from stephanie.utils.model_locator import ModelLocator
@@ -139,28 +139,23 @@ class SICQLScorer(BaseScorer):
             prompt_hash = ScoreORM.compute_prompt_hash(goal_text, scorable)
 
             # --- Create ScoreResult with optional zsa ---
-            result_kwargs = {
-                "dimension": dim,
-                "score": final_score,
-                "rationale": rationale,
-                "weight": 1.0,
+            attributes = {
                 "q_value": q_value,
                 "energy": q_value, # Keeping energy as q_value as in original
                 "source": self.name,
-                "target_type": scorable.target_type,
-                "prompt_hash": prompt_hash,
                 "state_value": v_value,
                 "policy_logits": policy_logits,
                 "uncertainty": uncertainty,
                 "entropy": entropy,
                 "advantage": advantage,
             }
-                    # Add zsa if it was calculated and return_zsa is True
+            # Add zsa if it was calculated and return_zsa is True
             if self.return_zsa and zsa_tensor is not None:
-                result_kwargs["zsa"] = zsa_tensor # Pass tensor directly (ScoreResult should handle)
+                attributes["zsa"] = zsa_tensor # Pass tensor directly (ScoreResult should handle)
                 rationale += f", zsa_dim={zsa_tensor.shape[-1] if zsa_tensor.ndim > 0 else 1}"
 
-            results[dim] = ScoreResult(**result_kwargs)
+            results[dim] = ScoreResult(dimension=dim, score=final_score, rationale=rationale, 
+                                       weight=1.0, prompt_hash=prompt_hash, attributes=attributes)
 
         return ScoreBundle(results=results)
 

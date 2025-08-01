@@ -10,8 +10,8 @@ from stephanie.memcubes.memcube_factory import MemCubeFactory
 from stephanie.models.score import ScoreORM
 from stephanie.scoring.scorable import Scorable
 from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
-from stephanie.scoring.score_bundle import ScoreBundle
-from stephanie.scoring.score_result import ScoreResult
+from stephanie.data.score_bundle import ScoreBundle
+from stephanie.data.score_result import ScoreResult
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.utils.file_utils import save_json
 from stephanie.utils.math_utils import (advantage_weighted_regression,

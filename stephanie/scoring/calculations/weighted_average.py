@@ -1,6 +1,6 @@
 # stephanie/scoring/calculations/weighted_average.py
 from stephanie.scoring.calculations.base_calculator import BaseScoreCalculator
-from stephanie.scoring.score_bundle import ScoreBundle
+from stephanie.data.score_bundle import ScoreBundle
 
 
 class WeightedAverageCalculator(BaseScoreCalculator):
