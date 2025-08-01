@@ -112,7 +112,7 @@ class EBTInferenceAgent(BaseAgent):
                     meta = self.model_meta.get(dim, {"min_value": 40, "max_value": 100})
                     real_score = (
                         normalized_score * (meta["max_value"] - meta["min_value"]) + meta["min_value"]
-                    ) Right now right
+                    ) 
                     final_score = round(real_score, 4)
                     dimension_scores[dim] = final_score
 

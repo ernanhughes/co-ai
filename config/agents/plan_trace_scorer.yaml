@@ -1,23 +1,19 @@
-gild_trainer:
-  name: gild_trainer
+plan_trace_scorer:
+  name: plan_trace_scorer
   enabled: true
   save_prompt: true
   save_context: false
   skip_if_completed: false
 
-  beta: 1.0
-  learning_rate: 0.0001
-  batch_size: 1
-  epochs: 10
-  il_weight: 0.5
-  il_decay_rate: 0.95
-  min_weight: 0.01
-  gild_loss_threshold: 0.1
 
-  gild_data_file_path: ${hydra:runtime.cwd}/reports/gild_data/
+  export_dir: ${hydra:runtime.cwd}/reports/epistemic_plan_executor
+  include_mars: true
+  scorer_types:
+    - hrm
+    - sicql
+    - svm
+    - mrq
 
-  use_ebt_as_expert: true
-  use_llm_as_expert: false
   dimensions: 
     - alignment
     - clarity
@@ -25,23 +21,12 @@ gild_trainer:
     - novelty
     - relevance
 
-  model:
-    name: ollama/qwen3
-    api_base: http://localhost:11434
-    api_key: null
-
-  input_keys: [goal, hypotheses]
-  input_key: documents
-  output_key: gild_trainer
-  prompt_mode: file
-  prompt_file: gild_trainer.txt
-
   sicql:
     name: gild_trainer_sicql
     model_type: sicql
     model_version: v1
     evaluator: sicql
-    return_zsa: true
+    return_zsa: false
     target_type: document
     dimensions: 
       - alignment
@@ -49,6 +34,20 @@ gild_trainer:
       - implementability
       - novelty
       - relevance
+
+  contrastive_ranker:
+    name: contrastive_ranker
+    model_type: contrastive_ranker
+    model_version: v1
+    evaluator: contrastive_ranker
+    target_type: document
+    dimensions: 
+      - alignment
+      - clarity
+      - implementability
+      - novelty
+      - relevance
+
 
   hrm:
     name: gild_trainer_hrm
@@ -139,3 +138,13 @@ gild_trainer:
       - novelty
       - relevance
 
+
+  model:
+    name: ollama/qwen3
+    api_base: http://localhost:11434
+    api_key: null
+  input_keys: ["goal", "hypotheses"]
+  input_key: documents
+  output_key: plan_trace_scorer
+  prompt_mode: file
+  prompt_file: plan_trace_scorer.txt

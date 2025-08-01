@@ -331,6 +331,8 @@ ERROR_STATES = {
 # MODEL OPS
 # =============
 MODELS = {
+    "EpistemicPlanHRMScorerModelLoaded": "🪸🧠📥",  # Epistemic Plan HRM scorer model loaded
+
     "SVMModelSaved": "💾🧮📊",  # SVM model saved
     "SVMModelLoaded": "📥🧮📊",  # SVM model load
     "SVMModelTrainingStarted": "🏋️🧮⚖️",
@@ -345,6 +347,11 @@ MODELS = {
 # ETHICS & REVIEWS
 # =============
 SPECIAL = {
+    "GILDProcessTraceStarted": "📊▶️",  # GILD process trace started
+    "SICQLAdvantageExtracted": "📊📈",  # SICQL advantage extracted
+    "SICQLAdvantageWarning": "⚠️📊",  # SICQL advantage warning
+    "GILDDataPreparationCompleted": "📊✅",  # GILD data preparation completed
+      
     "SQLQuery": "💾🔍",  # SQL query executed
     "EthicsReviewsGenerated": "⚖️🧾",  # Ethics reviews generated
     "EarlyStopping": "🛑⏱️",  # Early stopping triggered

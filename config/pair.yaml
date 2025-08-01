@@ -15,6 +15,7 @@ defaults:
   - agents/document_ebt_inference
   - agents/rank_trainer
   - agents/document_reward_scorer
+  - agents/plan_trace_scorer
   - logging/json_logger
 
 embeddings:
@@ -54,6 +55,18 @@ pipeline:
   tag: "epistemic_plan_hrm"
   description: "Builds and tests epistemic plans using HRM (Hierarchical Reasoning Model) to synthesize policies based on document values and scores."
   stages:
+    - name: epistemic_plan_executor
+      description: "Execute the epistemic plan to generate hypotheses"
+      cls: stephanie.agents.epistemic_plan_executor.EpistemicPlanExecutorAgent
+      enabled: false
+      iterations: 1
+
+    - name: plan_trace_scorer
+      description: "Score plan traces using various scorers including HRM, SICQL, and Contrastive Ranker"
+      cls: stephanie.agents.plan_trace_scorer.PlanTraceScorerAgent
+      enabled: true
+      iterations: 1
+
     - name: rank_trainer
       description: "Train the ranker model to score documents based on their relevance and quality"
       cls: stephanie.agents.maintenance.rank_trainer.ContrastiveRankerTrainerAgent

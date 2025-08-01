@@ -179,8 +179,6 @@ class ScoreBundle:
             lines.append(f"- **Score**: `{result.score:.4f}`")
             lines.append(f"- **Weight**: `{result.weight:.2f}`")
             lines.append(f"- **Source**: `{result.source}`")
-            lines.append(f"- **Target Type**: `{result.target_type}`")
-            lines.append(f"- **Prompt Hash**: `{result.prompt_hash}`")
             if result.rationale:
                 lines.append(f"- **Rationale**: {result.rationale}")
 

@@ -156,12 +156,12 @@ class EpistemicPlanExecutorAgent(BaseAgent):
 
         for goal in goals:
             goal_id = goal.id
-            if goal.id in existing_goal_ids:
-                self.logger.log("EpistemicPlanExecutorSkipped", {
-                    "goal_id": goal.id,
-                    "message": "Goal already has a PlanTrace, skipping."
-                })
-                continue
+            # if goal.id in existing_goal_ids:
+            #     self.logger.log("EpistemicPlanExecutorSkipped", {
+            #         "goal_id": goal.id,
+            #         "message": "Goal already has a PlanTrace, skipping."
+            #     })
+            #     continue
 
             goal_dict = goal.to_dict()
             goal_text = goal.goal_text
@@ -254,6 +254,7 @@ class EpistemicPlanExecutorAgent(BaseAgent):
 
                         exec_step = ExecutionStep(
                             step_id=str(step_id), # Ensure ID is string
+                            step_type="reasoning",  # Assuming all steps are actions
                             description=step_description,
                             output_text=step_output_text,
                             scores=sicql_scores, # Primary scores for the trace
