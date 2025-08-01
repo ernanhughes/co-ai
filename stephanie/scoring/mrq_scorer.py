@@ -84,18 +84,19 @@ class MRQScorer(BaseScorer):
                 scaled = norm * (meta["max_score"] - meta["min_score"]) + meta["min_score"]
 
             final_score = round(max(min(scaled, meta["max_score"]), meta["min_score"]), 4)
-            prompt_hash = ScoreORM.compute_prompt_hash(goal_text, scorable)
+
+            attributes = {
+                "q_value": round(q_value, 4),
+                "normalized_score": round(scaled, 4),
+                "energy": q_value,
+            }
 
             results[dim] = ScoreResult(
                 dimension=dim,
                 score=final_score,
+                source=self.model_type,
                 rationale=f"Q={round(q_value, 4)}",
                 weight=1.0,
-                q_value=q_value,
-                energy=q_value,
-                source="mrq",
-                target_type=scorable.target_type,
-                prompt_hash=prompt_hash,
-            )
+                attributes=attributes,)
 
         return ScoreBundle(results=results)

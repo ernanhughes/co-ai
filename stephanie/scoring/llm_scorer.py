@@ -86,8 +86,6 @@ class LLMScorer(BaseScorer):
                 rationale=response,
                 weight=dim.get("weight", 1.0),
                 source="llm",
-                target_type=scorable.target_type,
-                prompt_hash=prompt_hash,
             )
 
             results.append(result)

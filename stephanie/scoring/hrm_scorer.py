@@ -170,18 +170,21 @@ class HRMScorer(BaseScorer):
                     f"zH_mag={round(zH_mag, 4) if zH_mag else 'NA'}"
                 )
 
-                prompt_hash = ScoreORM.compute_prompt_hash(goal_text, scorable)
+                attributes = {
+                    "raw_score": round(raw_score, 4),
+                    "zL_magnitude": zL_mag,
+                    "zH_magnitude": zH_mag,
+                    "q_value": raw_score,  # Using raw_score as q_value
+                    "energy": raw_score,  # Keeping energy as q_value as in original
+                }
 
                 result = ScoreResult(
                     dimension=dimension,
                     score=raw_score,
+                    source=self.model_type,
                     rationale=rationale,
                     weight=1.0,
-                    q_value=raw_score,
-                    energy=raw_score,
-                    source=self.model_type,
-                    target_type=scorable.target_type,
-                    prompt_hash=prompt_hash
+                    attributes=attributes
                 )
 
                 results[dimension] = result

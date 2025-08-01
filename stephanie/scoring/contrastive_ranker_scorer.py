@@ -110,16 +110,21 @@ class ContrastiveRankerScorer(BaseScorer):
             # Calibrate to absolute score
             tuned_score = tuner.transform(raw_score)
             final_score = max(min(tuned_score, meta["max_score"]), meta["min_score"])
-            
+
+            attributes = {
+                "raw_score": round(raw_score, 4),
+                "normalized_score": round(tuned_score, 4),
+                "final_score": final_score,
+                "energy": raw_score,  # Using raw_score as energy
+            }
+
             results[dim] = ScoreResult(
                 dimension=dim,
                 score=final_score,
                 rationale=f"PrefScore(raw={raw_score:.4f}, tuned={tuned_score:.2f})",
                 weight=1.0,
                 source=self.model_type,
-                energy=0.0,
-                target_type=scorable.target_type,
-                prompt_hash=ScoreResult.compute_prompt_hash(goal_text, scorable),
-            )
+                attributes=attributes,
+                )
         
         return ScoreBundle(results=results)

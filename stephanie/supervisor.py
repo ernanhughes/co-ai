@@ -255,7 +255,7 @@ class Supervisor:
             agent = cls(**agent_args)
             self.logger.log("PipelineStageStart", {STAGE: stage.name})
 
-            for i in range(stage.iterations or 1):
+            for i in range(stage.iterations or 1): 
                 self.logger.log("PipelineIterationStart", {STAGE: stage.name, "iteration": i + 1})
                 
                 agent_input_context = context.copy()
@@ -271,7 +271,7 @@ class Supervisor:
                 self.logger.log("PipelineIterationEnd", {STAGE: stage.name, "iteration": i + 1})
 
             # Saving context after stage
-            if stage_dict.get(SAVE_CONTEXT, True):
+            if stage_dict.get(SAVE_CONTEXT, False):
                 self.context.save_to_db(stage_dict)
             self._save_pipeline_stage(stage, context, stage_dict)
             self.logger.log("PipelineStageEnd", {STAGE: stage.name})
@@ -350,7 +350,7 @@ class Supervisor:
         return report
 
     def save_context(self, cfg: DictConfig, context: dict):
-        if cfg.get(SAVE_CONTEXT, True):
+        if cfg.get(SAVE_CONTEXT, False):
             self.context.save_to_db()
             self.logger.log("ContextSaved", {
                 NAME: cfg.get(NAME, "UnnamedAgent"),

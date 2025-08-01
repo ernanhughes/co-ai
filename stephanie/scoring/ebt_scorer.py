@@ -114,24 +114,28 @@ class EBTScorer(BaseScorer):
 
             final_score = round(max(min(scaled_score, meta["max_score"]), meta["min_score"]), 4)
 
-            prompt_hash = ScoreORM.compute_prompt_hash(goal_text, scorable)
             rationale = f"Q={q_value:.4f}, V={v_value:.4f}, Δ={uncertainty:.3f}, H={entropy:.3f}"
+
+            attributes = {
+                "q_value": round(q_value, 4),
+                "v_value": round(v_value, 4),
+                "normalized_score": round(scaled_score, 4),
+                "final_score": final_score,
+                "energy": q_value,
+                "state_value": v_value,
+                "policy_logits": policy_logits,
+                "uncertainty": uncertainty,
+                "entropy": entropy,
+                "advantage": advantage,
+            }
 
             results[dim] = ScoreResult(
                 dimension=dim,
                 score=final_score,
+                source=self.model_type,
                 rationale=rationale,
-                weight=1.0,
-                q_value=q_value,
-                energy=q_value,
-                source=self.name,
-                target_type=scorable.target_type,
-                prompt_hash=prompt_hash,
-                state_value=v_value,
-                policy_logits=policy_logits,
-                uncertainty=uncertainty,
-                entropy=entropy,
-                advantage=advantage,
+                weight=1.0, 
+                attributes=attributes,
             )
 
         return ScoreBundle(results=results)

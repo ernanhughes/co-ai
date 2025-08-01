@@ -29,7 +29,7 @@ class SICQLScorer(BaseScorer):
         self.target_type = cfg.get("target_type", "document")
         self.model_path = cfg.get("model_path", "models")
         self.version = cfg.get("model_version", "v1")
-        self.return_zsa = cfg.get("return_zsa", True)
+        self.return_zsa = cfg.get("return_zsa", False)
 
         self.models = {}
         self.model_meta = {}
@@ -52,12 +52,22 @@ class SICQLScorer(BaseScorer):
             encoder = TextEncoder(dim=self.dim, hdim=self.hdim).to(self.device)
             q_head = QHead(zsa_dim=self.dim, hdim=self.hdim).to(self.device)
             v_head = VHead(zsa_dim=self.dim, hdim=self.hdim).to(self.device)
-            pi_head = PolicyHead(zsa_dim=self.dim, hdim=self.hdim, num_actions=3).to(self.device)
+            pi_head = PolicyHead(
+                zsa_dim=self.dim, hdim=self.hdim, num_actions=3
+            ).to(self.device)
 
-            encoder.load_state_dict(torch.load(locator.encoder_file(), map_location=self.device))
-            q_head.load_state_dict(torch.load(locator.q_head_file(), map_location=self.device))
-            v_head.load_state_dict(torch.load(locator.v_head_file(), map_location=self.device))
-            pi_head.load_state_dict(torch.load(locator.pi_head_file(), map_location=self.device))
+            encoder.load_state_dict(
+                torch.load(locator.encoder_file(), map_location=self.device)
+            )
+            q_head.load_state_dict(
+                torch.load(locator.q_head_file(), map_location=self.device)
+            )
+            v_head.load_state_dict(
+                torch.load(locator.v_head_file(), map_location=self.device)
+            )
+            pi_head.load_state_dict(
+                torch.load(locator.pi_head_file(), map_location=self.device)
+            )
 
             model = InContextQModel(
                 encoder=encoder,
@@ -69,7 +79,11 @@ class SICQLScorer(BaseScorer):
             )
             self.models[dim] = model
 
-            meta = load_json(locator.meta_file()) if os.path.exists(locator.meta_file()) else {"min_score": 0, "max_score": 100}
+            meta = (
+                load_json(locator.meta_file())
+                if os.path.exists(locator.meta_file())
+                else {"min_score": 0, "max_score": 100}
+            )
             self.model_meta[dim] = meta
 
             tuner_path = locator.tuner_file()
@@ -78,8 +92,9 @@ class SICQLScorer(BaseScorer):
                 tuner.load(tuner_path)
                 self.tuners[dim] = tuner
 
-
-    def score(self, goal: dict, scorable: Scorable, dimensions: list[str]) -> ScoreBundle:
+    def score(
+        self, goal: dict, scorable: Scorable, dimensions: list[str]
+    ) -> ScoreBundle:
         goal_text = goal.get("goal_text")
         results = {}
 
@@ -87,14 +102,22 @@ class SICQLScorer(BaseScorer):
             model = self.models.get(dim)
             prompt_emb_np = self.memory.embedding.get_or_create(goal_text)
             output_emb_np = self.memory.embedding.get_or_create(scorable.text)
-            prompt_emb = torch.tensor(prompt_emb_np, device=self.device, dtype=torch.float32).unsqueeze(0)
-            output_emb = torch.tensor(output_emb_np, device=self.device, dtype=torch.float32).unsqueeze(0)
+            prompt_emb = torch.tensor(
+                prompt_emb_np, device=self.device, dtype=torch.float32
+            ).unsqueeze(0)
+            output_emb = torch.tensor(
+                output_emb_np, device=self.device, dtype=torch.float32
+            ).unsqueeze(0)
             with torch.no_grad():
                 model_outputs = model(prompt_emb, output_emb)
                 # Standard outputs
-                q_value_tensor = model_outputs["q_value"] # Shape: (1, 1) or (1,)
+                q_value_tensor = model_outputs[
+                    "q_value"
+                ]  # Shape: (1, 1) or (1,)
                 v_value_tensor = model_outputs["state_value"]
-                policy_logits_tensor = model_outputs["action_logits"] # Shape: (1, num_actions) or (num_actions,)
+                policy_logits_tensor = model_outputs[
+                    "action_logits"
+                ]  # Shape: (1, num_actions) or (num_actions,)
 
                 # Extract scalar values
                 q_value = q_value_tensor.squeeze().item()
@@ -102,25 +125,26 @@ class SICQLScorer(BaseScorer):
                 # Handle policy_logits shape variations
                 policy_logits_np = policy_logits_tensor.cpu().detach().numpy()
                 if policy_logits_np.ndim > 1:
-                    policy_logits = policy_logits_np.flatten().tolist() # Shape: (num_actions,)
+                    policy_logits = (
+                        policy_logits_np.flatten().tolist()
+                    )  # Shape: (num_actions,)
                 else:
-                    policy_logits = policy_logits_np.tolist() # Shape: (num_actions,) already
+                    policy_logits = (
+                        policy_logits_np.tolist()
+                    )  # Shape: (num_actions,) already
 
                 # Calculate metrics
                 uncertainty = abs(q_value - v_value)
                 policy_tensor = torch.tensor(policy_logits)
                 action_probs = F.softmax(policy_tensor, dim=-1)
-                entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-8)).item()
+                entropy = -torch.sum(
+                    action_probs * torch.log(action_probs + 1e-8)
+                ).item()
                 advantage = q_value - v_value
 
                 zsa_tensor = None
                 if self.return_zsa:
-                    zsa_tensor = model_outputs.get("zsa")
-                    if zsa_tensor is None:
-                        self.logger.log("SICQLScorerWarning", {
-                            "message": f"Could not obtain zsa for dimension '{dim}'. Check model.forward or encoder.",
-                            "dimension": dim
-                        })
+                    zsa_tensor = model.encoder(prompt_emb, output_emb)
 
             meta = self.model_meta.get(dim, {"min_score": 0, "max_score": 100})
             # Ensure meta has min/max values for scaling logic
@@ -141,21 +165,29 @@ class SICQLScorer(BaseScorer):
             # --- Create ScoreResult with optional zsa ---
             attributes = {
                 "q_value": q_value,
-                "energy": q_value, # Keeping energy as q_value as in original
-                "source": self.name,
+                "energy": q_value,  # Keeping energy as q_value as in original
                 "state_value": v_value,
                 "policy_logits": policy_logits,
                 "uncertainty": uncertainty,
                 "entropy": entropy,
                 "advantage": advantage,
+                "prompt_hash": prompt_hash,
             }
             # Add zsa if it was calculated and return_zsa is True
             if self.return_zsa and zsa_tensor is not None:
-                attributes["zsa"] = zsa_tensor # Pass tensor directly (ScoreResult should handle)
+                attributes["zsa"] = (
+                    zsa_tensor  # Pass tensor directly (ScoreResult should handle)
+                )
                 rationale += f", zsa_dim={zsa_tensor.shape[-1] if zsa_tensor.ndim > 0 else 1}"
 
-            results[dim] = ScoreResult(dimension=dim, score=final_score, rationale=rationale, 
-                                       weight=1.0, prompt_hash=prompt_hash, attributes=attributes)
+            results[dim] = ScoreResult(
+                dimension=dim,
+                source=self.name,
+                score=final_score,
+                rationale=rationale,
+                weight=1.0,
+                attributes=attributes,
+            )
 
         return ScoreBundle(results=results)
 
@@ -176,15 +208,18 @@ class SICQLScorer(BaseScorer):
             raise ValueError(f"Model for dimension '{dimension}' not loaded.")
 
         prompt_emb = torch.tensor(
-            self.memory.embedding.get_or_create(goal["goal_text"]), device=self.device, dtype=torch.float32
+            self.memory.embedding.get_or_create(goal["goal_text"]),
+            device=self.device,
+            dtype=torch.float32,
         ).unsqueeze(0)
         output_emb = torch.tensor(
-            self.memory.embedding.get_or_create(scorable.text), device=self.device, dtype=torch.float32
+            self.memory.embedding.get_or_create(scorable.text),
+            device=self.device,
+            dtype=torch.float32,
         ).unsqueeze(0)
 
         with torch.no_grad():
             outputs = model(prompt_emb, output_emb)
-        if self.return_zsa and 'zsa' not in outputs:
-            outputs['zsa'] = model.encoder(prompt_emb, output_emb)
-        return outputs # Return the full outputs dict
-
+        if self.return_zsa and "zsa" not in outputs:
+            outputs["zsa"] = model.encoder(prompt_emb, output_emb)
+        return outputs  # Return the full outputs dict

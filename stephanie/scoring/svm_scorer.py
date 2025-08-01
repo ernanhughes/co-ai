@@ -58,9 +58,6 @@ class SVMScorer(BaseScorer):
                 rationale=f"SVM raw={round(raw_score, 4)}",
                 weight=1.0,
                 source=self.model_type,
-                energy=0.0,
-                target_type=scorable.target_type,
-                prompt_hash=ScoreORM.compute_prompt_hash(goal_text, scorable),
             )
 
         return ScoreBundle(results=results)

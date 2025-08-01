@@ -216,16 +216,17 @@ class EpistemicPlanHRMScorer(BaseScorer):
 
                 rationale = f"HRM[{dimension}] score={round(raw_score, 4)}"
 
+                attributes = {
+                    "raw_score": round(raw_score, 4),
+                }
+
                 result = ScoreResult(
                     dimension=dimension,
                     score=raw_score,
                     rationale=rationale,
                     weight=1.0,
-                    q_value=raw_score,
-                    energy=raw_score,
                     source=self.model_type,
-                    target_type="plan_trace",
-                    prompt_hash=plan_trace.trace_id,
+                    attributes=attributes,
                 )
                 results[dimension] = result
 

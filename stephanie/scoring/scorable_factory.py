@@ -105,7 +105,7 @@ class ScorableFactory:
         if target_type is None:
             target_type = data.get("target_type", "document")
         if "text" in data: # If text is provided, use it directly
-            return Scorable(id=data.get("id", ""), text=data["text"], target_type=target_type)
+            return Scorable(id=str(data.get("id", "")), text=data["text"], target_type=target_type)
         if target_type == "document":
             title = data.get("title", "")
             summary = data.get("summary", "")
@@ -123,7 +123,7 @@ class ScorableFactory:
         else:
             text = data.get("text", "")
 
-        return Scorable(id=data.get("id"), text=text, target_type=target_type)
+        return Scorable(id=str(data.get("id")), text=text, target_type=target_type)
 
 
     @staticmethod

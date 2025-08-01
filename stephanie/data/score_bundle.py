@@ -1,174 +1,179 @@
+# stephanie/scoring/score_bundle.py
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, List, Tuple
+from statistics import stdev
 
-from stephanie.data.score_result import ScoreResult
-
+from stephanie.scoring.calculations.weighted_average import (
+    WeightedAverageCalculator,
+)
+import numpy as np
 
 @dataclass
 class ScoreBundle:
-    results: dict[str, ScoreResult] = field(default_factory=dict)
-    
-    def __init__(self, results: dict[str, ScoreResult], dimension_config: Dict = None):
-        from stephanie.scoring.calculations.mars_calculator import MARSCalculator
+    """Represents all scores for a single Scorable across dimensions and scorers
+
+    Key features:
+    - Contains ScoreResults with flexible attributes dictionary
+    - Supports tensor operations for analysis
+    - Works with MARS calculator for agreement analysis
+    - Maintains compatibility with ORM layer
+    """
+    from stephanie.data.score_result import ScoreResult
+
+    results: Dict[str, ScoreResult] = field(default_factory=dict)
+    meta: Dict[str, Any] = field(default_factory=dict)
+
+    def __init__(
+        self, results: Dict[str, ScoreResult], meta: Dict[str, Any] = None
+    ):
         self.results = results
-        self.dimension_config = dimension_config
-        self.mars_calculator = MARSCalculator(dimension_config)
-        self.mars_analysis = None
-    
-    def analyze_agreement(self) -> Dict:
-        """Perform MARS analysis on the score bundle"""
-        self.mars_analysis = self.mars_calculator.calculate(self)
-        return self.mars_analysis
-    
-    def aggregate(self, use_mars: bool = True) -> Union[float, Dict]:
-        """
-        Aggregate scores, with option to use MARS analysis for enhanced aggregation
-        
-        If use_mars is True, returns a dictionary with:
-        - score: the final aggregated score
-        - agreement: agreement metrics
-        - uncertainty: uncertainty score
-        
-        If use_mars is False, returns just the float score (legacy behavior)
-        """
-        if use_mars and self.results:
-            return self.analyze_agreement()
-        else:
-            # Fall back to simple weighted average for legacy compatibility
-            total = sum(r.score * getattr(r, "weight", 1.0) for r in self.results.values())
-            weight_sum = sum(getattr(r, "weight", 1.0) for r in self.results.values())
-            return round(total / weight_sum, 2) if weight_sum else 0.0
-    
+        self.meta = meta or {}
+        self.calculator = WeightedAverageCalculator()
+
+    def aggregate(self) -> float:
+        """Calculate weighted average score across dimensions"""
+        return self.calculator.calculate(self)
+
     def get(self, dimension: str) -> Optional[ScoreResult]:
         return self.results.get(dimension)
-    
-    def to_dict(self, include_mars: bool = True) -> Dict[str, Any]:
-        base_dict = {dim: result.to_dict() for dim, result in self.results.items()}
-        
-        if include_mars and self.mars_analysis is None and self.results:
-            self.analyze_agreement()
-            
-        if include_mars and self.mars_analysis:
-            base_dict["mars_analysis"] = self.mars_analysis
-            
-        return base_dict
-    
+
+    def to_dict(self, include_attributes: bool = False) -> Dict[str, Any]:
+        """Convert to dictionary for serialization and storage"""
+        bundle_dict = {}
+        for dim, result in self.results.items():
+            result_dict = result.to_dict()
+            if not include_attributes:
+                # Remove attributes to keep the dictionary lean
+                result_dict.pop("attributes", None)
+            bundle_dict[dim] = result_dict
+
+        # Add meta information if present
+        if self.meta:
+            bundle_dict["_meta"] = self.meta
+
+        return bundle_dict
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], dimension_config: Dict = None) -> "ScoreBundle":
-        """Reconstruct a ScoreBundle from a dictionary"""
-        # Extract mars_analysis if present
-        mars_analysis = data.pop("mars_analysis", None)
-        
+    def from_dict(cls, data: Dict[str, Any]) -> "ScoreBundle":
+        """Reconstruct from dictionary"""
+        from stephanie.data.score_result import ScoreResult
+        # Extract meta if present
+        meta = data.pop("_meta", None)
+
         results = {
             dim: ScoreResult.from_dict(score_data)
             for dim, score_data in data.items()
             if isinstance(score_data, dict)
         }
-        
-        bundle = cls(results=results, dimension_config=dimension_config)
-        
-        # If mars_analysis was included, store it
-        if mars_analysis:
-            bundle.mars_analysis = mars_analysis
-            
-        return bundle
-    
+        return cls(results=results, meta=meta)
+
     def merge(self, other: "ScoreBundle") -> "ScoreBundle":
-        """Merge two bundles, preferring `self` values but including all from both"""
+        """
+        Merge two bundles, preferring `self` values but including all from both.
+        If a dimension exists in both, the value from `self` is kept.
+        """
         merged = dict(self.results)
         for dim, result in other.results.items():
             if dim not in merged:
                 merged[dim] = result
-        return ScoreBundle(merged, dimension_config=self.dimension_config)
-    
-    def to_json(self, stage: str, include_mars: bool = True):
-        aggregate = self.aggregate(use_mars=include_mars)
+        return ScoreBundle(merged, meta={**self.meta, **other.meta})
+
+    def to_json(
+        self, stage: str, include_attributes: bool = False
+    ) -> Dict[str, Any]:
+        """Convert to JSON structure for reporting"""
+        final_score = self.aggregate()
         return {
             "stage": stage,
-            "dimensions": self.to_dict(include_mars=include_mars),
-            "final_score": aggregate["score"] if isinstance(aggregate, dict) else aggregate,
-            **({"mars_analysis": aggregate} if isinstance(aggregate, dict) else {})
+            "dimensions": self.to_dict(include_attributes=include_attributes),
+            "final_score": final_score,
+            "meta": self.meta,
         }
-    
-    def to_orm(self, evaluation_id: int):
-        from stephanie.models.score import ScoreORM
-        # First, create regular score ORM objects
-        regular_scores = [
-            ScoreORM(
-                evaluation_id=evaluation_id,
-                dimension=r.dimension,
-                score=r.score,
-                weight=r.weight,
-                rationale=r.rationale,
-                source=r.source,
-                target_type=r.target_type,
-                prompt_hash=r.prompt_hash,
-                energy=r.energy,
-                q_value=r.q_value,
-                state_value=r.state_value,
-                policy_logits=r.policy_logits,
-                uncertainty=r.uncertainty,
-                entropy=r.entropy,
-                advantage=r.advantage,
-            )
-            for r in self.results.values()
-        ]
-        
-        # If we have MARS analysis, add it as a special score
-        if self.mars_analysis:
-            mars_result = ScoreResult(
-                dimension=list(self.results.values())[0].dimension,
-                score=self.mars_analysis["score"],
-                rationale=self.mars_analysis["explanation"],
-                source="mars",
-                uncertainty=self.mars_analysis["uncertainty"],
-                weight=1.0
-            )
-            
-            mars_score = ScoreORM(
-                evaluation_id=evaluation_id,
-                dimension=mars_result.dimension,
-                score=mars_result.score,
-                weight=mars_result.weight,
-                rationale=mars_result.rationale,
-                source=mars_result.source,
-                target_type="meta",
-                prompt_hash="",
-                uncertainty=mars_result.uncertainty
-            )
-            regular_scores.append(mars_score)
-            
-        return regular_scores
-    
+
+    def to_orm(self, evaluation_id: int) -> List[Dict[str, Any]]:
+        """Convert to ORM-compatible dictionaries for database storage"""
+        orm_dicts = []
+        for result in self.results.values():
+            # Core score data
+            orm_dict = {
+                "evaluation_id": evaluation_id,
+                "dimension": result.dimension,
+                "score": result.score,
+                "weight": result.weight,
+                "rationale": result.rationale,
+                "source": result.source,
+                "target_type": result.target_type,
+                "prompt_hash": result.prompt_hash,
+            }
+
+            # Include attribute references
+            if result.attributes:
+                orm_dict["attributes"] = result.attributes
+
+            orm_dicts.append(orm_dict)
+        return orm_dicts
+
+    def to_tensor(
+        self, dimensions: List[str], scorers: List[str], metrics: List[str]
+    ) -> Tuple[np.ndarray, Dict]:
+        """
+        Convert to 4D tensor: [1 × dimensions × scorers × metrics]
+        For a single ScoreBundle (1 scorable)
+
+        Returns:
+            tensor: numpy array of shape (1, n_dimensions, n_scorers, n_metrics)
+            metric_metadata: dictionary with metric information
+        """
+        import numpy as np
+
+        tensor = np.zeros((1, len(dimensions), len(scorers), len(metrics)))
+        metric_metadata = {
+            "dimensions": dimensions,
+            "scorers": scorers,
+            "metrics": metrics,
+        }
+
+        for dim_idx, dimension in enumerate(dimensions):
+            if dimension in self.results:
+                result = self.results[dimension]
+                scorer_idx = scorers.index(result.source)
+
+                # Fill in metric values
+                for metric_idx, metric in enumerate(metrics):
+                    if metric in result.attributes:
+                        try:
+                            tensor[0, dim_idx, scorer_idx, metric_idx] = float(
+                                result.attributes[metric]
+                            )
+                        except (TypeError, ValueError):
+                            tensor[0, dim_idx, scorer_idx, metric_idx] = 0.0
+                    else:
+                        tensor[0, dim_idx, scorer_idx, metric_idx] = 0.0
+
+        return tensor, metric_metadata
+
+    def get_metric_values(self, metric: str) -> Dict[str, float]:
+        """Get values for a specific metric across dimensions"""
+        return {
+            dim: result.attributes.get(metric, None)
+            for dim, result in self.results.items()
+        }
+
     def __repr__(self):
-        if self.mars_analysis:
-            return f"<ScoreBundle(score={self.mars_analysis['score']:.2f}, " \
-                   f"agreement={self.mars_analysis['agreement']['agreement_score']:.2f}, " \
-                   f"uncertainty={self.mars_analysis['uncertainty']:.2f})>"
-        else:
-            summary = ", ".join(
-                f"{dim}: {res.score}" for dim, res in self.results.items()
-            )
-            return f"<ScoreBundle({summary})>"
-    
+        summary = ", ".join(
+            f"{dim}: {res.score:.2f}" for dim, res in self.results.items()
+        )
+        return f"<ScoreBundle({summary})>"
+
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=2)
+
     def to_report(self, title: str = "Score Report") -> str:
+        """Generate a comprehensive report including tensor analysis capabilities"""
         lines = [f"## {title}", ""]
-        
-        # Add MARS analysis if available
-        if self.mars_analysis is None and self.results:
-            self.analyze_agreement()
-            
-        if self.mars_analysis:
-            lines.append(f"### Meta-Analysis (MARS)")
-            lines.append(f"- **Aggregate Score**: `{self.mars_analysis['score']:.2f}`")
-            lines.append(f"- **Agreement Score**: `{self.mars_analysis['agreement']['agreement_score']:.3f}`")
-            lines.append(f"- **Uncertainty**: `{self.mars_analysis['uncertainty']:.3f}`")
-            lines.append(f"- **Trust Reference**: `{self.mars_analysis['trust_reference']}`")
-            lines.append(f"- **Explanation**: {self.mars_analysis['explanation']}")
-            lines.append("")
-        
-        # Add individual dimension scores
+
+        # Add dimension scores
         for dim, result in self.results.items():
             lines.append(f"### Dimension: `{dim}`")
             lines.append(f"- **Score**: `{result.score:.4f}`")
@@ -178,24 +183,60 @@ class ScoreBundle:
             lines.append(f"- **Prompt Hash**: `{result.prompt_hash}`")
             if result.rationale:
                 lines.append(f"- **Rationale**: {result.rationale}")
-            # SICQL-specific fields
-            if result.energy is not None:
-                lines.append(f"- **Energy**: `{result.energy:.4f}`")
-            if result.q_value is not None:
-                lines.append(f"- **Q-Value**: `{result.q_value:.4f}`")
-            if result.state_value is not None:
-                lines.append(f"- **State Value**: `{result.state_value:.4f}`")
-            if result.policy_logits is not None:
-                logits_str = ", ".join(
-                    f"{x:.4f}" for x in result.policy_logits
-                )
-                lines.append(f"- **Policy Logits**: [{logits_str}]")
-            if result.uncertainty is not None:
-                lines.append(f"- **Uncertainty**: `{result.uncertainty:.4f}`")
-            if result.entropy is not None:
-                lines.append(f"- **Entropy**: `{result.entropy:.4f}`")
-            if result.advantage is not None:
-                lines.append(f"- **Advantage**: `{result.advantage:.4f}`")
+
+            # Add attributes section if present
+            if result.attributes:
+                lines.append("\n**Extended Metrics:**")
+                for key, value in result.attributes.items():
+                    # Format value based on type
+                    if isinstance(value, (int, float)):
+                        formatted = f"{value:.4f}"
+                    elif isinstance(value, (list, tuple)):
+                        if len(value) > 5:
+                            formatted = f"[{', '.join([f'{x:.4f}' for x in value[:5]])}, ...]"
+                        else:
+                            formatted = (
+                                f"[{', '.join([f'{x:.4f}' for x in value])}]"
+                            )
+                    else:
+                        formatted = str(value)
+                    lines.append(f"- `{key}`: `{formatted}`")
             lines.append("")  # Empty line between dimensions
-        
+
+        # Add aggregate score
+        lines.append(f"**Aggregate Score:** `{self.aggregate():.4f}`")
+
         return "\n".join(lines)
+
+    def analyze_agreement(self, dimension: str = None) -> Dict[str, Any]:
+        """Analyze agreement patterns across scorers for this bundle"""
+        if dimension:
+            # Analyze specific dimension
+            if dimension not in self.results:
+                return {"error": "dimension_not_found", "dimension": dimension}
+
+            # For single dimension, there's only one scorer in this bundle
+            # So agreement analysis doesn't apply at bundle level
+            return {
+                "dimension": dimension,
+                "agreement_score": 1.0,  # Only one scorer for this dimension
+                "explanation": "Single-scorer bundle - no agreement analysis needed",
+            }
+
+        # For cross-dimension analysis (not typically meaningful)
+        scores = [r.score for r in self.results.values()]
+        if len(scores) < 2:
+            return {
+                "agreement_score": 1.0,
+                "explanation": "Only one dimension scored - no agreement analysis needed",
+            }
+
+        std_dev = stdev(scores)
+        agreement_score = 1.0 - min(std_dev, 1.0)
+
+        return {
+            "agreement_score": round(agreement_score, 3),
+            "std_dev": round(std_dev, 3),
+            "dimension_count": len(scores),
+            "explanation": f"Cross-dimension agreement score: {agreement_score:.3f}",
+        }

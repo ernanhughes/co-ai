@@ -1,286 +1,462 @@
 import numpy as np
+from statistics import mean
+from typing import Dict, Any, List
 from scipy import stats
-from statistics import mean, stdev
-from typing import Dict, List, Tuple, Optional
 
 from stephanie.scoring.calculations.base_calculator import BaseScoreCalculator
-from stephanie.data.score_bundle import ScoreBundle
-from stephanie.data.score_result import ScoreResult
+from stephanie.data.score_corpus import ScoreCorpus
 
 
 class MARSCalculator(BaseScoreCalculator):
-    """Advanced meta-scoring that analyzes agreement across different scoring models"""
-    
-    def __init__(self, dimension_config: Dict = None):
+    """
+    Model Agreement and Reasoning Signal (MARS) Calculator
+
+    Analyzes agreement patterns across multiple scoring models/adapters to:
+    - Quantify scoring consensus or divergence across documents
+    - Identify which scorers disagree systematically
+    - Determine which model aligns best with trust reference
+    - Measure uncertainty in the overall assessment
+    - Provide diagnostic insights for scoring system improvement
+
+    Unlike traditional aggregators, MARS operates at the ScoreCorpus level (multiple documents)
+    to detect reliability patterns rather than just computing an average score.
+    """
+
+    def __init__(self, config: Dict = None):
         """
-        dimension_config example:
-        {
-            "helpfulness": {
-                "scale": "0-100",
-                "trust_references": ["llm", "human"],
-                "expected_variance": 0.15
-            },
-            "truthfulness": {
-                "scale": "0-1",
-                "trust_references": ["fact_checker", "human"],
-                "expected_variance": 0.1
-            }
-        }
+        Initialize MARS calculator with configuration
+
+        Args:
+            config: Optional configuration with:
+                - trust_reference: Which scorer to use as gold standard (default: "llm")
+                - variance_threshold: Threshold for flagging high disagreement (default: 0.15)
+                - dimensions: Dimension-specific configurations
+                - metrics: Which metrics to analyze (default: ["score"] for core score)
         """
-        self.dimension_config = dimension_config or {}
-        self.historical_agreement = {}  # Track agreement patterns over time
-    
-    def _normalize_score(self, score: ScoreResult, dimension: str) -> float:
-        """Normalize scores to 0-1 scale based on dimension configuration"""
-        config = self.dimension_config.get(dimension, {})
-        scale = config.get("scale", "0-1")
-        
-        if scale == "0-1":
-            return score.score
-        elif scale == "0-100":
-            return score.score / 100.0
-        elif scale == "categorical":
-            # Map categorical scores to numeric (would need more sophisticated handling)
-            category_map = {"poor": 0.2, "fair": 0.4, "good": 0.7, "excellent": 0.9}
-            return category_map.get(score.score, 0.5)
-        else:
-            # Default normalization based on historical data
-            return self._historical_normalization(score, dimension)
-    
-    def _historical_normalization(self, score: ScoreResult, dimension: str) -> float:
-        """Normalize using historical data if config doesn't specify scale"""
-        # In a real implementation, this would use actual historical data
-        # This is a placeholder for demonstration
-        return score.score / 100.0 if score.score > 10 else score.score
-    
-    def _calculate_agreement_metrics(self, normalized_scores: List[float]) -> Dict:
-        """Calculate advanced agreement metrics beyond simple std deviation"""
-        n = len(normalized_scores)
-        if n < 2:
-            return {"agreement_score": 1.0, "std_dev": 0.0}
-        
-        # Calculate standard deviation (on normalized 0-1 scale)
-        std_dev = stdev(normalized_scores)
-        
-        # Fleiss' Kappa for inter-rater agreement (simplified version)
-        # Measures agreement beyond chance
-        observed_agreement = 1.0 - std_dev
-        expected_agreement = 1.0 / n  # Simplified assumption
-        kappa = (observed_agreement - expected_agreement) / (1.0 - expected_agreement) if expected_agreement < 1 else 1.0
-        
-        # Entropy-based agreement measure (lower entropy = higher agreement)
-        histogram, _ = np.histogram(normalized_scores, bins=5, range=(0, 1), density=True)
-        entropy = stats.entropy(histogram + 1e-10)  # Add small value to avoid log(0)
-        normalized_entropy = entropy / np.log(len(histogram))
-        entropy_agreement = 1.0 - normalized_entropy
-        
-        return {
-            "std_dev": std_dev,
-            "fleiss_kappa": max(0.0, min(1.0, kappa)),  # Clamp to [0,1]
-            "entropy_agreement": entropy_agreement,
-            "agreement_score": (observed_agreement + entropy_agreement) / 2
-        }
-    
-    def _identify_conflict_clusters(self, scores: List[ScoreResult], 
-                                  normalized_scores: List[float]) -> Dict:
-        """Identify clusters of agreement rather than just max vs min"""
-        # Simple k-means for 2 clusters (could be enhanced)
-        if len(normalized_scores) < 3:
-            return {
-                "clusters": [{"members": [scores[0].source], "mean": normalized_scores[0]}],
-                "primary_conflict": None,
-                "cluster_count": 1
-            }
-        
-        # Very simple clustering (for demonstration - would use actual k-means in production)
-        midpoint = mean(normalized_scores)
-        cluster1 = [s for s, ns in zip(scores, normalized_scores) if ns <= midpoint]
-        cluster2 = [s for s, ns in zip(scores, normalized_scores) if ns > midpoint]
-        
-        clusters = []
-        if cluster1:
-            cluster_mean = mean([ns for ns in normalized_scores if ns <= midpoint])
-            clusters.append({
-                "members": [s.source for s in cluster1],
-                "mean": cluster_mean,
-                "size": len(cluster1)
-            })
-        if cluster2:
-            cluster_mean = mean([ns for ns in normalized_scores if ns > midpoint])
-            clusters.append({
-                "members": [s for s in cluster2],
-                "mean": cluster_mean,
-                "size": len(cluster2)
-            })
-        
-        # Identify primary conflict as the largest gap between clusters
-        primary_conflict = None
-        max_gap = 0
-        for i in range(len(clusters)-1):
-            gap = abs(clusters[i]["mean"] - clusters[i+1]["mean"])
-            if gap > max_gap:
-                max_gap = gap
-                primary_conflict = (clusters[i]["members"], clusters[i+1]["members"])
-        
-        return {
-            "clusters": clusters,
-            "primary_conflict": primary_conflict,
-            "cluster_count": len(clusters),
-            "max_gap": max_gap
-        }
-    
-    def _determine_trust_reference(self, dimension: str, 
-                                 scores: List[ScoreResult]) -> Tuple[str, float]:
-        """Determine the most reliable scorer based on dimension config and historical data"""
-        config = self.dimension_config.get(dimension, {})
-        trust_refs = config.get("trust_references", ["human", "llm"])
-        
-        # First try configured trust references
-        for ref in trust_refs:
-            for score in scores:
-                if score.source == ref:
-                    return ref, score.score
-        
-        # If no configured reference available, use the median scorer
-        median_idx = len(scores) // 2
-        return scores[median_idx].source, scores[median_idx].score
-    
-    def _calculate_uncertainty(self, agreement_metrics: Dict, 
-                             cluster_info: Dict, dimension: str) -> float:
-        """Calculate uncertainty score based on agreement metrics"""
-        config = self.dimension_config.get(dimension, {})
-        expected_variance = config.get("expected_variance", 0.15)
-        
-        # Higher uncertainty when agreement is low OR when there are multiple clusters
-        uncertainty = 1.0 - agreement_metrics["agreement_score"]
-        if cluster_info["cluster_count"] > 1:
-            uncertainty = max(uncertainty, cluster_info["max_gap"])
-        
-        # Adjust based on expected variance for this dimension
-        return min(1.0, uncertainty / max(0.01, expected_variance))
-    
-    def calculate(self, bundle: ScoreBundle) -> Dict:
-        """Calculate MARS metrics and return enhanced aggregate information"""
-        results = list(bundle.results.values())
-        if not results:
-            return {
-                "score": 0.0,
-                "agreement": {"agreement_score": 0.0},
-                "uncertainty": 1.0
-            }
-        
-        dimension = results[0].dimension  # All should have same dimension
-        normalized_scores = []
-        sources = []
-        
-        # Normalize all scores to 0-1 scale
-        for result in results:
-            normalized = self._normalize_score(result, dimension)
-            normalized_scores.append(normalized)
-            sources.append(result.source)
-        
-        # Calculate agreement metrics
-        agreement_metrics = self._calculate_agreement_metrics(normalized_scores)
-        
-        # Identify conflict clusters
-        cluster_info = self._identify_conflict_clusters(results, normalized_scores)
-        
-        # Determine trust reference
-        trust_ref, _ = self._determine_trust_reference(dimension, results)
-        
-        # Calculate uncertainty
-        uncertainty = self._calculate_uncertainty(agreement_metrics, cluster_info, dimension)
-        
-        # Calculate weighted score (giving more weight to reliable scorers)
-        weights = self._calculate_scorer_weights(results, trust_ref, agreement_metrics)
-        weighted_score = sum(ns * w for ns, w in zip(normalized_scores, weights)) / sum(weights) if weights else 0.0
-        
-        # Store in historical data for trend analysis
-        self._update_historical_data(dimension, agreement_metrics, cluster_info)
-        
-        return {
-            "score": round(weighted_score * 100, 2),  # Return on 0-100 scale for consistency
-            "agreement": {
-                "agreement_score": round(agreement_metrics["agreement_score"], 3),
-                "std_dev": round(agreement_metrics["std_dev"], 3),
-                "fleiss_kappa": round(agreement_metrics["fleiss_kappa"], 3),
-                "entropy_agreement": round(agreement_metrics["entropy_agreement"], 3),
-                "cluster_count": cluster_info["cluster_count"],
-                "primary_conflict": cluster_info["primary_conflict"]
-            },
-            "trust_reference": trust_ref,
-            "uncertainty": round(uncertainty, 3),
-            "scorer_weights": dict(zip(sources, [round(w, 3) for w in weights])),
-            "explanation": self._generate_explanation(
-                agreement_metrics, cluster_info, trust_ref, uncertainty
+        self.config = config or {}
+        self.trust_reference = self.config.get("trust_reference", "llm")
+        self.variance_threshold = self.config.get("variance_threshold", 0.15)
+        self.metrics = self.config.get(
+            "metrics", ["score"]
+        )  # Core score by default
+        self.dimension_configs = self.config.get("dimensions", {})
+
+    def calculate(self, corpus: "ScoreCorpus") -> Dict[str, Any]:
+        """
+        Calculate MARS metrics across all scoring models in the corpus
+
+        Args:
+            corpus: ScoreCorpus containing results from multiple scorers across multiple documents
+
+        Returns:
+            Dictionary containing comprehensive MARS analysis metrics
+        """
+        # Calculate MARS metrics for each dimension
+        mars_results = {}
+        for dimension in corpus.dimensions:
+            mars_results[dimension] = self._calculate_dimension_mars(
+                corpus, dimension
             )
-        }
-    
-    def _calculate_scorer_weights(self, results: List[ScoreResult], 
-                                trust_ref: str, agreement_metrics: Dict) -> List[float]:
-        """Calculate dynamic weights for each scorer based on reliability"""
-        weights = []
-        for result in results:
-            # Base weight on agreement with trust reference
-            if result.source == trust_ref:
-                weight = 1.2  # Slight boost for trust reference
-            else:
-                # Weight based on how much it agrees with the consensus
-                consensus = 1.0 - agreement_metrics["std_dev"]
-                weight = 0.8 + 0.4 * consensus
-            
-            weights.append(weight)
-        
-        # Normalize weights to sum to 1
-        total = sum(weights)
-        return [w/total for w in weights] if total > 0 else [1/len(weights)] * len(weights)
-    
-    def _update_historical_data(self, dimension: str, 
-                              agreement_metrics: Dict, cluster_info: Dict):
-        """Track historical agreement patterns for trend analysis"""
-        if dimension not in self.historical_agreement:
-            self.historical_agreement[dimension] = {
-                "agreement_scores": [],
-                "std_devs": [],
-                "cluster_counts": []
+
+        return mars_results
+
+    def _get_dimension_config(self, dimension: str) -> Dict:
+        """Get dimension-specific configuration with fallbacks"""
+        return self.dimension_configs.get(
+            dimension,
+            {
+                "trust_reference": self.trust_reference,
+                "variance_threshold": self.variance_threshold,
+                "metrics": self.metrics,
+            },
+        )
+
+    def _calculate_dimension_mars(
+        self, corpus: "ScoreCorpus", dimension: str
+    ) -> Dict[str, Any]:
+        """
+        Calculate MARS metrics for a specific dimension
+
+        Args:
+            corpus: ScoreCorpus containing evaluation results
+            dimension: The dimension being analyzed
+
+        Returns:
+            Dictionary with MARS metrics for this dimension
+        """
+        # Get dimension-specific configuration
+        dim_config = self._get_dimension_config(dimension)
+        trust_ref = dim_config["trust_reference"]
+        metrics = dim_config["metrics"]
+
+        # Get the document × scorer matrix for this dimension
+        matrix = corpus.get_dimension_matrix(dimension)
+
+        # If no data for this dimension, return empty results
+        if matrix.empty:
+            return {
+                "dimension": dimension,
+                "agreement_score": 0.0,
+                "std_dev": 0.0,
+                "preferred_model": "none",
+                "primary_conflict": ("none", "none"),
+                "delta": 0.0,
+                "high_disagreement": False,
+                "explanation": "No data available for this dimension",
+                "scorer_metrics": {},
+                "metric_correlations": {},
             }
-        
-        hist = self.historical_agreement[dimension]
-        hist["agreement_scores"].append(agreement_metrics["agreement_score"])
-        hist["std_devs"].append(agreement_metrics["std_dev"])
-        hist["cluster_counts"].append(cluster_info["cluster_count"])
-        
-        # Keep only last 1000 entries to prevent memory bloat
-        if len(hist["agreement_scores"]) > 1000:
-            hist["agreement_scores"] = hist["agreement_scores"][-1000:]
-            hist["std_devs"] = hist["std_devs"][-1000:]
-            hist["cluster_counts"] = hist["cluster_counts"][-1000:]
-    
-    def _generate_explanation(self, agreement_metrics: Dict, 
-                            cluster_info: Dict, trust_ref: str, 
-                            uncertainty: float) -> str:
-        """Generate human-readable explanation of MARS analysis"""
-        parts = []
-        
-        # Agreement assessment
-        if agreement_metrics["agreement_score"] > 0.8:
-            parts.append("High agreement among scorers")
-        elif agreement_metrics["agreement_score"] > 0.6:
-            parts.append("Moderate agreement among scorers")
+
+        # Calculate basic statistics
+        avg_score = matrix.mean().mean()  # Overall average score
+        std_dev = (
+            matrix.std().mean()
+        )  # Average standard deviation across documents
+
+        # Calculate agreement score (1.0 = perfect agreement)
+        agreement_score = 1.0 - min(std_dev, 1.0)
+
+        # Identify primary conflict (largest average score difference)
+        scorer_means = matrix.mean()
+        max_scorer = scorer_means.idxmax()
+        min_scorer = scorer_means.idxmin()
+        delta = scorer_means[max_scorer] - scorer_means[min_scorer]
+        primary_conflict = (max_scorer, min_scorer)
+
+        # Determine which model aligns best with trust reference
+        preferred_model = "unknown"
+        if trust_ref in matrix.columns:
+            trust_scores = matrix[trust_ref]
+            closest = None
+            min_diff = float("inf")
+
+            for scorer in matrix.columns:
+                if scorer == trust_ref:
+                    continue
+
+                # Calculate average absolute difference
+                diff = (matrix[scorer] - trust_scores).abs().mean()
+                if diff < min_diff:
+                    min_diff = diff
+                    closest = scorer
+
+            preferred_model = closest if closest else "unknown"
         else:
-            parts.append("Low agreement among scorers")
-        
-        # Cluster analysis
-        if cluster_info["cluster_count"] > 1:
-            parts.append(f"{cluster_info['cluster_count']} distinct viewpoints detected")
-        
-        # Uncertainty assessment
-        if uncertainty > 0.5:
-            parts.append("High uncertainty in final score")
-        elif uncertainty > 0.3:
-            parts.append("Moderate uncertainty in final score")
-        
-        # Trust reference
-        parts.append(f"Most aligned with {trust_ref} as reference")
-        
-        return ". ".join(parts) + "."
+            # If trust reference isn't available, use median scorer
+            sorted_scorers = scorer_means.sort_values()
+            median_idx = len(sorted_scorers) // 2
+            preferred_model = sorted_scorers.index[median_idx]
+
+        # Identify high-disagreement areas
+        high_disagreement = std_dev > dim_config["variance_threshold"]
+
+        # Analyze scorer metrics (q_value, uncertainty, etc.)
+        scorer_metrics = self._analyze_scorer_metrics(
+            corpus, dimension, metrics
+        )
+
+        # Calculate metric correlations
+        metric_correlations = self._calculate_metric_correlations(
+            corpus, dimension, metrics
+        )
+
+        # Generate explanation
+        explanation_parts = [
+            f"MARS agreement: {agreement_score:.3f} (std: {std_dev:.3f})"
+        ]
+
+        if high_disagreement:
+            explanation_parts.append(
+                f"⚠️ High disagreement detected (threshold: {dim_config['variance_threshold']})"
+            )
+
+        if preferred_model != "unknown":
+            explanation_parts.append(
+                f"Most aligned with {trust_ref}: {preferred_model}"
+            )
+
+        explanation_parts.append(
+            f"Primary conflict: {primary_conflict[0]} vs {primary_conflict[1]} (Δ={delta:.3f})"
+        )
+
+        # Check for systematic bias
+        above_mean = [
+            scorer
+            for scorer, mean_score in scorer_means.items()
+            if mean_score > avg_score
+        ]
+        below_mean = [
+            scorer
+            for scorer, mean_score in scorer_means.items()
+            if mean_score < avg_score
+        ]
+
+        if len(above_mean) == 1 or len(below_mean) == 1:
+            outlier = above_mean[0] if len(above_mean) == 1 else below_mean[0]
+            explanation_parts.append(f"⚠️ {outlier} appears to be an outlier")
+
+        explanation = " | ".join(explanation_parts)
+
+        return {
+            "dimension": dimension,
+            "agreement_score": round(agreement_score, 3),
+            "std_dev": round(std_dev, 3),
+            "preferred_model": preferred_model,
+            "primary_conflict": primary_conflict,
+            "delta": round(delta, 3),
+            "high_disagreement": high_disagreement,
+            "explanation": explanation,
+            "scorer_metrics": scorer_metrics,
+            "metric_correlations": metric_correlations,
+            "source": "mars",
+            "average_score": round(avg_score, 3),
+        }
+
+    def _analyze_scorer_metrics(
+        self, corpus: "ScoreCorpus", dimension: str, metrics: List[str]
+    ) -> Dict[str, Dict[str, float]]:
+        """
+        Analyze extended metrics for each scorer in this dimension
+        """
+        scorer_metrics = {}
+
+        for scorer in corpus.scorers:
+            # Get all attribute values for this scorer and dimension
+            metric_values = corpus.get_metric_values(
+                dimension, scorer, metrics
+            )
+
+            # Calculate statistics for each metric
+            metrics_stats = {}
+            for metric, values in metric_values.items():
+                if not values:
+                    continue
+
+                # Filter out None/NaN values
+                valid_values = [v for v in values if v is not None]
+                if not valid_values:
+                    continue
+
+                metrics_stats[metric] = {
+                    "mean": float(np.mean(valid_values)),
+                    "std": float(np.std(valid_values)),
+                    "min": float(min(valid_values)),
+                    "max": float(max(valid_values)),
+                    "count": len(valid_values),
+                }
+
+            if metrics_stats:
+                scorer_metrics[scorer] = metrics_stats
+
+        return scorer_metrics
+
+    def _calculate_metric_correlations(
+        self, corpus: "ScoreCorpus", dimension: str, metrics: List[str]
+    ) -> Dict[str, Dict[str, float]]:
+        """
+        Calculate correlations between different metrics for this dimension
+        """
+        if len(metrics) < 2:
+            return {}
+
+        # Get all metric values for this dimension
+        metric_values = corpus.get_all_metric_values(dimension, metrics)
+
+        # Calculate correlations
+        correlations = {}
+        for i in range(len(metrics)):
+            for j in range(i + 1, len(metrics)):
+                metric1, metric2 = metrics[i], metrics[j]
+
+                # Get valid pairs of values
+                pairs = [
+                    (v1, v2)
+                    for v1, v2 in zip(
+                        metric_values[metric1], metric_values[metric2]
+                    )
+                    if v1 is not None and v2 is not None
+                ]
+
+                if len(pairs) > 1:
+                    values1, values2 = zip(*pairs)
+                    try:
+                        corr, _ = stats.pearsonr(values1, values2)
+                        if metric1 not in correlations:
+                            correlations[metric1] = {}
+                        correlations[metric1][metric2] = float(corr)
+                    except:
+                        pass
+
+        return correlations
+
+    def get_aggregate_score(self, mars_results: Dict[str, Dict]) -> float:
+        """
+        Get a single aggregate score from MARS analysis
+
+        This provides a weighted average of dimension scores based on agreement reliability
+
+        Args:
+            mars_results: Results from calculate() method
+
+        Returns:
+            Weighted aggregate score where dimensions with higher agreement contribute more
+        """
+        total = 0
+        weight_sum = 0
+
+        for dimension, results in mars_results.items():
+            # Weight by agreement score (higher agreement = more weight)
+            weight = results["agreement_score"]
+            total += results["average_score"] * weight
+            weight_sum += weight
+
+        return round(total / weight_sum, 3) if weight_sum > 0 else 0.0
+
+    def get_high_disagreement_documents(
+        self, corpus: "ScoreCorpus", dimension: str, threshold: float = None
+    ) -> List[str]:
+        """
+        Identify documents with high scoring disagreement for this dimension
+
+        Args:
+            corpus: ScoreCorpus to analyze
+            dimension: Dimension to check
+            threshold: Custom disagreement threshold (uses config default if None)
+
+        Returns:
+            List of document IDs with high disagreement
+        """
+        if threshold is None:
+            dim_config = self._get_dimension_config(dimension)
+            threshold = dim_config["variance_threshold"]
+
+        # Get the document × scorer matrix
+        matrix = corpus.get_dimension_matrix(dimension)
+        if matrix.empty:
+            return []
+
+        # Calculate disagreement per document (standard deviation across scorers)
+        disagreement = matrix.std(axis=1)
+
+        # Return documents with disagreement above threshold
+        return disagreement[disagreement > threshold].index.tolist()
+
+    def get_scorer_reliability(
+        self, corpus: "ScoreCorpus", dimension: str
+    ) -> Dict[str, float]:
+        """
+        Calculate reliability score for each scorer in this dimension
+
+        Args:
+            corpus: ScoreCorpus to analyze
+            dimension: Dimension to check
+
+        Returns:
+            Dictionary mapping scorer names to reliability scores (higher = more reliable)
+        """
+        # Get dimension-specific configuration
+        dim_config = self._get_dimension_config(dimension)
+        trust_ref = dim_config["trust_reference"]
+
+        # Get the document × scorer matrix
+        matrix = corpus.get_dimension_matrix(dimension)
+        if matrix.empty:
+            return {}
+
+        # Calculate reliability as correlation with trust reference
+        reliability = {}
+        if trust_ref in matrix.columns:
+            trust_scores = matrix[trust_ref]
+
+            for scorer in matrix.columns:
+                if scorer == trust_ref:
+                    reliability[scorer] = (
+                        1.0  # Perfect correlation with itself
+                    )
+                    continue
+
+                # Calculate correlation with trust reference
+                valid_pairs = matrix[[scorer, trust_ref]].dropna()
+                if len(valid_pairs) > 1:
+                    try:
+                        corr, _ = stats.pearsonr(
+                            valid_pairs[scorer], valid_pairs[trust_ref]
+                        )
+                        reliability[scorer] = float(corr)
+                    except:
+                        reliability[scorer] = 0.0
+                else:
+                    reliability[scorer] = 0.0
+
+        # If no trust reference, use consistency across documents
+        else:
+            scorer_std = matrix.std()
+            max_std = scorer_std.max()
+            for scorer, std in scorer_std.items():
+                # Higher reliability for lower standard deviation
+                reliability[scorer] = (
+                    1.0 - (std / max_std) if max_std > 0 else 1.0
+                )
+
+        return reliability
+
+    def generate_recommendations(
+        self, mars_results: Dict[str, Dict]
+    ) -> List[str]:
+        """
+        Generate actionable recommendations based on MARS analysis
+
+        Args:
+            mars_results: Results from calculate() method
+
+        Returns:
+            List of actionable recommendations
+        """
+        recommendations = []
+
+        for dimension, results in mars_results.items():
+            # High disagreement recommendations
+            if results["high_disagreement"]:
+                primary_conflict = results["primary_conflict"]
+                recommendations.append(
+                    f"⚠️ High disagreement in {dimension}: {primary_conflict[0]} and {primary_conflict[1]} "
+                    f"differ by {results['delta']:.3f}. Consider human review for ambiguous cases."
+                )
+
+            # Outlier scorer recommendations
+            scorer_metrics = results["scorer_metrics"]
+            if (
+                len(scorer_metrics) > 2
+            ):  # Need at least 3 scorers to identify outliers
+                # Check for scorers with unusual metric patterns
+                for scorer, metrics in scorer_metrics.items():
+                    if (
+                        "uncertainty" in metrics
+                        and metrics["uncertainty"]["std"] > 0.2
+                    ):
+                        recommendations.append(
+                            f"⚠️ {scorer} shows high uncertainty variability in {dimension}. "
+                            "Consider retraining or adding calibration."
+                        )
+
+            # Correlation-based recommendations
+            metric_correlations = results["metric_correlations"]
+            for metric1, correlations in metric_correlations.items():
+                for metric2, corr in correlations.items():
+                    if abs(corr) > 0.7:  # Strong correlation
+                        recommendations.append(
+                            f"💡 In {dimension}, {metric1} and {metric2} are strongly correlated ({corr:.2f}). "
+                            "Consider using one as a proxy for the other."
+                        )
+
+        # Overall system recommendations
+        overall_agreement = mean(
+            [r["agreement_score"] for r in mars_results.values()]
+        )
+        if overall_agreement < 0.7:
+            recommendations.append(
+                "⚠️ Overall scoring agreement is low (<0.7). Consider implementing human review "
+                "for documents with high disagreement."
+            )
+
+        return recommendations

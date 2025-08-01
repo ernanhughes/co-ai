@@ -12,6 +12,7 @@ defaults:
   - agents/epistemic_plan_executor
   - agents/et_hrm_inference
   - agents/gild_trainer
+  - agents/document_ebt_inference
   - agents/rank_trainer
   - agents/document_reward_scorer
   - logging/json_logger
@@ -68,6 +69,12 @@ pipeline:
     - name: document_reward_scorer
       description: "Score documents using various scorers including HRM, SICQL, SVM and MRQ"
       cls: stephanie.agents.knowledge.document_reward_scorer.DocumentRewardScorerAgent
+      enabled: false
+      iterations: 1
+
+    - name: document_ebt_inference
+      description: "Infer epistemic traces from documents using the EBT model"
+      cls: stephanie.agents.inference.ebt_inference.EBTInferenceAgent
       enabled: true
       iterations: 1
 

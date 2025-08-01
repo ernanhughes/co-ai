@@ -23,8 +23,8 @@ class ContrastiveRankerTrainer(BaseTrainer):
         self.target_type = cfg.get("target_type", "document")
         self.version = cfg.get("model_version", "v1")
 
-        self.min_score = cfg.get("min_score", 0.0)
-        self.max_score = cfg.get("max_score", 100.0)
+        self.min_value = cfg.get("min_score", 0.0)
+        self.max_value = cfg.get("max_score", 100.0)
         self.hidden_dim = cfg.get("hidden_dim", 256)
         self.lr = cfg.get("lr", 1e-3)
         self.epochs = cfg.get("epochs", 20)
@@ -282,8 +282,8 @@ class ContrastiveRankerTrainer(BaseTrainer):
             "batch_size": self.batch_size,
             "patience": self.patience,
             "baseline": self.baseline,
-            "min_score": self.min_score,
-            "max_score": self.max_score,
+            "min_value": self.min_value,
+            "max_value": self.max_value,
             "dim": self.dim,
             "hdim": self.hdim,
             "training_pairs": len(samples),

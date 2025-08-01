@@ -207,6 +207,12 @@ REASONING = {
 # TRAINING & MODEL OPS
 # =====================
 TRAINING = {
+    "SVMTrainingComplete": "🎓📊",  # SVM training completed
+    "SVMTrainingCompleted": "🎓📊",  # SVM training completed
+    "SVMTrainerInvoked": "📊🤖",  # SVM trainer invoked
+    "DimensionTrainingStarted": "📏▶️",  # Dimension training started
+    "DimensionTrainingComplete": "📏🎓",  # Dimension training completed
+    "TunerMissing": "🔧❌",  # Tuner missing
     "MRQTrainerEpoch": "🏋️",  # MRQ training epoch
     "MRQTrainerStart": "🚀🧠",  # MRQ training started
     "MRQTrainerTrainingComplete": "🎓🧠",  # MRQ training completed

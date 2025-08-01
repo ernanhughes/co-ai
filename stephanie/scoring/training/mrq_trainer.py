@@ -155,8 +155,8 @@ class MRQTrainer(BaseTrainer):
             tuner.save(locator.tuner_file())
 
         scores_np = torch.tensor([s["value_a"] for s in samples])
-        min_score = float(torch.min(scores_np))
-        max_score = float(torch.max(scores_np))
+        min_value = float(torch.min(scores_np))
+        max_value = float(torch.max(scores_np))
 
         meta = {
             "dimension": dimension,
@@ -166,8 +166,8 @@ class MRQTrainer(BaseTrainer):
             "version": self.version,
             "dim": self.dim,
             "hdim": self.hdim,
-            "min_score": min_score,
-            "max_score": max_score,
+            "min_value": min_value,
+            "max_value": max_value,
             "avg_loss": best_loss,
             "timestamp": datetime.utcnow().isoformat()
         }

@@ -1,3 +1,4 @@
+# stephanie/agents/knowledge/document_reward_scorer.py
 from stephanie.agents.base_agent import BaseAgent
 from stephanie.scoring.contrastive_ranker_scorer import ContrastiveRankerScorer
 from stephanie.scoring.ebt_scorer import EBTScorer
@@ -7,12 +8,15 @@ from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
 from stephanie.scoring.scoring_manager import ScoringManager
 from stephanie.scoring.sicql_scorer import SICQLScorer
 from stephanie.scoring.svm_scorer import SVMScorer
+from stephanie.data.score_bundle import ScoreBundle
+from stephanie.data.score_corpus import ScoreCorpus
 from stephanie.scoring.calculations.mars_calculator import MARSCalculator
-from stephanie.data.score_result import ScoreResult
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import time
 import random
 from tqdm import tqdm
+import numpy as np
+import pandas as pd
 
 
 class DocumentRewardScorerAgent(BaseAgent):
@@ -21,14 +25,13 @@ class DocumentRewardScorerAgent(BaseAgent):
     using configured reward model (e.g., SVM-based or regression-based).
     
     Enhanced with MARS (Model Agreement and Reasoning Signal) analysis
-    to evaluate consistency across scoring models.
+    to evaluate consistency across scoring models using the tensor-based architecture.
     """
-
+    
     def __init__(self, cfg, memory=None, logger=None):
         super().__init__(cfg, memory, logger)
         self.dimensions = cfg.get("dimensions", ["helpfulness", "truthfulness", "reasoning_quality"])
         self.include_mars = cfg.get("include_mars", True)
-        self.mars_calculator = MARSCalculator(cfg.get("dimension_config", {}))
         self.test_mode = cfg.get("test_mode", False)
         self.test_document_count = cfg.get("test_document_count", 100)
         
@@ -37,10 +40,12 @@ class DocumentRewardScorerAgent(BaseAgent):
             "svm", "mrq", "sicql", "ebt", "hrm", "contrastive_ranker"
         ])
         
-        self.scorer_types = ["sicql"]
-
         # Initialize scorers dynamically
         self.scorers = self._initialize_scorers()
+        
+        # Initialize MARS calculator with dimension-specific configurations
+        dimension_config = cfg.get("dimension_config", {})
+        self.mars_calculator = MARSCalculator(dimension_config)
         
         self.logger.log("DocumentRewardScorerInitialized", {
             "dimensions": self.dimensions,
@@ -88,8 +93,9 @@ class DocumentRewardScorerAgent(BaseAgent):
             self.logger.log("NoDocumentsFound", {"source": self.input_key})
             return context
             
+        # Process all documents and collect ScoreBundles
+        all_bundles = {}  # scorable_id -> ScoreBundle
         results = []
-        mars_results = []
         total_documents = len(documents)
         
         # Process documents with progress tracking
@@ -104,7 +110,7 @@ class DocumentRewardScorerAgent(BaseAgent):
             try:
                 # Score document with all scorers
                 scoring_start = time.time()
-                doc_scores, doc_mars = self._score_document(context, doc)
+                doc_scores, bundle = self._score_document(context, doc)
                 scoring_time = time.time() - scoring_start
                 
                 # Update progress bar
@@ -124,9 +130,10 @@ class DocumentRewardScorerAgent(BaseAgent):
                 
                 # Store results
                 results.append(doc_scores)
-                if doc_mars:
-                    mars_results.append(doc_mars)
-                    
+                
+                # Save bundle for corpus analysis
+                all_bundles[doc["id"]] = bundle
+                
             except Exception as e:
                 self.logger.log("DocumentScoringError", {
                     "document_id": doc.get("id", "unknown"),
@@ -134,14 +141,22 @@ class DocumentRewardScorerAgent(BaseAgent):
                 })
                 continue
         
-        # Save MARS results to context
-        if mars_results and self.include_mars:
+        # Create ScoreCorpus for MARS analysis
+        corpus = ScoreCorpus(bundles=all_bundles)
+        
+        # Save corpus to context for potential future analysis
+        context["score_corpus"] = corpus.to_dict()
+        
+        # Run MARS analysis if requested
+        mars_results = {}
+        if self.include_mars and all_bundles:
+            mars_results = self.mars_calculator.calculate(corpus)
             context["mars_analysis"] = {
-                "summary": self._summarize_mars_results(mars_results),
-                "details": mars_results
+                "summary": mars_results,
+                "recommendations": self.mars_calculator.generate_recommendations(mars_results)
             }
             self.logger.log("MARSAnalysisCompleted", {
-                "document_count": len(mars_results),
+                "document_count": len(all_bundles),
                 "dimensions": self.dimensions
             })
         
@@ -166,38 +181,23 @@ class DocumentRewardScorerAgent(BaseAgent):
         goal = context.get("goal", {"goal_text": ""})
         scorable = ScorableFactory.from_dict(doc, TargetType.DOCUMENT)
         
-        # Collect scores from all scorers
-        all_scores = {}
-        scorer_timings = {}
+        # Collect ScoreResults for this document
+        score_results = {}
         
         for scorer_name, scorer in self.scorers.items():
             try:
-                start_time = time.time()
+                # Score with this scorer
                 score_bundle = scorer.score(
                     goal=goal,
                     scorable=scorable,
                     dimensions=self.dimensions,
                 )
-                scorer_timings[scorer_name] = time.time() - start_time
                 
-                # Convert to dictionary format for easier processing
+                # Add all results to our collection
                 for dim, result in score_bundle.results.items():
-                    if dim not in all_scores:
-                        all_scores[dim] = {}
-                    all_scores[dim][scorer_name] = result.score
-                
-                # Save individual scores to memory
-                ScoringManager.save_score_to_memory(
-                    score_bundle,
-                    scorable,
-                    context,
-                    self.cfg,
-                    self.memory,
-                    self.logger,
-                    source=scorer.model_type,
-                    model_name=scorer.get_model_name(),
-                )
-                
+                    if dim not in score_results:
+                        score_results[dim] = result
+            
             except Exception as e:
                 self.logger.log("ScorerError", {
                     "scorer": scorer_name,
@@ -206,109 +206,36 @@ class DocumentRewardScorerAgent(BaseAgent):
                 })
                 continue
         
-        # Create score bundle for reporting
-        from stephanie.data.score_bundle import ScoreBundle
-
-        score_bundle = ScoreBundle(
-            results={dim: list(scores.keys())[0] for dim, scores in all_scores.items()},
-            dimension_config=self.cfg.get("dimension_config", {})
+        # Create ScoreBundle for this document
+        bundle = ScoreBundle(results=score_results)
+        
+        # Save to memory
+        ScoringManager.save_score_to_memory(
+            bundle,
+            scorable,
+            context,
+            self.cfg,
+            self.memory,
+            self.logger,
+            source="document_reward",
+            model_name="ensemble"
         )
         
-        # Generate MARS analysis if requested
-        mars_result = None
-        if self.include_mars and all_scores:
-            mars_result = self._analyze_with_mars(all_scores, doc_id, goal)
+        # Prepare results for reporting
+        report_scores = {
+            dim: {
+                "score": result.score,
+                "rationale": result.rationale,
+                "source": result.source
+            } for dim, result in score_results.items()
+        }
         
         return {
             "document_id": doc_id,
             "title": doc.get("title", ""),
-            "scores": all_scores,
-            "scorer_timings": scorer_timings,
+            "scores": report_scores,
             "goal_text": goal.get("goal_text", "")
-        }, mars_result
-
-    def _analyze_with_mars(self, all_scores: Dict, doc_id: str, goal: dict) -> Dict:
-        """Perform MARS analysis on collected scores"""
-        mars_details = {}
-        
-        for dimension, scores in all_scores.items():
-            # Create a temporary ScoreBundle for this dimension
-            bundle_results = {}
-            for scorer_name, score_value in scores.items():
-                bundle_results[scorer_name] = ScoreResult(
-                    dimension=dimension,
-                    score=score_value,
-                    rationale=f"Score from {scorer_name}",
-                    source=scorer_name,
-                    weight=1.0
-                )
-            from stephanie.data.score_bundle import ScoreBundle
-
-            bundle = ScoreBundle(
-                results=bundle_results,
-                dimension_config=self.cfg.get("dimension_config", {})
-            )
-            
-            # Perform MARS analysis
-            mars_analysis = self.mars_calculator.calculate(bundle)
-            
-            mars_details[dimension] = {
-                "agreement": mars_analysis["agreement"],
-                "score": mars_analysis["score"],
-                "uncertainty": mars_analysis["uncertainty"],
-                "trust_reference": mars_analysis["trust_reference"],
-                "explanation": mars_analysis["explanation"]
-            }
-        
-        return {
-            "document_id": doc_id,
-            "goal_text": goal.get("goal_text", ""),
-            "mars_analysis": mars_details
-        }
-
-    def _summarize_mars_results(self, mars_results: List[Dict]) -> Dict:
-        """Create summary statistics from multiple MARS analyses"""
-        if not mars_results:
-            return {}
-            
-        summary = {
-            "dimensions": {},
-            "overall_agreement": 0.0,
-            "high_uncertainty_count": 0,
-            "total_documents": len(mars_results)
-        }
-        
-        # Collect data by dimension
-        dimension_data = {}
-        for result in mars_results:
-            for dim, analysis in result["mars_analysis"].items():
-                if dim not in dimension_data:
-                    dimension_data[dim] = {
-                        "agreement_scores": [],
-                        "uncertainties": []
-                    }
-                dimension_data[dim]["agreement_scores"].append(analysis["agreement"]["agreement_score"])
-                dimension_data[dim]["uncertainties"].append(analysis["uncertainty"])
-                
-                if analysis["uncertainty"] > 0.5:
-                    summary["high_uncertainty_count"] += 1
-        
-        # Calculate summary stats
-        for dim, data in dimension_data.items():
-            summary["dimensions"][dim] = {
-                "avg_agreement": sum(data["agreement_scores"]) / len(data["agreement_scores"]),
-                "avg_uncertainty": sum(data["uncertainties"]) / len(data["uncertainties"]),
-                "high_uncertainty_pct": (
-                    sum(1 for u in data["uncertainties"] if u > 0.5) / len(data["uncertainties"])
-                )
-            }
-        
-        # Overall agreement is average of dimension agreements
-        summary["overall_agreement"] = sum(
-            stats["avg_agreement"] for stats in summary["dimensions"].values()
-        ) / len(summary["dimensions"])
-        
-        return summary
+        }, bundle
 
     def _generate_test_documents(self) -> List[Dict]:
         """Generate synthetic documents for testing"""

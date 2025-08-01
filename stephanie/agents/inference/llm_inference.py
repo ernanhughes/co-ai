@@ -44,8 +44,9 @@ class LLMInferenceAgent(ScoringMixin, BaseAgent):
         results = []
         for document in documents:
             doc_id = document["id"]
+            scorable = ScorableFactory.from_dict(document, TargetType.DOCUMENT)
 
-            saved_scores = self.get_scores_by_document_id(doc_id)
+            saved_scores = self.get_scores_by_document_id(scorable.id)
             if saved_scores and not self.force_rescore:
                 self.logger.log(
                     "DocumentScoresAlreadyExist",
@@ -53,7 +54,6 @@ class LLMInferenceAgent(ScoringMixin, BaseAgent):
                 )
                 continue
 
-            scorable = ScorableFactory.from_dict(document, TargetType.DOCUMENT)
             result = self.scoring_engine.score_item(
                 scorable, context, "document"
             )
@@ -82,10 +82,10 @@ class LLMInferenceAgent(ScoringMixin, BaseAgent):
         context[self.output_key] = results
         return context
 
-    def get_scores_by_document_id(self, document_id: int) -> list[ScoreORM]:
+    def get_scores_by_document_id(self, scorable_id: str) -> list[ScoreORM]:
         evaluations = (
             self.memory.session.query(EvaluationORM)
-            .filter_by(target_type=TargetType.DOCUMENT, target_id=document_id)
+            .filter_by(target_type=TargetType.DOCUMENT, target_id=scorable_id)
             .all()
         )
 
