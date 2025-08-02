@@ -30,37 +30,91 @@ class ExecutionStep:
     
     # Optional: Any other metadata specific to this step
     extra_data: Optional[Dict[str, Any]] = field(default_factory=dict) 
+   
+    agent_config: Optional[Dict] = None
+    input_type: Optional[str] = None
+    output_type: Optional[str] = None
+    start_time: Optional[float] = None
+    end_time: Optional[float] = None
+    duration: Optional[float] = None
+    error: Optional[Dict[str, Any]] = None
+    output_keys: Optional[List[str]] = None
+    output_size: Optional[int] = None
+    policy_logits: Optional[List[float]] = None
+    uncertainty: Optional[float] = None
+    entropy: Optional[float] = None
+    zsa: Optional[Union[List[float], Dict]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        """Convert to dictionary for serialization"""
+        result = {
             "step_id": self.step_id,
+            "step_order": self.step_order,
             "step_type": self.step_type,
-            "agent_name": self.agent_name,
             "description": self.description,
             "input_text": self.input_text,
             "output_text": self.output_text,
-            "scores": self.scores.to_dict(),
-            "plan_trace_id": self.plan_trace_id,
-            "step_order": self.step_order,
-            "extra_data": self.extra_data,
+            "agent_name": self.agent_name,
+            "input_type": self.input_type,
+            "output_type": self.output_type,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "duration": self.duration,
+            "output_keys": self.output_keys,
+            "output_size": self.output_size,
+            "policy_logits": self.policy_logits,
+            "uncertainty": self.uncertainty,
+            "entropy": self.entropy
         }
+        
+        # Handle agent_config safely
+        if self.agent_config:
+            result["agent_config"] = self.agent_config
+            
+        # Handle error information
+        if self.error:
+            result["error"] = self.error
+            
+        # Handle scores
+        if self.scores:
+            result["scores"] = self.scores
+            
+        # Handle zsa (can be complex tensor data)
+        if self.zsa is not None:
+            if isinstance(self.zsa, list):
+                result["zsa"] = self.zsa
+            elif hasattr(self.zsa, "tolist"):
+                result["zsa"] = self.zsa.tolist()
+            else:
+                result["zsa"] = str(self.zsa)
+                
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ExecutionStep":
-        from stephanie.data.score_bundle import \
-            ScoreBundle  # Local import to avoid circular dependencies
-
+        """Create from dictionary"""
         return cls(
-            step_id=data.get("step_id"),
-            step_type=data.get("step_type", "action"),  # Default to "action"
-            agent_name=data.get("agent_name"),
-            description=data.get("description", ""),
-            output_text=data.get("output_text", ""),
+            step_id=data["step_id"],
+            step_order=data["step_order"],
+            step_type=data["step_type"],
+            description=data["description"],
             input_text=data.get("input_text"),
-            scores=ScoreBundle.from_dict(data.get("scores", {})),
-            plan_trace_id=data.get("plan_trace_id"),
-            step_order=data.get("step_order"),
-            extra_data=data.get("extra_data", {}),
+            output_text=data.get("output_text"),
+            agent_name=data.get("agent_name"),
+            agent_config=data.get("agent_config"),
+            input_type=data.get("input_type"),
+            output_type=data.get("output_type"),
+            start_time=data.get("start_time"),
+            end_time=data.get("end_time"),
+            duration=data.get("duration"),
+            error=data.get("error"),
+            scores=data.get("scores"),
+            output_keys=data.get("output_keys"),
+            output_size=data.get("output_size"),
+            policy_logits=data.get("policy_logits"),
+            uncertainty=data.get("uncertainty"),
+            entropy=data.get("entropy"),
+            zsa=data.get("zsa")
         )
 
 
@@ -103,6 +157,7 @@ class PlanTrace:
     created_at: str = "" # ISO format timestamp
     # Any other execution metadata (e.g., time taken, DSPy optimizer version)
     extra_data: Optional[Dict[str, Any]] = field(default_factory=dict) 
+
 
     def to_dict(self) -> dict:
         return {
@@ -190,6 +245,20 @@ class PlanTrace:
                 plan_trace_id=step.get("plan_trace_id"),
                 step_order=step.get("step_order"),
                 extra_data=step.get("extra_data", {}),
+                agent_config=step.get("agent_config"),
+                input_type=step.get("input_type"),
+                output_type=step.get("output_type"),
+                start_time=step.get("start_time"),
+                end_time=step.get("end_time"),
+                duration=step.get("duration"),
+                error=step.get("error"), 
+                output_keys=step.get("output_keys"),
+                output_size=step.get("output_size"),
+                policy_logits=step.get("policy_logits"),
+                uncertainty=step.get("uncertainty"),
+                entropy=step.get("entropy"),
+                zsa=step.get("zsa"),
+                    
             )
             for step in data["execution_steps"]
         ]
@@ -208,4 +277,3 @@ class PlanTrace:
             created_at=data.get("created_at", ""),
             extra_data=data.get("extra_data", {}),
         )
-Bing

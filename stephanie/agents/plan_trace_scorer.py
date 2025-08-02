@@ -63,12 +63,12 @@ class PlanTraceScorerAgent(BaseAgent):
         scorers = {}
         
         if "hrm" in self.scorer_types:
-            scorers["hrm"] = HRMScorer(self.cfg.get("hrm"), memory=self.memory, logger=self.logger)
+            scorers["hrm"] = HRMScorer(self.cfg.scorer.hrm, memory=self.memory, logger=self.logger)
         if "sicql" in self.scorer_types:
-            scorers["sicql"] = SICQLScorer(self.cfg.get("sicql"), memory=self.memory, logger=self.logger)
+            scorers["sicql"] = SICQLScorer(self.cfg.scorer.sicql, memory=self.memory, logger=self.logger)
         if "contrastive_ranker" in self.scorer_types:
             scorers["contrastive_ranker"] = ContrastiveRankerScorer(
-                self.cfg.get("contrastive_ranker"), memory=self.memory, logger=self.logger
+                self.cfg.scorer.contrastive_ranker, memory=self.memory, logger=self.logger
             )
             
         return scorers

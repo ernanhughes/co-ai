@@ -1,6 +1,10 @@
 defaults:
   - _self_
   - db: postgres
+  - scorer/sicql/default
+  - scorer/contrastive_ranker/default
+  - scorer/hrm/default
+  - scorer/epistemic_hrm/default
   - agents/knowledge_db_loader
   - agents/gild_trainer
   - agents/pipeline_judge
@@ -64,7 +68,7 @@ pipeline:
     - name: plan_trace_scorer
       description: "Score plan traces using various scorers including HRM, SICQL, and Contrastive Ranker"
       cls: stephanie.agents.plan_trace_scorer.PlanTraceScorerAgent
-      enabled: true
+      enabled: false
       iterations: 1
 
     - name: rank_trainer

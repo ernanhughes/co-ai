@@ -59,7 +59,6 @@ class HRMScorer(BaseScorer):
                     self.logger.log("HRMScorerModelError", {
                         "message": "HRM model file not found.",
                         "path": model_file_path,
-                        "dimension": self.hrm_dimension
                     })
                     return # Cannot load if file is missing
 
@@ -80,12 +79,12 @@ class HRMScorer(BaseScorer):
                 # --- Reconstruct HRM Model Configuration ---
                 # Get HRM hyperparameters from meta or use defaults consistent with training
                 hrm_cfg_from_meta = {
-                    "hrm.input_dim": self.model_meta.get("input_dim", self.dim * 2), # Default concat
-                    "hrm.h_dim": self.model_meta.get("h_dim", 256),
-                    "hrm.l_dim": self.model_meta.get("l_dim", 128),
-                    "hrm.output_dim": self.model_meta.get("output_dim", 1),
-                    "hrm.n_cycles": self.model_meta.get("n_cycles", 4),
-                    "hrm.t_steps": self.model_meta.get("t_steps", 4),
+                    "input_dim": self.model_meta[dimension].get("input_dim", self.dim * 2), # Default concat
+                    "h_dim": self.model_meta[dimension].get("h_dim", 256),
+                    "l_dim": self.model_meta[dimension].get("l_dim", 128),
+                    "output_dim": self.model_meta[dimension].get("output_dim", 1),
+                    "n_cycles": self.model_meta[dimension].get("n_cycles", 4),
+                    "t_steps": self.model_meta[dimension].get("t_steps", 4),
                     # lr, epochs are not needed for inference
                 }
                 

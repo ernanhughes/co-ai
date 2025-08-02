@@ -5,7 +5,6 @@ plan_trace_scorer:
   save_context: false
   skip_if_completed: false
 
-
   export_dir: ${hydra:runtime.cwd}/reports/epistemic_plan_executor
   include_mars: true
   scorer_types:
@@ -22,7 +21,7 @@ plan_trace_scorer:
     - relevance
 
   sicql:
-    name: gild_trainer_sicql
+    name: plan_trace_scorer_sicql
     model_type: sicql
     model_version: v1
     evaluator: sicql
@@ -36,7 +35,7 @@ plan_trace_scorer:
       - relevance
 
   contrastive_ranker:
-    name: contrastive_ranker
+    name: plan_trace_scorer_contrastive_ranker
     model_type: contrastive_ranker
     model_version: v1
     evaluator: contrastive_ranker
@@ -48,9 +47,8 @@ plan_trace_scorer:
       - novelty
       - relevance
 
-
   hrm:
-    name: gild_trainer_hrm
+    name: plan_trace_scorer_hrm
     model_type: hrm
     model_version: v1
     evaluator: hrm

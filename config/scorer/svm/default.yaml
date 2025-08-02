@@ -1,0 +1,12 @@
+# config/scorer/svn.yaml
+name: svn
+model_type: svn
+model_version: v1
+evaluator: svn
+target_type: document
+dimensions: 
+  - alignment
+  - clarity
+  - implementability
+  - novelty
+  - relevance
