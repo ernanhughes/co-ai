@@ -77,7 +77,7 @@ class ExecutionStep:
             
         # Handle scores
         if self.scores:
-            result["scores"] = self.scores
+            result["scores"] = self.scores.to_dict() if hasattr(self.scores, "to_dict") else self.scores
             
         # Handle zsa (can be complex tensor data)
         if self.zsa is not None:
@@ -160,7 +160,7 @@ class PlanTrace:
 
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "trace_id": self.trace_id,
             "goal_text": self.goal_text,
             "goal_id": self.goal_id,
@@ -174,6 +174,7 @@ class PlanTrace:
             "created_at": self.created_at,
             "extra_data": self.extra_data,
         }
+        return result
 
     def get_target_quality(self) -> float:
         if self.has_target_quality():
