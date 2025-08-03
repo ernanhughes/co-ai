@@ -209,6 +209,12 @@ REASONING = {
 # TRAINING & MODEL OPS
 # =====================
 TRAINING = {
+    "TrainingStarted": "🏋️▶️",  # Training started
+    "CalibrationCompleted": "✅📊",  # Calibration completed
+    "ContrastiveRankerTrainingComplete": "🎓📊",  # Contrastive ranker training completed
+    "TrainingEpochsCompleted": "🏋️✅",  # Training epochs completed
+    "DimensionTrainingStart": "📏▶️",  # Dimension training started
+    "ContrastiveRankerTrainingStarted": "📊🏋️",  # Contrastive ranker training started I
     "SICQLTrainerInitialized": "📊🤖",  # SICQL trainer initialized   
     "SVMTrainingComplete": "🎓📊",  # SVM training completed
     "SVMTrainingCompleted": "🎓📊",  # SVM training completed

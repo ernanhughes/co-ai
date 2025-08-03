@@ -4,7 +4,6 @@
 import numpy as np
 from joblib import load
 
-from stephanie.models.score import ScoreORM
 from stephanie.scoring.base_scorer import BaseScorer
 from stephanie.scoring.scorable import Scorable
 from stephanie.data.score_bundle import ScoreBundle
