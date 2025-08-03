@@ -1,8 +1,5 @@
 # stephanie/supervisor.py
 
-import json
-import os
-import time
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -14,7 +11,6 @@ from stephanie.constants import (GOAL, NAME, PIPELINE, PIPELINE_RUN_ID,
                                  PROMPT_DIR, RUN_ID, SAVE_CONTEXT,
                                  SKIP_IF_COMPLETED, STAGE)
 from stephanie.core.context.context_manager import ContextManager
-from stephanie.engine import plan_trace_monitor
 from stephanie.engine.cycle_watcher import CycleWatcher
 from stephanie.engine.meta_confidence import MetaConfidenceTracker
 from stephanie.engine.self_validation import SelfValidationEngine

@@ -27,6 +27,9 @@ class ExecutionStep:
     plan_trace_id: Optional[int] = None  # Foreign key to the PlanTrace this step belongs to
     step_order: Optional[int] = None  # Foreign key to the PlanTrace this step belongs to
     # Optional: Embedding of the output_text. Can be computed on demand if not stored.
+
+    # Optional: Any other metadata specific to this step
+    attributes: Optional[Dict[str, Any]] = field(default_factory=dict) 
     
     # Optional: Any other metadata specific to this step
     extra_data: Optional[Dict[str, Any]] = field(default_factory=dict) 

@@ -22,15 +22,21 @@ class PlanTraceMonitor:
         self.cfg = cfg
         self.memory = memory
         self.logger = logger
+        self.enabled = cfg.get("plan_monitor", {}).get("enabled", True)
         self.current_plan_trace: Optional[PlanTrace] = None
-        self.plan_trace_scorer = PlanTraceScorerAgent(cfg, memory, logger)
-        self.stage_start_times: Dict[int, float] = {}
+        if self.enabled:
+            self.plan_trace_scorer = PlanTraceScorerAgent(cfg, memory, logger)
+            self.stage_start_times: Dict[int, float] = {}
         
         self.logger.log("PlanTraceMonitorInitialized", {
             "cfg_keys": list(cfg.keys())
         })
     
     def start_pipeline(self, context: Dict, pipeline_run_id: str) -> None:
+        if not self.enabled:
+            self.logger.log("PlanTraceMonitorDisabled", {})
+            return 
+
         """Create PlanTrace when pipeline starts"""
         goal = context.get("goal", {})
         essential_config = {

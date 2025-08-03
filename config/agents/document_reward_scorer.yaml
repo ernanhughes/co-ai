@@ -2,7 +2,7 @@ document_reward_scorer:
   name: document_reward_scorer
   enabled: true
   save_prompt: true
-  save_context: true
+  save_context: false
   skip_if_completed: false
 
   scorer_types:

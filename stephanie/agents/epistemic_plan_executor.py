@@ -314,10 +314,10 @@ class EpistemicPlanExecutorAgent(BaseAgent):
             try:
                 executed_trace = PlanTrace(
                     trace_id=trace_id,
+                    plan_signature=plan_signature,
                     goal_text=goal_text,
                     goal_id=goal_id,
                     input_data=input_data,
-                    plan_signature=plan_signature,
                     execution_steps=execution_steps,
                     final_output_text=final_output_text,
                     final_scores=final_scores,

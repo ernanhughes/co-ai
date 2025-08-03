@@ -108,6 +108,8 @@ KNOWLEDGE_OPS = {
 # PIPELINE CONTROL
 # =================
 PIPELINE_FLOW = {
+    "PipelineStageCompleted": "🖇️✅",  # Pipeline stage completed
+    "PipelineStageStarted": "🖇️▶️",  # Pipeline stage started
     "PipelineSummaryPrinted": "🖇️📄",  # Pipeline summary printed
     "PipelineStageInserted": "🖇️➕",  # Stage inserted
     "PipelineStart": "🖇️▶️",  # Pipeline started
@@ -207,12 +209,13 @@ REASONING = {
 # TRAINING & MODEL OPS
 # =====================
 TRAINING = {
+    "SICQLTrainerInitialized": "📊🤖",  # SICQL trainer initialized   
     "SVMTrainingComplete": "🎓📊",  # SVM training completed
     "SVMTrainingCompleted": "🎓📊",  # SVM training completed
     "SVMTrainerInvoked": "📊🤖",  # SVM trainer invoked
     "DimensionTrainingStarted": "📏▶️",  # Dimension training started
     "DimensionTrainingComplete": "📏🎓",  # Dimension training completed
-    "TunerMissing": "🔧❌",  # Tuner missing
+    "TunerMissing": "🔧📄",  # Tuner missing
     "MRQTrainerEpoch": "🏋️",  # MRQ training epoch
     "MRQTrainerStart": "🚀🧠",  # MRQ training started
     "MRQTrainerTrainingComplete": "🎓🧠",  # MRQ training completed
@@ -236,7 +239,7 @@ TRAINING = {
     "EBTTrainerEpoch": "🏋️🧪",  # EBT training epoch
     "TrainingCompleted": "🏁🎓",  # Training completed
     "MRQTrainingEpoch": "🏋️🧠",  # MRQ training epoch
-    "MRQEarlyStopping": "🛑🏋️",  # MRQ early stopping
+    "MRQEarlyStopping": "✨🏋️",  # MRQ early stopping
     "MRQTrainerInitialized": "🧠🤖",  # MRQ trainer initialized
     "NoSamplesFound": "🚫🚫",  # No samples found for training
     "SICQLTrainingEpoch": "🏋️📊",  # SICQL training epoch
@@ -347,6 +350,9 @@ MODELS = {
 # ETHICS & REVIEWS
 # =============
 SPECIAL = {
+    "PlanTraceCreated": "📄📝",  # Plan trace created
+    "PlanTraceScorerInitialized": "📊🤖🪸",  # Plan trace scorer initialized
+    "PlanTraceMonitorInitialized": "📊🤖🪸",  # Plan trace monitor initialized
     "GILDProcessTraceStarted": "📊▶️",  # GILD process trace started
     "SICQLAdvantageExtracted": "📊📈",  # SICQL advantage extracted
     "SICQLAdvantageWarning": "⚠️📊",  # SICQL advantage warning
@@ -354,7 +360,7 @@ SPECIAL = {
       
     "SQLQuery": "💾🔍",  # SQL query executed
     "EthicsReviewsGenerated": "⚖️🧾",  # Ethics reviews generated
-    "EarlyStopping": "🛑⏱️",  # Early stopping triggered
+    "EarlyStopping": "✅⏱️",  # Early stopping triggered
 }
 
 # Combine all categories into a single dictionary

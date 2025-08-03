@@ -95,7 +95,7 @@ class MRQTrainer(BaseTrainer):
             scores = scores.to(self.device)
 
             predictions = model.predictor(inputs).squeeze()
-            loss = F.mse_loss(predictions, scores)
+            loss = F.mse_loss(predictions, scores.view(-1))
 
             self.optimizer.zero_grad()
             loss.backward()

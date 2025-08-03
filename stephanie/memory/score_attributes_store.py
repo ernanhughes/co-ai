@@ -1,13 +1,11 @@
 # stephanie/memory/score_attribute_store.py
-from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, func
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from stephanie.models.score import ScoreORM
 from stephanie.models.score_attribute import ScoreAttributeORM
-
 
 class ScoreAttributeStore:
     def __init__(self, session: Session, logger=None):

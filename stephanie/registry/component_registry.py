@@ -77,7 +77,7 @@ def clear_registry() -> None:
     _component_registry.clear()
 
 def get_all_components() -> dict:
-    """
+    """ 
     Get a copy of all registered components.
     
     Returns:
