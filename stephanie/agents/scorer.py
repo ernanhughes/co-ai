@@ -48,7 +48,7 @@ class ScorerAgent(BaseAgent):
 
         # Initialize MARS calculator with dimension-specific configurations
         dimension_config = cfg.get("dimension_config", {})
-        self.mars_calculator = MARSCalculator(dimension_config)
+        self.mars_calculator = MARSCalculator(dimension_config, self.logger)
 
         self.logger.log(
             "DocumentRewardScorerInitialized",
@@ -95,18 +95,8 @@ class ScorerAgent(BaseAgent):
         """Main execution method with optional test mode"""
         start_time = time.time()
 
-        # Handle test mode if enabled
-        if self.test_mode:
-            documents = self._generate_test_documents()
-            self.logger.log(
-                "TestModeActivated",
-                {
-                    "document_count": len(documents),
-                    "dimensions": self.dimensions,
-                },
-            )
-        else:
-            documents = context.get(self.input_key, [])
+        documents = context.get(self.input_key, [])
+        documents = documents[:5] if self.test_mode else documents
 
         if not documents:
             self.logger.log("NoDocumentsFound", {"source": self.input_key})
@@ -272,30 +262,3 @@ class ScorerAgent(BaseAgent):
             "scores": report_scores,
             "goal_text": goal.get("goal_text", ""),
         }, bundle
-
-    def _generate_test_documents(self) -> List[Dict]:
-        """Generate synthetic documents for testing"""
-        self.logger.log(
-            "GeneratingTestDocuments",
-            {"count": self.test_document_count, "dimensions": self.dimensions},
-        )
-
-        documents = []
-        for i in range(self.test_document_count):
-            # Generate realistic-looking content
-            doc_type = random.choice(
-                ["article", "research_paper", "blog_post", "technical_doc"]
-            )
-            length = random.randint(100, 2000)
-
-            documents.append(
-                {
-                    "id": f"test_doc_{i}",
-                    "title": f"Test Document #{i} - {doc_type}",
-                    "content": " ".join([f"word_{j}" for j in range(length)]),
-                    "type": doc_type,
-                    "length": length,
-                }
-            )
-
-        return documents

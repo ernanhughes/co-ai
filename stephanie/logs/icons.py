@@ -183,6 +183,14 @@ SCORING = {
 # REASONING & ANALYSIS
 # =====================
 REASONING = {
+    "PlanTraceCompleted": "📄✅",  # Plan trace completed
+    "MARSAnalysisCompleted": "📊✅",  # MARS analysis completed
+    "PlanTraceScoringCompleted": "📄✅",  # Plan trace scoring completed
+    "PlanTraceUpdated": "📄🔄",  # Plan trace updated
+    "PlanTraceScored": "📄⚖️",  # Plan trace scored
+    "PlanTraceScoringComplete": "📄✅",  # Plan trace scoring completed
+    "DocumentScoringProgress": "📄🔄",  # Document scoring progress
+    "DocumentScoringCompleted": "📄✅",  # Document scoring completed
     "EpistemicPlanHRMModelInitialized": "🪸🧠",  # Epistemic Plan HRM model initialized
     "EpistemicPlanHRMOptimizerInitialized": "🪸⚙️",  # Epistemic Plan HRM optimizer initialized
     "EpistemicPlanHRMLossInitialized": "🪸📉",  # Epistemic Plan HRM loss initialized

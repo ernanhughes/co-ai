@@ -162,8 +162,8 @@ class MRQCoreScoring:
         if tuner:
             tuned = tuner.transform(norm_score)
             tuned = max(
-                self.min_score_by_dim.get(dimension, 0.0),
-                min(self.max_score_by_dim.get(dimension, 100.0), tuned),
+                self.min_value_by_dim.get(dimension, 0.0),
+                min(self.max_value_by_dim.get(dimension, 100.0), tuned),
             )
             self.logger.log(
                 "MRQTunedScore",

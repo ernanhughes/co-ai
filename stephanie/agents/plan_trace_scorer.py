@@ -41,7 +41,7 @@ class PlanTraceScorerAgent(BaseAgent):
         
         # Initialize MARS calculator
         dimension_config = cfg.get("dimension_config", {})
-        self.mars_calculator = MARSCalculator(dimension_config)
+        self.mars_calculator = MARSCalculator(dimension_config, self.logger)
         
         # Pattern extraction parameters
         self.high_agreement_threshold = cfg.get("high_agreement_threshold", 0.8)

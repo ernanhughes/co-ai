@@ -109,7 +109,7 @@ class ContrastiveRankerScorer(BaseScorer):
             
             # Calibrate to absolute score
             tuned_score = tuner.transform(raw_score)
-            final_score = max(min(tuned_score, meta["max_score"]), meta["min_score"])
+            final_score = max(min(tuned_score, meta["max_value"]), meta["min_value"])
 
             attributes = {
                 "raw_score": round(raw_score, 4),

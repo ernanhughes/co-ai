@@ -43,14 +43,14 @@ class SVMScorer(BaseScorer):
         for dim in dimensions:
             scaler, model = self.models[dim]
             tuner = self.tuners[dim]
-            meta = self.metas.get(dim, {"min_score": 0, "max_score": 100})
+            meta = self.metas.get(dim, {"min_value": 0, "max_value": 100})
 
             scaled_input = scaler.transform(input_vec)
             raw_score = model.predict(scaled_input)[0]
             tuned_score = tuner.transform(raw_score)
 
             # Clip to min/max
-            final_score = max(min(tuned_score, meta["max_score"]), meta["min_score"])
+            final_score = max(min(tuned_score, meta["max_value"]), meta["min_value"])
             results[dim] = ScoreResult(
                 dimension=dim,
                 score=final_score,

@@ -45,7 +45,7 @@ class DocumentRewardScorerAgent(BaseAgent):
         
         # Initialize MARS calculator with dimension-specific configurations
         dimension_config = cfg.get("dimension_config", {})
-        self.mars_calculator = MARSCalculator(dimension_config)
+        self.mars_calculator = MARSCalculator(dimension_config, self.logger)
         
         self.logger.log("DocumentRewardScorerInitialized", {
             "dimensions": self.dimensions,

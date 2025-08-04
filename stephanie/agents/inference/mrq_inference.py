@@ -211,7 +211,7 @@ class MRQInferenceAgent(BaseAgent):
                 meta = (
                     load_json(locator.meta_file())
                     if os.path.exists(locator.meta_file())
-                    else {"min_score": 0, "max_score": 100}
+                    else {"min_value": 0, "max_value": 100}
                 )
                 self.model_meta[dim] = meta
 

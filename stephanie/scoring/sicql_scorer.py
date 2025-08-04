@@ -82,7 +82,7 @@ class SICQLScorer(BaseScorer):
             meta = (
                 load_json(locator.meta_file())
                 if os.path.exists(locator.meta_file())
-                else {"min_score": 0, "max_score": 100}
+                else {"min_value": 0, "max_value": 100}
             )
             self.model_meta[dim] = meta
 
@@ -146,10 +146,10 @@ class SICQLScorer(BaseScorer):
                 if self.return_zsa:
                     zsa_tensor = model.encoder(prompt_emb, output_emb)
 
-            meta = self.model_meta.get(dim, {"min_score": 0, "max_score": 100})
+            meta = self.model_meta.get(dim, {"min_value": 0, "max_value": 100})
             # Ensure meta has min/max values for scaling logic
-            min_val = meta.get("min_value", meta.get("min_score", 0))
-            max_val = meta.get("max_value", meta.get("max_score", 100))
+            min_val = meta.get("min_value", meta.get("min_value", 0))
+            max_val = meta.get("max_value", meta.get("max_value", 100))
             if dim in self.tuners:
                 scaled_score = self.tuners[dim].transform(q_value)
             else:

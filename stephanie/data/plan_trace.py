@@ -171,7 +171,7 @@ class PlanTrace:
             "plan_signature": self.plan_signature,
             "execution_steps": [step.to_dict() for step in self.execution_steps],
             "final_output_text": self.final_output_text,
-            "final_scores": self.final_scores.to_dict(),
+            "final_scores": self.final_scores.to_dict() if self.final_scores else None,
             "target_epistemic_quality": self.target_epistemic_quality,
             "target_epistemic_quality_source": self.target_epistemic_quality_source,
             "created_at": self.created_at,

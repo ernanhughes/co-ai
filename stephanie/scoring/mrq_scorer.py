@@ -52,7 +52,7 @@ class MRQScorer(BaseScorer):
             model.load_weights(locator.encoder_file(), locator.model_file())
             self.models[dim] = model
 
-            meta = load_json(locator.meta_file()) if os.path.exists(locator.meta_file()) else {"min_score": 0, "max_score": 100}
+            meta = load_json(locator.meta_file()) if os.path.exists(locator.meta_file()) else {"min_value": 0, "max_value": 100}
             self.model_meta[dim] = meta
 
             tuner_path = locator.tuner_file()
@@ -72,7 +72,7 @@ class MRQScorer(BaseScorer):
 
             q_value = model.predict(goal_text, scorable.text)
 
-            meta = self.model_meta.get(dim, {"min_score": 0, "max_score": 100})
+            meta = self.model_meta.get(dim, {"min_value": 0, "max_value": 100})
             tuner = self.tuners.get(dim)
 
             if tuner:
@@ -81,9 +81,9 @@ class MRQScorer(BaseScorer):
                 norm = torch.sigmoid(torch.tensor(q_value)).item()
                 if norm < 0.01 or norm > 0.99:
                     self.logger.log("QValueOutlier", {"dimension": dim, "q_value": q_value})
-                scaled = norm * (meta["max_score"] - meta["min_score"]) + meta["min_score"]
+                scaled = norm * (meta["max_value"] - meta["min_value"]) + meta["min_value"]
 
-            final_score = round(max(min(scaled, meta["max_score"]), meta["min_score"]), 4)
+            final_score = round(max(min(scaled, meta["max_value"]), meta["min_value"]), 4)
 
             attributes = {
                 "q_value": round(q_value, 4),

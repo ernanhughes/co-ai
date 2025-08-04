@@ -8,6 +8,8 @@ that we encountered when trying to store PlanTrace objects in the database.
 
 from typing import Any
 from omegaconf import OmegaConf
+import numpy as np
+from stephanie.data.plan_trace import PlanTrace, ExecutionStep
 
 def to_serializable(obj: Any) -> Any:
     """
@@ -48,3 +50,19 @@ def to_serializable(obj: Any) -> Any:
             return str(obj)
         except:
             return "non-serializable-object"
+        
+def default_serializer(obj):
+    """Handle serialization of complex objects including NumPy types"""
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, (np.integer, np.floating)):
+        return obj.item()
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif hasattr(obj, 'to_dict'):
+        return obj.to_dict()
+    elif isinstance(obj, (ExecutionStep, PlanTrace)):
+        return obj.to_dict()
+    elif hasattr(obj, '_get_node'):  # OmegaConf DictConfig
+        return OmegaConf.to_container(obj, resolve=True, enum_to_str=True)
+    raise TypeError(f"Type {type(obj)} not serializable")

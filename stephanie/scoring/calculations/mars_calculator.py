@@ -1,11 +1,16 @@
 import numpy as np
+import os
 from statistics import mean
 from typing import Dict, Any, List
 from scipy import stats
+import json
+from datetime import datetime
+import traceback
 
 from stephanie.scoring.calculations.base_calculator import BaseScoreCalculator
 from stephanie.data.score_corpus import ScoreCorpus
 
+from stephanie.utils.serialization import default_serializer
 
 class MARSCalculator(BaseScoreCalculator):
     """
@@ -22,7 +27,7 @@ class MARSCalculator(BaseScoreCalculator):
     to detect reliability patterns rather than just computing an average score.
     """
 
-    def __init__(self, config: Dict = None):
+    def __init__(self, config: Dict = None, logger=None):
         """
         Initialize MARS calculator with configuration
 
@@ -34,12 +39,81 @@ class MARSCalculator(BaseScoreCalculator):
                 - metrics: Which metrics to analyze (default: ["score"] for core score)
         """
         self.config = config or {}
+        self.logger = logger
         self.trust_reference = self.config.get("trust_reference", "llm")
         self.variance_threshold = self.config.get("variance_threshold", 0.15)
         self.metrics = self.config.get(
             "metrics", ["score"]
         )  # Core score by default
         self.dimension_configs = self.config.get("dimensions", {})
+
+        # Configure logging options
+        self.log_enabled = self.config.get("log_enabled", True)
+        self.log_path = self.config.get("log_path", "mars_reports")
+        self.include_full_data = self.config.get("include_full_data", True)
+
+        if self.log_enabled and self.logger:
+            self.logger.log("MARSLoggerConfigured", {
+                "log_path": os.path.abspath(self.log_path),
+                "include_full_data": self.include_full_data,
+                "enabled": self.log_enabled
+            })
+
+
+    def _write_json_report(self, mars_results: Dict[str, Any], corpus: "ScoreCorpus"):
+        """Write MARS results to a JSON file with proper serialization"""
+        if not self.log_enabled:
+            return
+        
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(self.log_path, exist_ok=True)
+            
+            # Generate filename with timestamp and dimension
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"mars_report_{timestamp}.json"
+            filepath = os.path.join(self.log_path, filename)
+            
+            # Prepare report data
+            report_data = {
+                "metadata": {
+                    "timestamp": timestamp,
+                    "document_count": len(corpus.bundles),
+                    "scorers": list(corpus.scorers),
+                    "metrics": ["agreement", "uncertainty", "std_deviation", "outliers"]
+                },
+                "results": mars_results
+            }
+            
+            # Include full data if configured
+            if self.include_full_data:
+                report_data["full_data"] = {
+                    "corpus_summary": corpus.get_summary(),
+                    "metric_matrices": {
+                        metric: mars_results.get(metric, {}).get("matrix", {}).tolist() 
+                        for metric in ["agreement", "uncertainty", "std_deviation"]
+                        if metric in mars_results
+                    }
+                }
+            
+            # Write the report with proper serialization
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(report_data, f, indent=2, default=default_serializer)
+            
+            if self.logger:
+                self.logger.log("MARSReportSaved", {
+                    "filepath": filepath,
+                    "document_count": len(corpus.bundles),
+                    "scorers_count": len(corpus.scorers)
+                })
+                
+        except Exception as e:
+            if self.logger:
+                self.logger.log("MARSReportError", {
+                    "error": str(e),
+                    "traceback": traceback.format_exc()
+                })
+
 
     def calculate(self, corpus: "ScoreCorpus") -> Dict[str, Any]:
         """
@@ -58,6 +132,8 @@ class MARSCalculator(BaseScoreCalculator):
                 corpus, dimension
             )
 
+        if self.log_enabled:
+            self._write_json_report(mars_results, corpus)
         return mars_results
 
     def _get_dimension_config(self, dimension: str) -> Dict:
@@ -118,10 +194,10 @@ class MARSCalculator(BaseScoreCalculator):
 
         # Identify primary conflict (largest average score difference)
         scorer_means = matrix.mean()
-        max_scorer = scorer_means.idxmax()
-        min_scorer = scorer_means.idxmin()
-        delta = scorer_means[max_scorer] - scorer_means[min_scorer]
-        primary_conflict = (max_scorer, min_scorer)
+        max_valuer = scorer_means.idxmax()
+        min_valuer = scorer_means.idxmin()
+        delta = scorer_means[max_valuer] - scorer_means[min_valuer]
+        primary_conflict = (max_valuer, min_valuer)
 
         # Determine which model aligns best with trust reference
         preferred_model = "unknown"

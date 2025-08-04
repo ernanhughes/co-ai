@@ -542,3 +542,136 @@ class ScoreCorpus:
                 f"dimensions={len(self.dimensions)}, "
                 f"scorers={len(self.scorers)}, "
                 f"metrics={len(self.metrics)})>")
+    
+
+    def get_summary(self) -> Dict[str, Any]:
+        """
+        Generate a comprehensive summary of the ScoreCorpus.
+        
+        Returns:
+            Dictionary containing key statistics and insights about the corpus.
+        """
+        summary = {
+            "metadata": {
+                "scorables_count": len(self.bundles),
+                "dimensions": self.dimensions,
+                "scorers": self.scorers,
+                "metrics": list(self.metrics),
+                "created_at": self.meta.get("created_at", ""),
+                "source": self.meta.get("source", "unknown")
+            },
+            "statistics": {
+                "average_scores": {},
+                "score_ranges": {},
+                "uncertainty_stats": {},
+                "agreement_stats": {}
+            },
+            "insights": {
+                "high_uncertainty_count": 0,
+                "strong_agreement_count": 0,
+                "scorer_reliability": {}
+            }
+        }
+        
+        # Calculate basic statistics
+        for dimension in self.dimensions:
+            scores = []
+            for bundle in self.bundles.values():
+                if dimension in bundle.results:
+                    try:
+                        scores.append(bundle.results[dimension].score)
+                    except (AttributeError, TypeError):
+                        continue
+            
+            if scores:
+                summary["statistics"]["average_scores"][dimension] = float(np.mean(scores))
+                summary["statistics"]["score_ranges"][dimension] = {
+                    "min": float(min(scores)),
+                    "max": float(max(scores)),
+                    "std": float(np.std(scores))
+                }
+        
+        # Calculate uncertainty statistics
+        for dimension in self.dimensions:
+            uncertainties = []
+            for bundle in self.bundles.values():
+                if dimension in bundle.results:
+                    result = bundle.results[dimension]
+                    try:
+                        if hasattr(result, 'uncertainty') and result.uncertainty is not None:
+                            uncertainties.append(result.uncertainty)
+                    except (AttributeError, TypeError):
+                        continue
+            
+            if uncertainties:
+                high_uncertainty_count = sum(1 for u in uncertainties if u > 0.3)
+                summary["statistics"]["uncertainty_stats"][dimension] = {
+                    "average": float(np.mean(uncertainties)),
+                    "high_uncertainty_count": high_uncertainty_count,
+                    "total_count": len(uncertainties)
+                }
+                summary["insights"]["high_uncertainty_count"] += high_uncertainty_count
+        
+        # Analyze agreement patterns
+        for dimension in self.dimensions:
+            # Get scores from all scorers for this dimension
+            scores_by_scorer = {}
+            for bundle in self.bundles.values():
+                if dimension in bundle.results:
+                    result = bundle.results[dimension]
+                    try:
+                        scorer = result.source
+                        if scorer not in scores_by_scorer:
+                            scores_by_scorer[scorer] = []
+                        scores_by_scorer[scorer].append(result.score)
+                    except (AttributeError, TypeError):
+                        continue
+            
+            # Calculate agreement across scorers
+            all_scores = []
+            for scores in scores_by_scorer.values():
+                all_scores.extend(scores)
+            
+            if all_scores:
+                std_dev = float(np.std(all_scores))
+                summary["statistics"]["agreement_stats"][dimension] = {
+                    "average_score": float(np.mean(all_scores)),
+                    "std_deviation": std_dev,
+                    "agreement_score": 1.0 - min(std_dev, 1.0)
+                }
+            
+            # Count strong agreement items
+            strong_agreement_count = 0
+            for bundle in self.bundles.values():
+                dimension_scores = []
+                for dim, result in bundle.results.items():
+                    if dim == dimension:
+                        try:
+                            dimension_scores.append(result.score)
+                        except (AttributeError, TypeError):
+                            continue
+                
+                if len(dimension_scores) > 1 and np.std(dimension_scores) < 0.1:
+                    strong_agreement_count += 1
+            
+            summary["insights"]["strong_agreement_count"] += strong_agreement_count
+        
+        # Calculate scorer reliability
+        for scorer in self.scorers:
+            all_scores = []
+            for bundle in self.bundles.values():
+                for result in bundle.results.values():
+                    try:
+                        if result.source == scorer:
+                            all_scores.append(result.score)
+                    except (AttributeError, TypeError):
+                        continue
+            
+            if all_scores:
+                summary["insights"]["scorer_reliability"][scorer] = {
+                    "average_score": float(np.mean(all_scores)),
+                    "score_count": len(all_scores),
+                    "std_deviation": float(np.std(all_scores))
+                }
+        
+        return summary

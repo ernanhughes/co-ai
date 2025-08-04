@@ -55,7 +55,7 @@ class SVMInferenceAgent(BaseAgent):
             self.models[dim] = (scaler, model)
             self.model_meta[dim] = (
                 load_json(meta_path) if os.path.exists(meta_path)
-                else {"min_score": 0, "max_score": 100}
+                else {"min_value": 0, "max_value": 100}
             )
             tuner = RegressionTuner(dimension=dim, logger=self.logger)
             tuner.load(tuner_path)

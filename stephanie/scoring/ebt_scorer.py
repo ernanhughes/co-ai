@@ -68,7 +68,7 @@ class EBTScorer(BaseScorer):
             model.eval()
             self.models[dim] = model
 
-            meta = load_json(locator.meta_file()) if os.path.exists(locator.meta_file()) else {"min_score": 0, "max_score": 100}
+            meta = load_json(locator.meta_file()) if os.path.exists(locator.meta_file()) else {"min_value": 0, "max_value": 100}
             self.model_meta[dim] = meta
 
             if os.path.exists(locator.tuner_file()):
@@ -105,14 +105,14 @@ class EBTScorer(BaseScorer):
             action_probs = F.softmax(torch.tensor(policy_logits), dim=-1)
             entropy = -torch.sum(action_probs * torch.log(action_probs + 1e-8)).item()
 
-            meta = self.model_meta.get(dim, {"min_score": 0, "max_score": 100})
+            meta = self.model_meta.get(dim, {"min_value": 0, "max_value": 100})
             if dim in self.tuners:
                 scaled_score = self.tuners[dim].transform(q_value)
             else:
                 normalized = torch.sigmoid(torch.tensor(q_value)).item()
-                scaled_score = normalized * (meta["max_score"] - meta["min_score"]) + meta["min_score"]
+                scaled_score = normalized * (meta["max_value"] - meta["min_value"]) + meta["min_value"]
 
-            final_score = round(max(min(scaled_score, meta["max_score"]), meta["min_score"]), 4)
+            final_score = round(max(min(scaled_score, meta["max_value"]), meta["min_value"]), 4)
 
             rationale = f"Q={q_value:.4f}, V={v_value:.4f}, Δ={uncertainty:.3f}, H={entropy:.3f}"
 

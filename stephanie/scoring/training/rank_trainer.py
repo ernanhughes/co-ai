@@ -23,8 +23,8 @@ class ContrastiveRankerTrainer(BaseTrainer):
         self.target_type = cfg.get("target_type", "document")
         self.version = cfg.get("model_version", "v1")
 
-        self.min_value = cfg.get("min_score", 0.0)
-        self.max_value = cfg.get("max_score", 100.0)
+        self.min_value = cfg.get("min_value", 0.0)
+        self.max_value = cfg.get("max_value", 100.0)
         self.hidden_dim = cfg.get("hidden_dim", 256)
         self.lr = cfg.get("lr", 1e-3)
         self.epochs = cfg.get("epochs", 20)

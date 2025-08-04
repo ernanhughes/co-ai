@@ -1,14 +1,16 @@
 # stephanie/engine/plan_trace_monitor.py
+import os
+import json
+from datetime import datetime
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Optional
 import traceback
 
 from stephanie.data.plan_trace import PlanTrace, ExecutionStep
 from stephanie.agents.plan_trace_scorer import PlanTraceScorerAgent
-from stephanie.scoring.scorable_factory import ScorableFactory, TargetType
-from stephanie.logs.json_logger import JSONLogger
 from stephanie.utils.timing import time_function
 from omegaconf import OmegaConf
+from stephanie.utils.serialization import default_serializer
 
 
 class PlanTraceMonitor:
@@ -23,7 +25,13 @@ class PlanTraceMonitor:
         self.memory = memory
         self.logger = logger
         self.enabled = cfg.get("plan_monitor", {}).get("enabled", True)
+        monitor_cfg = cfg.get("plan_monitor", {})
+        self.save_output = monitor_cfg.get("save_output", False)
+        self.output_dir = monitor_cfg.get("output_dir", "plan_traces")
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
         self.current_plan_trace: Optional[PlanTrace] = None
+   
         if self.enabled:
             self.plan_trace_scorer = PlanTraceScorerAgent(cfg, memory, logger)
             self.stage_start_times: Dict[int, float] = {}
@@ -214,6 +222,9 @@ class PlanTraceMonitor:
         start_time = self.current_plan_trace.extra_data.get("started_at", time.time())
         self.current_plan_trace.extra_data["total_time"] = time.time() - start_time
         
+        if self.enabled and self.save_output:
+            self.save_plan_trace_to_json(self.current_plan_trace)
+
         # Store in memory
         try:
             self.memory.plan_traces.add(self.current_plan_trace)
@@ -302,3 +313,39 @@ class PlanTraceMonitor:
         """Reset the monitor for the next pipeline"""
         self.current_plan_trace = None
         self.stage_start_times = {}
+
+    def save_plan_trace_to_json(self, plan_trace: PlanTrace) -> str:
+        """Save PlanTrace to JSON file in the output directory"""
+        if not self.enabled or not self.output_dir:
+            return ""
+        
+        try:
+            # Create filename with trace_id and timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{plan_trace.trace_id}_{timestamp}.json"
+            filepath = os.path.join(self.output_dir, filename)
+            
+            # Convert to dictionary and save with custom serializer
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(
+                    plan_trace.to_dict(), 
+                    f, 
+                    indent=2, 
+                    default=default_serializer,
+                    ensure_ascii=False
+                )
+            
+            print(f"✅ PlanTrace saved to: {filepath}")
+            self.logger.log("PlanTraceSavedToFile", {
+                "trace_id": plan_trace.trace_id,
+                "filepath": filepath,
+                "step_count": len(plan_trace.execution_steps)
+            })
+            
+            return filepath
+        except Exception as e:
+            self.logger.log("PlanTraceSaveToFileError", {
+                "trace_id": plan_trace.trace_id,
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            })
