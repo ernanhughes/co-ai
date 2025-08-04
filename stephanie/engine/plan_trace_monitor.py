@@ -24,7 +24,7 @@ class PlanTraceMonitor:
         self.cfg = cfg
         self.memory = memory
         self.logger = logger
-        self.enabled = cfg.get("plan_monitor", {}).get("enabled", True)
+        self.enabled = cfg.get("plan_monitor", {}).get("enabled", False)
         monitor_cfg = cfg.get("plan_monitor", {})
         self.save_output = monitor_cfg.get("save_output", False)
         self.output_dir = monitor_cfg.get("output_dir", "plan_traces")
@@ -37,6 +37,8 @@ class PlanTraceMonitor:
             self.stage_start_times: Dict[int, float] = {}
         
         self.logger.log("PlanTraceMonitorInitialized", {
+            "enabled": self.enabled,
+            "save_output": self.save_output,
             "cfg_keys": list(cfg.keys())
         })
     

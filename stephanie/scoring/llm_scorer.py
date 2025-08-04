@@ -19,6 +19,7 @@ class LLMScorer(BaseScorer):
 
     def __init__(self, cfg, memory, logger, prompt_loader=None, llm_fn=None):
         self.cfg = cfg
+        self.model_type = "llm"
         self.memory = memory
         self.logger = logger
         self.prompt_loader = prompt_loader

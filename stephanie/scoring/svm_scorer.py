@@ -19,11 +19,12 @@ class SVMScorer(BaseScorer):
         self.models = {}        # dim -> (scaler, model)
         self.tuners = {}        # dim -> RegressionTuner
         self.metas = {}         # dim -> model metadata
-        self._load_all_dimensions()
+        self.dimensions = cfg.get("dimensions", [])
+        self._load_models(self.dimensions)
 
-    def _load_all_dimensions(self):
-        for dim in self.dimensions:
-            locator = self.get_locator(dim) 
+    def _load_models(self, dimensions: list[str]):
+        for dim in dimensions:
+            locator = self.get_locator(dim)
             self.models[dim] = (
                 load(locator.scaler_file()),
                 load(locator.model_file(suffix=".joblib")),
@@ -35,8 +36,8 @@ class SVMScorer(BaseScorer):
 
     def score(self, goal: dict, scorable: Scorable, dimensions: list[str]) -> ScoreBundle:
         goal_text = goal.get("goal_text", "")
-        ctx_emb = np.array(self.memory.embedding.get_or_create(goal_text))
-        doc_emb = np.array(self.memory.embedding.get_or_create(scorable.text))
+        ctx_emb = np.asarray(self.memory.embedding.get_or_create(goal_text))
+        doc_emb = np.asarray(self.memory.embedding.get_or_create(scorable.text))
         input_vec = np.concatenate([ctx_emb, doc_emb]).reshape(1, -1)
 
         results = {}

@@ -131,6 +131,7 @@ PIPELINE_FLOW = {
 # SCORING & EVALUATION
 # =====================
 SCORING = {
+    "ScoringPaper": "📄⚖️",  # Scoring paper
     "EpistemicPlanExecutorSkipped": "🪸⏭️",  # Epistemic plan executor skipped
     "EpistemicPlanHRMTrainingBatch": "🪸🏋️",  # Training batch
     "EpistemicPlanHRMDataLoaderCreated": "🪸📥",  # Data loader created
@@ -183,6 +184,8 @@ SCORING = {
 # REASONING & ANALYSIS
 # =====================
 REASONING = {
+    "PlanTraceMonitorDisabled": "📄🔧",  # Plan trace monitoring disabled
+    "PlanTraceSavedToFile": "📄💾",  # Plan trace saved to file
     "PlanTraceCompleted": "📄✅",  # Plan trace completed
     "MARSAnalysisCompleted": "📊✅",  # MARS analysis completed
     "PlanTraceScoringCompleted": "📄✅",  # Plan trace scoring completed

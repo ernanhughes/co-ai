@@ -172,11 +172,9 @@ class ScoringManager(BaseAgent):
         if data["scorer"] == "mrq":
             # Use MRQ scoring profile if specified
             scorer = MRQScorer(cfg, memory, logger)
-            scorer.load_models()
         elif data["scorer"] == "svm":
             # Use SVM scoring profile if specified
             scorer = SVMScorer(cfg, memory, logger)
-            scorer.load_models()
         else:
             # Default to LLM scoring profile
             scorer = LLMScorer(
@@ -239,9 +237,14 @@ class ScoringManager(BaseAgent):
 
     def evaluate(self, context: dict, scorable: Scorable, llm_fn=None):
         try:
-            score = self.scorer.score(
-                context, scorable, self.dimensions, llm_fn=llm_fn
-            )
+            if self.scorer.name == "llm":
+                score = self.scorer.score(
+                    context, scorable, self.dimensions, llm_fn=llm_fn
+                )
+            else:
+                score = self.scorer.score(
+                    context, scorable, self.dimensions
+                )
         except Exception as e:
             self.logger.log(
                 "MgrScoreParseError",
@@ -298,9 +301,7 @@ class ScoringManager(BaseAgent):
                 score=score,
                 weight=dim["weight"],
                 rationale=response,
-                prompt_hash=prompt_hash,
                 source="llm",
-                target_type=scorable.target_type,
             )
             results.append(result)
 
@@ -314,7 +315,9 @@ class ScoringManager(BaseAgent):
 
         bundle = ScoreBundle(results={r.dimension: r for r in results})
         self.save_score_to_memory(
-            bundle, scorable, context, self.cfg, self.memory, self.logger
+            bundle=bundle, scorable=scorable,
+            context=context, cfg=self.cfg, memory=self.memory, logger=self.logger,
+            source=self.scorer.name
         )
         return bundle
 
